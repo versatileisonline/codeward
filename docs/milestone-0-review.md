@@ -43,10 +43,10 @@ Main reported unprotected; no settings changed by this work.
 | Structure and whitespace | Balanced code fences; no trailing whitespace; diff whitespace check passes |
 | Requirements | 10 functional and 8 nonfunctional IDs, unique and sequential |
 | Scope and decision review | Confirmed boundaries preserved; all five ADRs undecided |
-| Mermaid | Two source diagrams authored and manually reviewed; rendered preview not verified because the preview tool stalled |
+| Mermaid | Both diagrams render in GitHub Markdown; rendered states and transition labels inspected and corrected |
 | Runtime/build tests | Not applicable: no application or build configuration |
 
 Milestone 0 cannot validate encryption, recovery, crash safety, accessibility or
 offline runtime. Those remain later acceptance obligations. No application,
-dependencies or technology choices are included. Verify Mermaid rendering in the
-PR's rendered Markdown before accepting this milestone.
+dependencies or technology choices are included. Owner review and milestone
+acceptance remain pending.
