@@ -53,23 +53,23 @@ stateDiagram-v2
     Enrollment --> Closed: Cancel
     Creating --> Locked: Initial commit succeeds
     Creating --> CreationError: Failure or interruption
-    CreationError --> Closed: Report; never open partial file
+    CreationError --> Closed: Report without opening partial file
     Closed --> Locked: Open existing vault
     Locked --> Clean: Valid master password and intact vault
     Locked --> Recovery: Forgotten master password
-    Locked --> Locked: Invalid credentials; no mutation
+    Locked --> Locked: Invalid credentials leave file unchanged
     Recovery --> AccessChange: Valid paper secret and intact vault
-    Recovery --> Locked: Invalid secret or cancel; no mutation
+    Recovery --> Locked: Invalid secret or cancel leaves file unchanged
     AccessChange --> RecoveryCommit: Set replacement master password
     RecoveryCommit --> Clean: Access metadata commit succeeds
-    RecoveryCommit --> Locked: Failure or crash; reopen coherent state
+    RecoveryCommit --> Locked: Failure or crash reopens coherent state
     Locked --> FileError: Missing, unsupported, damaged or tampered file
     Recovery --> FileError: Missing, unsupported, damaged or tampered file
-    FileError --> Closed: Report; preserve file; no reconstruction
+    FileError --> Closed: Report without reconstructing data
     Clean --> Draft: Generate password or edit credential
     Draft --> Clean: Explicit discard
     Draft --> Saving: Explicit save
-    Saving --> Clean: Commit succeeds; acknowledge saved
+    Saving --> Clean: Acknowledge after commit succeeds
     Saving --> SaveError: Storage failure or uncertain result
     SaveError --> Saving: Retry after resolving outcome
     SaveError --> Clean: Discard draft after outcome is known
@@ -79,9 +79,9 @@ stateDiagram-v2
     Locked --> Closed: Close
     Clean --> Closed: Close
     Draft --> Closed: Resolve or discard draft on close
-    Saving --> Closed: Crash; reopen complete old or new commit
-    Clean --> Closed: Crash; committed state remains
-    Draft --> Closed: Crash; draft may be lost
+    Saving --> Closed: Crash retains complete old or new commit
+    Clean --> Closed: Crash preserves committed state
+    Draft --> Closed: Crash may lose draft
     Closed --> [*]
 ```
 
