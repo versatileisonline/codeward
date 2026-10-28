@@ -4,8 +4,9 @@ Local password manager for personal use on macOS.
 
 The initial version will run offline, store credentials in a local encrypted vault,
 and support a handwritten offline recovery secret for an intact vault. No account
-or telemetry is required. Milestone 0 establishes documentation and system design;
-there is no application implementation yet.
+or telemetry is required. Milestone 0 established the foundation; Milestone 1 has
+started with a Rust/C++ comparison. Rust is recommended for the core, with the
+owner's choice pending. There is no application implementation yet.
 
 ## Project foundation
 
@@ -18,7 +19,8 @@ there is no application implementation yet.
 | [Threat model](docs/threat-model.md) | Assets, boundaries, threats, assumptions, limitations |
 | [System design](docs/system-design.md) | Logical responsibilities and Mermaid context/lifecycle diagrams |
 | [Roadmap](docs/roadmap.md) | Milestones, dependencies, completion gates |
-| [Architecture decisions](docs/adr/README.md) | ADR index and undecided placeholders |
+| [Architecture decisions](docs/adr/README.md) | ADR index, proposals, and open decisions |
+| [Rust/C++ comparison](docs/adr/0001-implementation-platform.md) | Language tradeoffs and recommendation awaiting owner choice |
 | [Git practices](CONTRIBUTING.md) | Branches, reviews, commits, secret handling |
 | [Milestone 0 review](docs/milestone-0-review.md) | Deliverables and owner checklist |
 

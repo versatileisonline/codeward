@@ -1,8 +1,10 @@
 # Milestone roadmap
 
-Numbers indicate order, not dates. Only Milestone 0 is authorized by this task.
-Later milestones require owner review of the previous gate and retain the
-[charter](charter.md)'s initial scope.
+Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
+The owner has started Milestone 1 with a [Rust/C++ comparison](adr/0001-implementation-platform.md)
+and recommendation before selecting a language. No choices are accepted yet;
+implementation remains outside this request. Later milestones require owner review
+of the previous gate and retain the [charter](charter.md)'s initial scope.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |

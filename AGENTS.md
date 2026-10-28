@@ -10,11 +10,14 @@ branch or chat summary reflects the repository's current state.
 
 ## Current stage
 
-Milestone 0's documentation foundation was merged in PR #1. This iteration adds
-navigation and agent context on main at the owner's explicit request. No app code,
-build system, or dependencies exist. Milestone 1 has not been authorized; the five
-ADR placeholders remain undecided. See [the review record](docs/milestone-0-review.md)
-for evidence and limits. A merge does not establish any runtime security guarantee.
+Milestone 0's foundation was merged in PR #1, followed by navigation/context docs.
+The owner has now started Milestone 1 with a Rust/C++ comparison and recommendation
+before choosing a language. ADR-0001 is Proposed: Rust is recommended for the vault
+core, but neither language is selected. The other four ADRs remain placeholders;
+UI, tooling, algorithms, format, recovery construction, and persistence are undecided.
+No app code, build system, or dependencies exist. See [the review record](docs/milestone-0-review.md)
+for the foundation evidence. Do not treat a recommendation as owner acceptance,
+advance to implementation, or complete Milestone 1 without the required decisions.
 
 ## Confirmed scope
 
@@ -27,7 +30,8 @@ for evidence and limits. A merge does not establish any runtime security guarant
   across interrupted updates and acknowledge saves only after commit. Newly
   generated passwords and other uncommitted edits have no durability guarantee.
 - Rust/C++, UI toolkit, cryptographic algorithms, key derivation, vault format,
-  and persistence mechanism remain undecided. Do not choose them in Milestone 0.
+  and persistence mechanism remain undecided. Record the owner's explicit choices
+  as Milestone 1 progresses; keep recommendations distinct from accepted decisions.
 - File recovery, automated backups, online recovery, browser integration, sync,
   and other platforms remain deferred. Model malware without claiming protection
   against a compromised OS.

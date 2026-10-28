@@ -18,7 +18,7 @@ Root:
 `docs/adr/`:
 
 - [README.md](docs/adr/README.md): Architecture decision index.
-- [0001-implementation-platform.md](docs/adr/0001-implementation-platform.md): Language and macOS tooling.
+- [0001-implementation-platform.md](docs/adr/0001-implementation-platform.md): Rust/C++ comparison and platform decisions.
 - [0002-vault-security-and-format.md](docs/adr/0002-vault-security-and-format.md): Vault security and format.
 - [0003-committed-writes.md](docs/adr/0003-committed-writes.md): Crash-safe saves.
 - [0004-offline-recovery.md](docs/adr/0004-offline-recovery.md): Paper-secret recovery.
