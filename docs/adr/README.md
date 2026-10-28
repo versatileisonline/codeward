@@ -1,12 +1,13 @@
 # Architecture decision records
 
-The [charter](../charter.md) is the confirmed scope input. All numbered records
-below are **placeholders with no selected option**. They track decisions for
-Milestone 1; they do not approve technology or authorize implementation now.
+The [charter](../charter.md) is the confirmed scope input. Milestone 1 has started
+with a language comparison in ADR-0001; it proposes Rust for the core and awaits
+the owner's choice. The other records remain placeholders. **No technology is
+selected or accepted**, and no application implementation is authorized by these proposals.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |
-| [0001](0001-implementation-platform.md) | Language, macOS UI/platform, tooling | Placeholder — undecided | Milestone 1 gate |
+| [0001](0001-implementation-platform.md) | Language comparison, macOS UI/platform, tooling | Proposed — owner choice pending | Milestone 1 gate |
 | [0002](0002-vault-security-and-format.md) | Security, key relationships, format, compatibility | Placeholder — undecided | Milestone 1 gate |
 | [0003](0003-committed-writes.md) | Crash-safe commits, durability, conflicting writers | Placeholder — undecided | Milestone 1 gate |
 | [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Placeholder — undecided | Milestone 1 gate |
