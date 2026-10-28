@@ -1,8 +1,9 @@
 # System design
 
-Status: logical design only. Boxes are responsibilities, not chosen libraries,
-processes, programming languages, file layouts, or algorithms. There is no
-KeePassXC format-compatibility or identical-internals commitment.
+Status: logical design with owner-confirmed Rust core, installed desktop delivery,
+and macOS/Windows/Linux targets. Boxes describe responsibilities, not a selected
+UI toolkit, process model, file layout, or algorithm. There is no KeePassXC
+format-compatibility or identical-internals commitment.
 
 ## System context
 
@@ -10,10 +11,10 @@ KeePassXC format-compatibility or identical-internals commitment.
 flowchart LR
     person["Personal user"]
     paper["Physical notebook: recovery secret"]
-    subgraph device["User's Mac: initial runtime boundary"]
+    subgraph device["User's computer: macOS, Windows or Linux"]
         app["Codeward: local application"]
         vault["Local encrypted vault file"]
-        session["macOS session events and local storage"]
+        session["OS session events and local storage"]
         app <-->|"Read / commit complete states"| vault
         session -->|"Lock / sleep events and storage outcomes"| app
     end
@@ -27,7 +28,7 @@ flowchart LR
 ```
 
 The paper secret reaches the app through explicit enrollment display/user entry.
-The notebook is outside the Mac boundary. Initial runtime has no required service
+The notebook is outside the computer boundary. Initial runtime has no required service
 or network communication. Isolated future boxes describe scope, not approved APIs.
 
 ## Logical responsibilities
@@ -40,8 +41,38 @@ or network communication. Isolated future boxes describe scope, not approved API
 | Vault access/recovery | Validate input, authenticate, protect contents, manage access metadata |
 | Persistence | Commit complete states safely, preserve prior state on failure, report outcomes |
 
-These boundaries support later modular work without choosing Rust/C++, UI,
-cryptography, or storage. Security construction/dependencies require ADR review.
+The Rust core owns session control, credential operations, vault access/recovery,
+and persistence. UI toolkit, security components, file format, and commit mechanism
+still require ADR review.
+
+## Installed application separation
+
+```mermaid
+flowchart TB
+    subgraph app["Installed Codeward application"]
+        ui["Interface: credentials, forms and save status"]
+        core["Rust core: vault access, sessions, recovery and persistence"]
+        ui <-->|"Limited commands and minimal results"| core
+    end
+    core <-->|"Read and commit encrypted data"| vault["Local vault file"]
+```
+
+The same logical separation applies on all three desktop target families. The UI
+collects intent and displays results; the Rust core validates each request, gates
+actions on session state, and reports committed outcomes. The UI does not read or
+write the vault directly or hold the core's session keys. Authorized display of a
+credential can expose transient plaintext in the UI; minimize that exposure and
+define lock/redaction behavior in ADR-0005. Separation does not imply perfect
+memory erasure, process isolation, or protection against a compromised OS.
+
+The installed app bundles its interface assets and opens its own window. Users
+do not start a localhost server or open a browser tab; no runtime network service
+is required. Tauri with TypeScript/React remains a recommendation. The command
+boundary may become an in-process API or IPC depending on that later UI decision.
+
+Platform-specific filesystem, session-event, and packaging adapters need validation.
+Keep platform assumptions outside the shared vault behavior and define a bounded
+Linux distribution/desktop matrix before claiming support.
 
 ## Vault lifecycle
 

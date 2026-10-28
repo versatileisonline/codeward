@@ -1,16 +1,22 @@
 # Project charter
 
-Status: proposed Milestone 0 baseline for owner review. Date: 2026-10-28.
+Status: Milestone 0 foundation with owner-confirmed Milestone 1 scope updates.
+Updated: 2026-10-28. Platform/UI details remain under design review.
 
 ## Purpose
 
-Build a personal, local-first macOS password manager with understandable credential
+Build a personal, local-first desktop password manager with understandable credential
 storage, local password generation, and an offline path to regain access after
 forgetting the master password. Work in small milestones with explicit review gates.
 
 ## Confirmed initial-version scope
 
-- One person using a local macOS application and a local encrypted vault.
+- An installed desktop application targeting macOS, Windows, and Linux, with a
+  local encrypted vault for each person. Initial private prototype audience:
+  roughly 20 friends/family at most; no public release or shared-vault service.
+- Rust core separated from the interface and local vault file. Users launch an
+  application window without opening a browser tab or starting a localhost server.
+  UI framework, supported OS versions/architectures, and Linux distributions remain open.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
 - Generate passwords on demand and explicitly save them with credentials.
 - Use a master password for normal access and a separate handwritten recovery
@@ -25,7 +31,7 @@ forgetting the master password. Work in small milestones with explicit review ga
 
 The recovery secret is an alternative access credential, not a copy of the vault.
 Losing the device and its only vault file cannot be repaired with the paper secret.
-Keep it physically separate from the Mac and vault. Someone with both a usable
+Keep it physically separate from the computer and vault. Someone with both a usable
 recovery secret and its intact vault may gain access.
 
 Crash safety concerns committed data. A password that has only been generated,
@@ -43,9 +49,14 @@ is outside Codeward's transaction boundary.
 | Browser integration | Extensions, autofill, imports, website password changes |
 | Sync and sharing | Cloud synchronization, multiple devices, collaborative/family vaults |
 | Advanced endpoint defenses | Stronger malware resistance; no claim to defeat a compromised OS |
-| Other platforms | Support beyond macOS |
+| Mobile platforms | Phone/tablet applications; desktop target families are already in scope |
 
 These are possibilities, not commitments or prerequisites for the prototype.
+
+macOS, Windows, and Linux are target families, not implemented compatibility claims.
+Define a bounded support matrix and validate packaging, session events, accessibility,
+and storage behavior on each declared target before prototype acceptance. Linux
+support does not imply every distribution or desktop environment is supported.
 
 ## Success and change control
 
@@ -62,3 +73,7 @@ not implemented capabilities.
 The owner reviews milestone completion and scope changes. Record unresolved
 design choices in [ADRs](adr/README.md); a placeholder or proposal is not an accepted
 choice. Begin each later milestone after its preceding gate is reviewed.
+
+Learning follows architecture: discuss component contracts, ownership boundaries,
+failure cases, and evidence so the owner can understand and contribute design
+decisions while using AI agents for implementation.

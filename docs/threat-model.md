@@ -1,7 +1,9 @@
 # Threat model
 
 Status: initial design model; no implemented or audited security claims.
-Scope: one person, local macOS app, local vault, handwritten recovery secret.
+Scope: one person per local vault; installed macOS/Windows/Linux desktop targets,
+Rust core, separate UI responsibility, handwritten recovery secret. Private beta
+audience size does not change the per-vault threat model.
 
 ## Assets and boundaries
 
@@ -10,11 +12,11 @@ Scope: one person, local macOS app, local vault, handwritten recovery secret.
 | Credentials and sensitive metadata | Confidentiality/integrity at rest and during use |
 | Master password and recovery secret | Unauthorized unlock, offline guessing, UI/log disclosure |
 | Last committed vault and access metadata | Complete, coherent persistence across failure |
-| Paper recovery copy | Theft, transcription errors, loss, co-location with the Mac |
+| Paper recovery copy | Theft, transcription errors, loss, co-location with the computer |
 | Session memory and displayed contents | Another local user, screen capture, malware, OS facilities |
 
-Boundaries: person/application UI, application/filesystem, application/macOS session,
-and person/physical notebook. Treat file input as untrusted until validated. Assume
+Boundaries: person/UI, UI/Rust core, core/filesystem, core/OS session,
+and person/physical notebook. Treat UI requests and file input as untrusted until validated. Assume
 OS/hardware behave as documented; same-user malware or privileged compromise can
 violate this assumption. There is no initial runtime network dependency.
 
@@ -22,10 +24,10 @@ violate this assumption. There is no initial runtime network dependency.
 
 | ID | Scenario | Initial response / requirement | Residual limit and later evidence |
 | --- | --- | --- | --- |
-| T-01 | Locked Mac or copied vault is stolen. | Stored confidentiality/integrity, normal unlock protection, no persisted plaintext (FR-02, NFR-02/05). | Offline guessing remains; strength/cost depend on ADR-0002. An unlocked stolen device may expose active secrets. |
+| T-01 | Locked computer or copied vault is stolen. | Stored confidentiality/integrity, normal unlock protection, no persisted plaintext (FR-02, NFR-02/05). | Offline guessing remains; strength/cost depend on ADR-0002. An unlocked stolen device may expose active secrets. |
 | T-02 | Attacker obtains notebook and vault. | Treat paper secret as an access credential; separate it physically; confirm transcription (FR-06/07). | Both together may grant access. No service identity check or remote revocation. ADR-0004 assesses guessing/leakage. |
 | T-03 | User forgets master password. | Offline recovery and replacement password against intact vault (FR-07). | Loss of both valid unlock paths can make contents inaccessible. No operator override. |
-| T-04 | Vault deleted, only Mac lost, or only file corrupted. | Explain file-recovery distinction; preserve input on error (FR-09/10). | Paper secret cannot restore data. Backup/restore features are deferred; this availability threat remains unresolved initially. |
+| T-04 | Vault deleted, only computer lost, or only file corrupted. | Explain file-recovery distinction; preserve input on error (FR-09/10). | Paper secret cannot restore data. Backup/restore features are deferred; this availability threat remains unresolved initially. |
 | T-05 | App terminates during creation/save. | Complete committed states, acknowledgement after commit, coherent recovery metadata (FR-01/05, NFR-03/04). | Drafts may be lost. ADR-0003 defines power-loss boundary and fault matrix. |
 | T-06 | Capacity, permissions, or I/O fail. | Preserve prior commit; report failure without false success (NFR-04). | No progress guarantee on unavailable storage. Test each failure stage. |
 | T-07 | Malicious or damaged input is opened. | Validate format/integrity before exposure; no destructive repair (FR-09, NFR-02). | Parser defects remain possible. Negative tests/security review follow format selection. |
@@ -33,6 +35,7 @@ violate this assumption. There is no initial runtime network dependency.
 | T-09 | Malware/keylogger/debugger/privileged process observes use. | Minimize secret lifetime, avoid logging, lock on chosen triggers (FR-08, NFR-05). | Initial release cannot defeat a compromised OS or guarantee active-secret protection. Advanced defenses deferred, risk retained. |
 | T-10 | Diagnostics/temp files/display/OS memory leak secrets. | Review persistence, diagnostics, UI exposure and lifetime (NFR-02/05/07). | Swap, dumps, screenshots, memory remnants depend on stack/platform; no absolute erasure claim. Review clipboard risk if copying is added. |
 | T-11 | Website password changed, then app crashes before local save. | Distinguish generated/draft/saved (FR-04/05). | Website updates are outside local transaction. Unsaved generation excluded; no browser recovery promise. |
+| T-12 | Faulty or compromised UI invokes privileged actions or retains plaintext. | Validate bounded commands and session state in the Rust core; limit returned data; avoid UI file/key access (NFR-09). | UI can observe plaintext it is authorized to display. Logical separation alone does not isolate a process or defeat OS compromise; review actual framework, permissions and secret lifetime before implementation. |
 
 ## Assumptions and follow-through
 
@@ -49,3 +52,7 @@ offline guessing through both paths, exposed metadata, and reviewed security
 components without inventing cryptography. ADR-0003 must define failure behavior.
 Revisit this model for accepted ADRs and before adding services, extensions,
 imports, backups, or other integrations.
+
+For each declared platform, review file permissions, local-storage durability,
+session events, memory/dump limits, and installer/runtime dependencies. No platform
+security behavior is assumed identical solely because the core is shared Rust.

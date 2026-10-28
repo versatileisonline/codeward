@@ -4,7 +4,7 @@ Status: Placeholder — undecided. Decision: none. Target: Milestone 1.
 
 ## Context and questions
 
-Decide inactivity timeout, macOS session events, manual lock/close behavior,
+Decide inactivity timeout, macOS/Windows/Linux session events, manual lock/close behavior,
 secret lifetime, draft handling and accessible save feedback. No timeout, toolkit,
 autosave behavior or draft-retention policy is selected.
 

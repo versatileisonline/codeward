@@ -27,7 +27,11 @@ Main reported unprotected; no settings changed by this work.
 | Git/review/secret practices | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | PR checklist | [PR template](../.github/pull_request_template.md) |
 
-## Owner checklist
+## Historical Milestone 0 owner checklist
+
+These items describe the original macOS-only, language-undecided baseline.
+Milestone 1 subsequently selected Rust and macOS/Windows/Linux desktop targets;
+current scope lives in the charter and roadmap.
 
 - [ ] Personal macOS app; all initial runtime workflows offline.
 - [ ] No mandatory accounts, telemetry or hosted dependency.
@@ -55,4 +59,5 @@ offline runtime. Those remain later acceptance obligations. No application,
 dependencies or technology choices are included. PR #1's merge records delivery of
 the foundation; unchecked items remain available for explicit owner review and do
 not certify future runtime behavior. Starting later work requires its own owner
-instruction, as now received for the Milestone 1 language comparison.
+instruction, as now received for Milestone 1 design work. This record is a historical
+snapshot, not an override of later confirmed platform or language choices.
