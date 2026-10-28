@@ -17,6 +17,7 @@ Main reported unprotected; no settings changed by this work.
 | Foundation | Location |
 | --- | --- |
 | Simple file map | [tldr.md](../tldr.md) |
+| Persistent agent context | [AGENTS.md](../AGENTS.md) |
 | Charter/scope | [charter.md](charter.md) |
 | Functional/nonfunctional requirements and acceptance evidence | [requirements.md](requirements.md) |
 | Threat model/residual limits | [threat-model.md](threat-model.md) |
@@ -42,7 +43,7 @@ Main reported unprotected; no settings changed by this work.
 
 | Check | Result |
 | --- | --- |
-| Markdown files and local links | 17 files; all 49 relative links resolve |
+| Markdown files and local links | 18 files; all 55 relative links resolve |
 | Structure and whitespace | Balanced code fences; no trailing whitespace; diff whitespace check passes |
 | Requirements | 10 functional and 8 nonfunctional IDs, unique and sequential |
 | Scope and decision review | Confirmed boundaries preserved; all five ADRs undecided |

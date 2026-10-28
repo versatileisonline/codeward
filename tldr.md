@@ -3,6 +3,7 @@
 Root:
 
 - [README.md](README.md): Project overview.
+- [AGENTS.md](AGENTS.md): Project context and agent working rules.
 - [CONTRIBUTING.md](CONTRIBUTING.md): Git and review practices.
 
 `docs/`:

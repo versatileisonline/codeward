@@ -12,6 +12,7 @@ there is no application implementation yet.
 | Document | Purpose |
 | --- | --- |
 | [File map](tldr.md) | Quick guide to where information lives |
+| [Agent context](AGENTS.md) | Project context and working rules for future iterations |
 | [Project charter](docs/charter.md) | Goals, scope, exclusions, success criteria |
 | [Requirements](docs/requirements.md) | Functional/nonfunctional requirements and acceptance evidence |
 | [Threat model](docs/threat-model.md) | Assets, boundaries, threats, assumptions, limitations |

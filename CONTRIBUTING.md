@@ -10,8 +10,9 @@ scope expansion.
   `docs/milestone-0-foundation`, `feat/<topic>` or `fix/<topic>`.
 - Make focused commits, e.g. `docs: establish Milestone 0 project foundation`.
 - Inspect full diffs/staged paths; stage explicit paths and preserve unrelated work.
-- No force-pushing shared branches, rewriting reviewed history or direct pushes to
-  `main`. Merge only with explicit owner approval; a PR is not merge approval.
+- No force-pushing shared branches or rewriting reviewed history. Direct pushes to
+  `main` require explicit owner authorization for the update. Merge only with explicit
+  owner approval; a PR is not merge approval.
 
 ## Pull requests and decisions
 
