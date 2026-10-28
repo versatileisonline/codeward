@@ -1,6 +1,8 @@
 # Milestone 0 review
 
-Date: 2026-10-28. Status: documentation prepared; owner acceptance pending.
+Date: 2026-10-28. Status: foundation merged in [PR #1](https://github.com/versatileisonline/codeward/pull/1);
+documentation follow-ups continue on main at the owner's request. Milestone 1 is
+not yet authorized.
 
 ## Repository inspected
 
@@ -14,6 +16,7 @@ Main reported unprotected; no settings changed by this work.
 
 | Foundation | Location |
 | --- | --- |
+| Simple file map | [tldr.md](../tldr.md) |
 | Charter/scope | [charter.md](charter.md) |
 | Functional/nonfunctional requirements and acceptance evidence | [requirements.md](requirements.md) |
 | Threat model/residual limits | [threat-model.md](threat-model.md) |
@@ -39,7 +42,7 @@ Main reported unprotected; no settings changed by this work.
 
 | Check | Result |
 | --- | --- |
-| Markdown files and local links | 16 files; all 31 relative links resolve |
+| Markdown files and local links | 17 files; all 49 relative links resolve |
 | Structure and whitespace | Balanced code fences; no trailing whitespace; diff whitespace check passes |
 | Requirements | 10 functional and 8 nonfunctional IDs, unique and sequential |
 | Scope and decision review | Confirmed boundaries preserved; all five ADRs undecided |
@@ -48,5 +51,6 @@ Main reported unprotected; no settings changed by this work.
 
 Milestone 0 cannot validate encryption, recovery, crash safety, accessibility or
 offline runtime. Those remain later acceptance obligations. No application,
-dependencies or technology choices are included. Owner review and milestone
-acceptance remain pending.
+dependencies or technology choices are included. PR #1's merge records delivery of
+the foundation; unchecked items remain available for explicit owner review and do
+not certify future runtime behavior or authorize Milestone 1.
