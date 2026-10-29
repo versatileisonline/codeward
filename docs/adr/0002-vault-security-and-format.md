@@ -1,7 +1,7 @@
 # ADR-0002: Vault security and format
 
 Status: Accepted — normative format/profile and evidence plan; implementation unverified.
-Owner decisions: 2026-10-28; concrete handoff approved 2026-10-29.
+Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
 ## Confirmed key model
@@ -27,21 +27,22 @@ and [ADR-0004](0004-offline-recovery.md) for the reusable paper-secret lifecycle
 
 ## Selected algorithms and Rust libraries
 
-| Purpose | Owner-selected algorithm | RustCrypto package |
+| Purpose | Selected algorithm | RustCrypto package |
 | --- | --- | --- |
 | Master-password wrapping key | Argon2id | [`argon2`](https://docs.rs/argon2/latest/argon2/) |
 | Recovery wrapping key | HKDF-SHA256 | [`hkdf`](https://docs.rs/hkdf/latest/hkdf/) with `sha2` |
 | Vault contents and both key slots | XChaCha20-Poly1305 authenticated encryption | [`chacha20poly1305`](https://docs.rs/chacha20poly1305/latest/chacha20poly1305/) using its XChaCha variant |
 
-The owner also approved the format and parameter recommendations below in the
-Codeward design conversation. Package versions/features and exact byte encodings
-are not selected, and no dependencies are installed. Review compatible releases,
+The format and parameter profile below were approved during Milestone 1. Exact
+byte encodings are defined by the normative format document. Package patches and
+features still need review before use; no crypto dependencies are installed here.
+Review compatible releases,
 advisories, audit scope and target support before dependency setup; these decisions
 do not establish audit coverage or runtime evidence for Codeward.
 
 ## Selected starting parameter profile
 
-| Setting | Owner-approved starting value |
+| Setting | Approved starting value |
 | --- | --- |
 | Vault data key | Independently generated random 32 bytes |
 | Master-password KDF | Argon2id version `0x13`, memory `65536` KiB (64 MiB), `3` passes, `4` lanes |
@@ -142,10 +143,9 @@ rotating the vault key; that workflow still requires design and review.
 
 The [version 1 format](../vault-format-v1.md) specifies offsets,
 identifiers, endianness, slot/payload AAD, HKDF context, schema, parser sublimits,
-Base32/checksum and candidate component release lines. The owner accepted those
-details through the concrete handoff on 2026-10-29. That document is the normative
-byte specification; the conceptual
-descriptions above do not authorize alternate encodings.
+Base32/checksum and candidate component release lines. Those details were accepted
+through the concrete handoff on 2026-10-29. That document is the normative byte
+specification; the conceptual descriptions above do not authorize alternate encodings.
 
 Recommend OS randomness through `getrandom` and owned-buffer cleanup through
 `zeroize`, subject to exact release/feature/advisory review before dependency setup.
@@ -165,8 +165,8 @@ is introduced by selecting this model.
 
 ## Acceptance gate
 
-The owner accepted the concrete format/component direction, negative-test plan
-and residual-risk assessment against FR-01/02/07/09 and NFR-02/05 through the
+The concrete format/component direction, negative-test plan and residual-risk
+assessment were accepted against FR-01/02/07/09 and NFR-02/05 through the
 handoff on 2026-10-29. Exact dependency pinning/advisory review is the first
 authorized setup step, before any package is used. Design acceptance does not
 claim measured tuning, independent security review or implementation evidence.

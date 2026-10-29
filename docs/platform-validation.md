@@ -30,7 +30,7 @@ not purchase, publish or invent signing credentials as part of core implementati
 
 ## Filesystem adapter acceptance
 
-Support only regular files in owner-controlled local directories on the declared
+Support only regular files in user-controlled local directories on the declared
 filesystems. Reject symlink/reparse-point vault paths and hard-linked vault files;
 bind operations to validated parent directories/handles to avoid path substitution.
 Exclude network shares, removable filesystems and cloud-synchronized locations from

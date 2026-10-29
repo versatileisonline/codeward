@@ -1,7 +1,7 @@
 # ADR-0004: Offline recovery-secret lifecycle
 
 Status: Accepted — reusable-secret transcription/lifecycle contract; implementation unverified.
-Owner decisions: 2026-10-28; concrete handoff approved 2026-10-29.
+Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
 ## Confirmed lifecycle
@@ -12,7 +12,7 @@ Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2)
 - Derive its wrapping key with HKDF-SHA256 using RustCrypto `hkdf` and `sha2`,
   with recovery-specific context and vault binding. Protect the slot with
   XChaCha20-Poly1305 from RustCrypto `chacha20poly1305`. These algorithms are selected;
-  the owner-approved profile and remaining byte details are recorded below.
+  the approved profile and remaining byte details are recorded below.
 - The user transcribes and confirms the secret during enrollment. The core checks
   the transcription before the vault is presented as ready, and the initial data
   and access metadata must commit coherently. Do not persist a plaintext paper
@@ -45,7 +45,7 @@ Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2)
   user-chosen secret. Master-password input has separate exact UTF-8 preservation
   rules in [ADR-0002](0002-vault-security-and-format.md).
 
-These are owner-confirmed design choices, not implemented or measured behavior.
+These are confirmed design choices, not implemented or measured behavior.
 Routine recovery preserves the same reusable secret, HKDF salt and recovery slot;
 the replacement password slot changes the header authenticated by the payload.
 
@@ -70,7 +70,7 @@ The [format proposal](../vault-format-v1.md) specifies RFC 4648 Base32, no paddi
 52 secret characters plus an eight-character SHA-256-derived transcription
 checksum, four-character groups and strict ASCII input normalization. It also
 specifies HKDF/AAD bytes, bounds, candidate randomness helpers and negative tests.
-The owner accepted these exact choices through the handoff on 2026-10-29; the
+These exact choices were accepted through the handoff on 2026-10-29; the
 previously selected entropy, HKDF salt/output and reusable-secret model are unchanged.
 
 Show a generated secret only during enrollment/explicit replacement, with a
@@ -101,8 +101,8 @@ requires its own reviewed format/commit/session design.
 
 ## Acceptance gate
 
-The owner accepted this contract together with ADR-0002/0003 through the handoff
-on 2026-10-29. Implement later tests for repeat recovery with the same confirmed paper secret, invalid input, transcription
+This contract was accepted together with ADR-0002/0003 through the handoff on
+2026-10-29. Implement later tests for repeat recovery with the same confirmed paper secret, invalid input, transcription
 errors, replacement credentials, interrupted access changes, missing/corrupted files,
 and old-copy/compromise limits. Map to FR-06/07/10 and T-02/03/04/14. Preserve offline
 runtime. This is design documentation, not evidence of working recovery.

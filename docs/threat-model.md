@@ -68,7 +68,7 @@ session events, memory/dump limits, and installer/runtime dependencies. No platf
 security behavior is assumed identical solely because the core is shared Rust.
 
 The [Milestone 1 handoff](milestone-1-handoff.md) now collects the concrete
-contracts accepted by the owner on 2026-10-29. The approved logical save protocol stages a whole
+contracts accepted on 2026-10-29. The approved logical save protocol stages a whole
 encrypted envelope, coordinates Codeward writers and distinguishes publication,
 persistence and acknowledgement. Arbitrary external writers can bypass advisory
 coordination; authentic rollback after trusted state is lost remains unresolved.

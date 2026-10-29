@@ -1,6 +1,6 @@
 # Requirements
 
-Status: design requirements with owner-confirmed Rust/desktop scope updates.
+Status: design requirements with confirmed Rust/desktop scope updates.
 These are intended behaviors, not implemented features.
 All requirements apply to the initial version unless explicitly deferred.
 
@@ -98,7 +98,7 @@ records the approved starting profile (64 MiB, 3 passes, 4 lanes), binary envelo
 with an encrypted JSON snapshot, authentication boundaries and 16 MiB whole-file
 limit. ADR-0004 records the generated 256-bit recovery secret and representation.
 The [format proposal](vault-format-v1.md) specifies exact bytes/schema/checksum/
-parser sublimits accepted through the owner-reviewed handoff. The [handoff](milestone-1-handoff.md) and
+parser sublimits accepted through the reviewed handoff. The [handoff](milestone-1-handoff.md) and
 [platform plan](platform-validation.md) collect the accepted design and evidence plan.
 Review/pin exact component releases and advisories before use. Derivation timing
 targets and all runtime guarantees remain unmeasured; design acceptance and
