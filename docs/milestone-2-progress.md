@@ -2,7 +2,9 @@
 
 Status: in progress, 2026-10-29. First slice only; the milestone is not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
-[PR #2](https://github.com/versatileisonline/codeward/pull/2), which remains unmerged.
+[PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
+This review covers only the first completed parser/metadata step; further
+implementation waits for selection of the next modular step.
 
 ## Implemented first slice
 

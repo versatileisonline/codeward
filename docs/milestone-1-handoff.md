@@ -48,10 +48,10 @@ review approves contracts and the evidence plan, not results that do not exist.
 
 ## Acceptance boundary
 
-The approval satisfies the [roadmap](roadmap.md)'s combined design review
-and explicitly authorizes the implementation needed to obtain evidence. The
-Milestone 1 pull request records that approval; it does not fabricate a GitHub
-review or imply permission to merge. Keep Milestone 2 work on a separate branch,
-based on these approved contracts while the documentation PR remains open.
+The approval satisfies the [roadmap](roadmap.md)'s combined design review and
+authorizes the implementation needed to obtain evidence. Milestone 1's design
+was merged in [PR #2](https://github.com/versatileisonline/codeward/pull/2).
+Keep Milestone 2 implementation and documentation follow-ups in separate focused
+branches and reviews. A completed review does not imply permission to merge other PRs.
 No merge, public release, signing purchase, new service or real credential use
 is authorized by this handoff. Exact dependency review still precedes package use.
