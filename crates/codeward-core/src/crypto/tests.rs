@@ -17,6 +17,25 @@ fn key() -> SecretKey {
 }
 
 #[test]
+fn checks_argon2_password_length_bound_without_allocating_a_multigigabyte_input() {
+    // Test length metadata rather than allocating >4 GiB to exercise rejection.
+    // Source review also checks that this guard precedes locking/work allocation.
+    for length in [0, 1, 0xffff_ffff] {
+        assert_eq!(validate_master_password_length(length), Ok(()));
+    }
+    if let Ok(over_limit) = usize::try_from(0x1_0000_0000_u64) {
+        assert_eq!(
+            validate_master_password_length(over_limit),
+            Err(CryptoError::InvalidLength)
+        );
+        assert_eq!(
+            validate_master_password_length(usize::MAX),
+            Err(CryptoError::InvalidLength)
+        );
+    }
+}
+
+#[test]
 fn rfc9106_argon2id_vector_uses_the_same_owned_memory_path() {
     // RFC 9106 section 5.3. Alternate costs/secret/AD are test-only, not the app profile.
     let params = ParamsBuilder::new()

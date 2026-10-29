@@ -35,7 +35,7 @@ pub enum CryptoError {
     DerivationFailed,
     /// The bounded working allocation could not be reserved.
     AllocationFailed,
-    /// Plaintext/ciphertext/AAD length exceeds the core bound or omits a tag.
+    /// Password/plaintext/ciphertext/AAD exceeds its bound or omits a tag.
     InvalidLength,
     /// Wrong key, nonce, metadata or ciphertext; no plaintext is returned.
     AuthenticationFailed,
@@ -125,6 +125,7 @@ fn random_secret_with<const N: usize>(
 /// There is no alternate profile, pepper or associated-data input. This does not
 /// validate a password or authorize access; a later slot authentication must do so.
 pub fn derive_master_key(password: &[u8], salt: &[u8; 16]) -> Result<SecretKey, CryptoError> {
+    validate_master_password_length(password.len())?;
     let _guard = match MASTER_DERIVATION.try_lock() {
         Ok(guard) => guard,
         Err(std::sync::TryLockError::WouldBlock) => return Err(CryptoError::DerivationBusy),
@@ -133,6 +134,15 @@ pub fn derive_master_key(password: &[u8], salt: &[u8; 16]) -> Result<SecretKey, 
     let params = Params::new(65_536, 3, 4, Some(32)).map_err(|_| CryptoError::DerivationFailed)?;
     let context = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     derive_with_memory(&context, password, salt)
+}
+
+// Check Argon2's existing input ceiling before acquiring the derivation guard or
+// reserving 64 MiB. This is not a new application password-length policy.
+fn validate_master_password_length(length: usize) -> Result<(), CryptoError> {
+    if length > argon2::MAX_PWD_LEN {
+        return Err(CryptoError::InvalidLength);
+    }
+    Ok(())
 }
 
 fn derive_with_memory(
