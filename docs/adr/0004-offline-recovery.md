@@ -1,6 +1,6 @@
 # ADR-0004: Offline recovery-secret lifecycle
 
-Status: Proposed — reusable paper secret and HKDF-SHA256 selected; lifecycle details open.
+Status: Proposed — reusable secret, entropy/encoding shape and HKDF profile selected; byte/lifecycle details open.
 Owner decision: 2026-10-28, Codeward design conversation. Review PR: pending.
 Target: Milestone 1. No application implementation is authorized.
 
@@ -12,7 +12,7 @@ Target: Milestone 1. No application implementation is authorized.
 - Derive its wrapping key with HKDF-SHA256 using RustCrypto `hkdf` and `sha2`,
   with recovery-specific context and vault binding. Protect the slot with
   XChaCha20-Poly1305 from RustCrypto `chacha20poly1305`. These algorithms are selected;
-  exact compatible versions, encoding and derivation context layout remain open.
+  the owner-approved profile and remaining byte details are recorded below.
 - The user transcribes and confirms the secret during enrollment. The core checks
   the transcription before the vault is presented as ready, and the initial data
   and access metadata must commit coherently. Do not persist a plaintext paper
@@ -28,6 +28,26 @@ Target: Milestone 1. No application implementation is authorized.
   Report completion only after the access change commits; wrong input or failed
   authentication leaves the file unchanged. Interrupted changes must retain a
   coherent prior or new state under ADR-0003.
+
+## Selected secret representation and derivation
+
+- Generate an independent random 32-byte secret (256 bits). Display it as 52 Base32
+  characters grouped for handwriting, plus a transcription checksum. The checksum
+  detects errors; it adds neither secret entropy nor proof of authorization.
+- Derive a 32-byte wrapping key using HKDF-SHA256's full extract-and-expand with
+  an independent random 32-byte salt stored in the recovery slot.
+- Feed decoded secret bytes into HKDF, excluding display separators and checksum.
+  Bind context to Codeward, format version, vault ID and recovery-wrapping purpose.
+- Base32 alphabet, padding/unused-bit rules, group sizes, checksum algorithm/length,
+  allowed normalization and exact context bytes still need specification. Do not
+  invent those choices from the approved 52-character representation.
+- Keep transcription confirmation in Rust. Do not replace generated entropy with a
+  user-chosen secret. Master-password input has separate exact UTF-8 preservation
+  rules in [ADR-0002](0002-vault-security-and-format.md).
+
+These are owner-confirmed design choices, not implemented or measured behavior.
+Routine recovery preserves the same reusable secret, HKDF salt and recovery slot;
+the replacement password slot changes the header authenticated by the payload.
 
 ## Protection limits
 
@@ -46,12 +66,12 @@ strategy; no complete compromise-recovery feature is claimed by this decision.
 
 ## Remaining decisions
 
-- Randomness source, entropy, human-readable encoding, checksum/error detection,
-  normalization, and transcription UX. A checksum can help detect errors; it is
-  not proof of authorization. No word list, code length, or encoding is selected.
-- Recovery entropy requirement, HKDF salt/context encoding, authenticated slot
-  metadata, and compatible library versions/features with ADR-0002. HKDF is not
-  a password-hardening function; do not substitute a short or user-chosen secret.
+- Randomness source/error handling, exact Base32/checksum/normalization rules and
+  transcription UX. The 256-bit entropy, 52-character Base32 representation plus
+  checksum and HKDF salt/output sizes are selected, not open questions.
+- Exact HKDF context/authenticated slot encoding and compatible library releases/
+  features with ADR-0002. HKDF is not a password-hardening function; do not substitute
+  a short or user-chosen secret.
 - Display/re-display and in-memory lifetime policy; do not add stored recovery
   material merely to enable re-display without review.
 - Explicit replacement after paper loss/disclosure, data-key compromise handling,
