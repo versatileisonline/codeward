@@ -1,6 +1,6 @@
 # ADR-0001: Implementation platform
 
-Status: Proposed — confirmed decisions recorded; UI and support details open.
+Status: Proposed — Rust/Tauri/React selected; platform evidence and support details open.
 Owner decisions: 2026-10-28, in the Codeward design conversation. Review PR: pending.
 Target: Milestone 1. This records decisions, not a language-comparison essay.
 
@@ -9,6 +9,7 @@ Target: Milestone 1. This records decisions, not a language-comparison essay.
 | Area | Decision |
 | --- | --- |
 | Implementation language | Rust for the application core; the owner also wants to learn Rust. |
+| Desktop host and UI | Tauri with a React/TypeScript interface, selected by the owner on 2026-10-28. |
 | Delivery | Installed desktop application with its own window and bundled interface assets. Users do not start a localhost server or open a browser tab. |
 | Runtime | Offline, local vault, no mandatory accounts, telemetry, or hosted service. |
 | Platforms | Target macOS, Windows, and Linux. Supported versions, architectures, and Linux distributions still need definition and validation. |
@@ -18,19 +19,23 @@ Target: Milestone 1. This records decisions, not a language-comparison essay.
 The Rust/C++ comparison stays in chat at the owner's request. Language selection
 alone does not complete this platform ADR or authorize application implementation.
 
-## UI recommendation still awaiting a decision
+## Selected UI architecture
 
-Tauri with a TypeScript/React interface is a candidate, not an accepted stack.
-It could reuse existing frontend experience while keeping core logic in Rust.
-Tauri uses an embedded WebView and supports bundling frontend assets; that can
-provide the intended installed, offline experience. See its
+Tauri hosts the installed application and embedded system WebView. React/TypeScript
+owns presentation; a thin Rust Tauri adapter translates limited IPC commands into
+framework-independent core operations. The Rust core remains authoritative for
+session state, vault access, recovery and committed writes. Interface assets are
+bundled locally; no remote UI, user-started server, or browser tab is required.
+See Tauri's
 [process model](https://v2.tauri.app/concept/process-model/) and
 [bundled-assets configuration](https://v2.tauri.app/reference/config/#frontenddist).
 No prototype, dependency assessment, or cross-platform UI verification has been done.
+Exact dependency versions, frontend bundler, plugins, and packaging setup remain open.
+This selection does not authorize scaffolding, dependency installation, or app code.
 
 ## Remaining platform decisions
 
-- Choose the UI framework and define the UI/core command and secret-exposure boundary.
+- Finalize typed UI/core payloads, command permissions and secret-exposure policy.
 - Define minimum OS versions, CPU architectures, and a bounded Linux support matrix.
 - Evaluate installation/runtime prerequisites and per-platform packaging, signing,
   accessibility, session events, and local storage behavior. Runtime must work offline;
@@ -44,7 +49,7 @@ verify platform-specific adapters and installers against the declared matrix.
 
 ## Acceptance gate
 
-The owner has selected Rust and the three desktop platform families. Keep the
-whole ADR Proposed until the remaining platform/UI choices and evidence have
+The owner has selected Rust, Tauri, React/TypeScript and the three desktop platform
+families. Keep the whole ADR Proposed until the remaining support/security details and evidence have
 received owner review. Record acceptance and its review link/date when available.
 No app code, dependencies, cryptographic algorithms, or build setup are added here.

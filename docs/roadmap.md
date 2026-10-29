@@ -2,9 +2,10 @@
 
 Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
 Milestone 1 is in progress. The owner selected a Rust core, installed desktop
-delivery, UI/core/local-vault separation, and macOS/Windows/Linux targets, recorded
-in [ADR-0001](adr/0001-implementation-platform.md). UI and detailed platform support
-remain open; implementation is not yet authorized. Later milestones require owner
+delivery, Tauri with React/TypeScript, UI/core/local-vault separation, and
+macOS/Windows/Linux targets, recorded in [ADR-0001](adr/0001-implementation-platform.md).
+Detailed platform support and security/persistence mechanisms remain open;
+implementation is explicitly outside this update. Later milestones require owner
 review of the previous gate and retain the [charter](charter.md)'s scope.
 
 | Milestone | Deliverable | Completion gate |
@@ -22,8 +23,8 @@ design a vault requiring an incompatible recovery retrofit.
 
 ## Next Milestone 1 steps
 
-1. Complete ADR-0001: evaluate the recommended Tauri/TypeScript/React UI, specify
-   limited core commands and data exposure, and define OS versions/architectures,
+1. Complete ADR-0001 around the selected Rust/Tauri/React stack: finalize command
+   permissions and data exposure, and define OS versions/architectures,
    Linux distribution/desktop targets, installer/runtime prerequisites, and validation.
    Keep the Rust core and installed/offline experience as confirmed inputs.
 2. Develop ADR-0002 and ADR-0004 together: define vault protection, master-password
@@ -40,6 +41,20 @@ For each step, discuss the contract, boundary, failure cases, and validation wit
 the owner. A design recommendation is not an accepted choice; diagrams describe
 intended behavior, not a working app. Linux is in scope but requires its own
 support matrix and verification; it is not automatically covered by a shared codebase.
+
+## When implementation becomes necessary
+
+Recording the stack and UI/core contract requires documentation only. Actual
+cross-platform text-input/accessibility checks, packaged offline behavior, IPC
+permissions, and secret-handling behavior will eventually need executable evidence.
+Before any such feasibility spike, explain the question and smallest synthetic-data
+experiment to the owner and obtain explicit authorization. Do not scaffold the app,
+install dependencies, or create a mock executable under this design-only request.
+
+Product implementation starts in Milestone 2 after the remaining security/recovery,
+save, session, and platform decisions pass the Milestone 1 review gate and the owner
+authorizes implementation. A narrowly authorized feasibility spike does not itself
+complete that gate or authorize the product build.
 
 ## Future options, separately scoped
 

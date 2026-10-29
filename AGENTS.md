@@ -13,14 +13,15 @@ branch or chat summary reflects the repository's current state.
 Milestone 0's foundation was merged in PR #1, followed by navigation/context docs.
 Milestone 1 is in progress. The owner selected Rust for the core and macOS, Windows,
 and Linux as desktop targets, and approved the UI/core/local-vault separation.
-ADR-0001 records those decisions but remains Proposed while UI/support details are
-open. Tauri with TypeScript/React is recommended, not selected. The other four ADRs
+The owner has now selected Tauri with a React/TypeScript UI. ADR-0001 records these
+decisions but remains Proposed while support/security details and platform evidence
+are open. The other four ADRs
 remain placeholders; tooling, algorithms, format, recovery construction, and
 persistence mechanisms remain undecided.
 No app code, build system, or dependencies exist. See [the review record](docs/milestone-0-review.md)
 for the foundation evidence. Repository edits for design decisions are authorized;
-application implementation is not yet authorized. Do not treat recommendations as
-owner acceptance or mark Milestone 1 complete before its required decisions.
+application implementation is explicitly prohibited for this update. Do not treat
+stack selection as milestone completion or permission to scaffold/install dependencies.
 
 ## Confirmed scope
 
@@ -36,8 +37,8 @@ owner acceptance or mark Milestone 1 complete before its required decisions.
 - Crash safety applies to committed writes. Preserve a complete old or new state
   across interrupted updates and acknowledge saves only after commit. Newly
   generated passwords and other uncommitted edits have no durability guarantee.
-- Rust is chosen for the core. UI toolkit, cryptographic algorithms, key derivation,
-  vault format, and persistence mechanism remain undecided. Record explicit owner
+- Rust core, Tauri host, and React/TypeScript UI are selected. Cryptographic algorithms,
+  key derivation, vault format, and persistence mechanism remain undecided. Record explicit owner
   choices as Milestone 1 progresses. Keep language comparisons and career advice in
   chat; repository ADRs should briefly record decisions, boundaries, and open work.
 - File recovery, automated backups, online recovery, browser integration, sync,
@@ -55,6 +56,10 @@ owner acceptance or mark Milestone 1 complete before its required decisions.
   Never infer merge permission or milestone advancement from a request to prepare work.
 - Before implementation, obtain the required milestone/ADR review. Record accepted
   decisions with evidence; never present placeholders as choices already made.
+- Tell the owner when runtime evidence requires implementation: identify the design
+  question and smallest synthetic-data experiment before writing code or installing
+  dependencies. Wait for explicit authorization. Product implementation begins only
+  after the Milestone 1 gate and owner authorization; no feasibility spike is implied.
 - Verify document links, fences, whitespace, and relevant Mermaid rendering for
   documentation changes. Run appropriate checks for future code; report limitations.
   Never describe documented runtime requirements as implemented or tested behavior.

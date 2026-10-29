@@ -1,7 +1,7 @@
 # Project charter
 
 Status: Milestone 0 foundation with owner-confirmed Milestone 1 scope updates.
-Updated: 2026-10-28. Platform/UI details remain under design review.
+Updated: 2026-10-28. Rust/Tauri/React are selected; support/security details remain open.
 
 ## Purpose
 
@@ -14,9 +14,10 @@ forgetting the master password. Work in small milestones with explicit review ga
 - An installed desktop application targeting macOS, Windows, and Linux, with a
   local encrypted vault for each person. Initial private prototype audience:
   roughly 20 friends/family at most; no public release or shared-vault service.
-- Rust core separated from the interface and local vault file. Users launch an
+- Rust core separated from a React/TypeScript interface hosted by Tauri and the local
+  vault file. Users launch an
   application window without opening a browser tab or starting a localhost server.
-  UI framework, supported OS versions/architectures, and Linux distributions remain open.
+  Supported OS versions/architectures, packaging, and Linux distributions remain open.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
 - Generate passwords on demand and explicitly save them with credentials.
 - Use a master password for normal access and a separate handwritten recovery
