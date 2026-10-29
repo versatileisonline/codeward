@@ -24,7 +24,8 @@ design a vault requiring an incompatible recovery retrofit.
 
 The complete handoff was approved on 2026-10-29 and Milestone 2 implementation
 was authorized. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
-The documentation PR remains unmerged; application work proceeds separately.
+The design was merged in PR #2; application work and documentation follow-ups
+proceed in separate focused reviews.
 
 Begin with a framework-independent Rust core, bounded envelope parsing and exact
 AAD bytes using synthetic fixtures. Review/pin dependencies before using them;
