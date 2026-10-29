@@ -81,6 +81,32 @@ Platform-specific filesystem, session-event, and packaging adapters need validat
 Keep platform assumptions outside the shared vault behavior and define a bounded
 Linux distribution/desktop matrix before claiming support.
 
+## Vault key and unlock slots
+
+```mermaid
+flowchart TB
+    password["Master password"] -->|"Password key derivation"| normal["Open master-password key slot"]
+    recovery["Reusable handwritten recovery secret"] -->|"Independent recovery key derivation"| backup["Open recovery key slot"]
+    normal --> key["Same random vault data key"]
+    backup --> key
+    key --> contents["Decrypt and authenticate vault contents"]
+```
+
+Each slot stores a separately protected copy of the same per-vault data key.
+Either valid secret can unlock its slot without the other secret. The file holds
+encrypted contents, both protected slots and required public metadata, not the
+plaintext secrets or unwrapped data key. Rust performs key derivation, unwrapping
+and content validation; React receives only permitted interaction data.
+
+Recovery permits setting a replacement master-password slot without exposing the
+forgotten password. Updating a slot does not itself rotate the data key or revoke
+old vault copies. Protecting future contents after data-key compromise requires a
+reviewed rotation strategy. Missing/corrupted files still need separate file recovery.
+
+The key/slot model is confirmed; exact primitives, metadata authentication and
+file layout remain in [ADR-0002](adr/0002-vault-security-and-format.md). Paper-secret
+reuse and remaining lifecycle decisions are in [ADR-0004](adr/0004-offline-recovery.md).
+
 ## Vault lifecycle
 
 ```mermaid

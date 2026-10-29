@@ -8,6 +8,10 @@ All requirements apply to the initial version unless explicitly deferred.
 
 - **Vault:** the local encrypted file and metadata needed to open it.
 - **Master password:** the user's normal vault-unlock secret.
+- **Vault key:** one random per-vault data key protecting the encrypted contents.
+- **Key slots:** two separately protected copies of the same vault key, opened by
+  the master-password-derived wrapping key or the independent recovery wrapping key.
+  Either route is sufficient; this is not a requirement to provide both secrets.
 - **Recovery secret:** a separate offline access secret intended for handwritten
   storage. Its encoding, lifecycle, and construction remain undecided.
 - **Draft:** a generated password or edit before a successful commit.
@@ -23,7 +27,7 @@ performed: the repository still contains documentation only.
 
 | ID | Requirement | Acceptance evidence |
 | --- | --- | --- |
-| FR-01 | Create a local encrypted vault with a master password and enrolled recovery secret. It is ready only after the initial state commits. | Create, close, reopen, and unlock offline. Interrupt creation; no partial file is presented as ready. |
+| FR-01 | Create a local encrypted vault with one random data key and separate master-password and recovery slots protecting copies of that key. It is ready only after the complete initial state commits. | Create, close, reopen, and unlock offline through each independent route; inspect for no plaintext secrets/unwrapped keys. Interrupt creation; no partial file is presented as ready. |
 | FR-02 | Open, unlock, lock, and close with clear session state. Incorrect credentials must not expose data or modify the file. | Exercise lifecycle and failed unlocks; compare file before/after failure. |
 | FR-03 | Create, view, edit, search, and explicitly delete credentials with title/service, username, password, and optional URL/notes. | Commit mutations, reopen, verify records; cancel deletion and verify no change. |
 | FR-04 | Generate passwords locally on demand using security-appropriate randomness. Controls/policy are decided later. Generation alone does not save a record. | Generate offline; distinguish draft from saved; save and reopen a selected result. |
@@ -37,6 +41,11 @@ performed: the repository still contains documentation only.
 FR-07 does not choose secret reuse/rotation/replacement. ADR-0004 must specify that
 behavior and interrupted-change handling. Replacing a master password cannot
 revoke access to old vault copies still accessible with old credentials.
+
+The confirmed key-slot model is recorded in
+[ADR-0002](adr/0002-vault-security-and-format.md). A master-password change replaces
+its protected slot; it does not automatically rotate the vault key. Threat handling
+for a disclosed vault key must address newer contents as well as old copies.
 
 ## Nonfunctional requirements
 
