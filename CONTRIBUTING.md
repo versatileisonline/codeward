@@ -11,15 +11,15 @@ scope expansion.
 - Make focused commits, e.g. `docs: establish Milestone 0 project foundation`.
 - Inspect full diffs/staged paths; stage explicit paths and preserve unrelated work.
 - No force-pushing shared branches or rewriting reviewed history. Direct pushes to
-  `main` require explicit owner authorization for the update. Merge only with explicit
-  owner approval; a PR is not merge approval.
+  `main` require explicit authorization for the update. Merge only with explicit
+  approval; a PR is not merge approval.
 
 ## Pull requests and decisions
 
 Describe the concrete change, affected requirement/ADR IDs, scope, verification and
-remaining limits. Use the [PR template](.github/pull_request_template.md). Owner
-review is required before merge/milestone advancement. Record accepting review
-before changing an ADR from undecided to accepted.
+remaining limits. Use the [PR template](.github/pull_request_template.md). Review is
+required before merge/milestone advancement. Record accepting review before
+changing an ADR from undecided to accepted.
 
 For docs, verify relative links, Markdown tables/fences, Mermaid rendering, terms
 and scope. Milestone 0 needs no application tests or build setup. Later code PRs
@@ -35,7 +35,7 @@ revoke/rotate affected credentials; deleting a line alone does not erase history
 
 ## Repository settings
 
-Recommended owner setup: protect `main` from direct/force pushes and require PRs.
+Recommended repository setup: protect `main` from direct/force pushes and require PRs.
 This is documented policy, not a claim of enforced settings. At the inspected
 Milestone 0 baseline `main` reported unprotected. No settings were changed here.
 Choose required checks when automation exists. No CI/build stack or license choice

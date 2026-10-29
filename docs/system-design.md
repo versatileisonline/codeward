@@ -1,12 +1,12 @@
 # System design
 
-Status: logical design with owner-selected Rust core, Tauri host, React/TypeScript
+Status: logical design with selected Rust core, Tauri host, React/TypeScript
 UI, installed desktop delivery, and macOS/Windows/Linux targets. The IPC topology
 is selected, along with Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 from RustCrypto.
-The owner selected a binary envelope with one encrypted JSON snapshot and a starting
+The design uses a binary envelope with one encrypted JSON snapshot and a starting
 parameter profile in ADR-0002. The [handoff](milestone-1-handoff.md) now supplies
 accepted contracts, including the [byte specification](vault-format-v1.md).
-The owner approved implementation entry on 2026-10-29; runtime evidence is pending. There is no KeePassXC
+Implementation entry was approved on 2026-10-29; runtime evidence is pending. There is no KeePassXC
 format-compatibility commitment.
 
 ## System context
@@ -107,7 +107,7 @@ forgotten password. Updating a slot does not itself rotate the data key or revok
 old vault copies. Protecting future contents after data-key compromise requires a
 reviewed rotation strategy. Missing/corrupted files still need separate file recovery.
 
-The owner-selected [ADR-0002](adr/0002-vault-security-and-format.md) construction uses
+The selected [ADR-0002](adr/0002-vault-security-and-format.md) construction uses
 a versioned binary envelope, two key slots and one encrypted UTF-8 JSON snapshot.
 Each slot authenticates its own role/derivation metadata, excluding the other slot
 and changing revision; the payload authenticates the complete public header with
@@ -189,7 +189,7 @@ an interrupted operation as saved.
 5. Drafts have no durability promise; displaying/copying does not commit them.
 6. Conflicting writers must not silently overwrite each other.
 
-The owner-approved logical protocol in [ADR-0003](adr/0003-committed-writes.md)
+The approved logical protocol in [ADR-0003](adr/0003-committed-writes.md)
 uses whole-envelope staging/publication, explicit acknowledgement barriers, stable
 writer exclusion and reconciliation of unknown outcomes. Platform adapters remain
 unverified; no blanket OS-crash/power-loss guarantee is made. The accepted lock/draft

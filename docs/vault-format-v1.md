@@ -1,7 +1,7 @@
 # Vault format version 1
 
 Status: Accepted version 1 design, 2026-10-29, through the
-[owner-approved handoff](milestone-1-handoff.md). This is the normative byte/schema
+[approved handoff](milestone-1-handoff.md). This is the normative byte/schema
 specification. Independent implementation/security review and runtime evidence
 are still required; acceptance does not certify an implementation.
 

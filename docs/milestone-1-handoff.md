@@ -1,10 +1,10 @@
 # Milestone 1 design handoff
 
-Status: Accepted by owner, 2026-10-29. Implementation entry authorized.
+Status: Accepted, 2026-10-29. Implementation entry authorized.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). No runtime evidence is implied.
 
-The owner explicitly approved this concrete handoff on 2026-10-29 and authorized
-starting Milestone 2. The acceptance covers ADR-0001–0005, the version 1 byte/schema
+This concrete handoff was approved on 2026-10-29, authorizing Milestone 2
+implementation. The acceptance covers ADR-0001–0005, the version 1 byte/schema
 specification and the bounded validation/evidence plan. It records design approval,
 not a claim that the software or native adapters have been implemented or tested.
 
@@ -48,10 +48,10 @@ review approves contracts and the evidence plan, not results that do not exist.
 
 ## Acceptance boundary
 
-The owner approval satisfies the [roadmap](roadmap.md)'s combined design review
-and explicitly authorizes the implementation needed to obtain evidence. The
-Milestone 1 pull request records that approval; it does not fabricate a GitHub
-review or imply permission to merge. Keep Milestone 2 work on a separate branch,
-based on these approved contracts while the documentation PR remains open.
+The approval satisfies the [roadmap](roadmap.md)'s combined design review and
+authorizes the implementation needed to obtain evidence. Milestone 1's design
+was merged in [PR #2](https://github.com/versatileisonline/codeward/pull/2).
+Keep Milestone 2 implementation and documentation follow-ups in separate focused
+branches and reviews. A completed review does not imply permission to merge other PRs.
 No merge, public release, signing purchase, new service or real credential use
 is authorized by this handoff. Exact dependency review still precedes package use.

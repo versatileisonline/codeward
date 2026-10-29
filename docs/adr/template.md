@@ -13,7 +13,7 @@ Compare viable options, tradeoffs and primary references; identify uncertainty.
 ## Decision
 
 State the proposed choice and rationale. Leave explicitly undecided until the
-proposal contains evidence and receives owner review.
+proposal contains evidence and receives review.
 
 ## Consequences and validation
 

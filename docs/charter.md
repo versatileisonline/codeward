@@ -4,7 +4,8 @@ Status: Milestone 1 design accepted; Milestone 2 entry authorized.
 Updated: 2026-10-29. Rust/Tauri/React, RustCrypto primitives, the starting profile
 and format structure are selected. The logical save protocol is approved; concrete
 remaining proposals are ready in the [Milestone 1 handoff](milestone-1-handoff.md).
-The owner accepted that handoff on 2026-10-29 and authorized core implementation.
+The handoff records design acceptance and core implementation authorization on
+2026-10-29.
 No runtime support/security claim is verified.
 
 ## Purpose
@@ -73,7 +74,7 @@ support does not imply every distribution or desktop environment is supported.
 
 ## Success and change control
 
-Milestone 0 succeeds when a documentation-only branch/PR gives the owner a clear
+Milestone 0 succeeds when a documentation-only branch/PR provides a clear
 charter, requirements, threat model, Mermaid diagrams, roadmap, ADR placeholders,
 and Git practices to review. It contains no application code, dependencies, build
 system, language/algorithm selection, or vault-format choice.
@@ -83,10 +84,10 @@ a credential offline, lock/reopen it, recover using the paper secret and intact
 vault, and demonstrate save guarantees through fault tests. These are targets,
 not implemented capabilities.
 
-The owner reviews milestone completion and scope changes. Record unresolved
+Milestone completion and scope changes require explicit approval. Record unresolved
 design choices in [ADRs](adr/README.md); a placeholder or proposal is not an accepted
 choice. Begin each later milestone after its preceding gate is reviewed.
 
-Learning follows architecture: discuss component contracts, ownership boundaries,
-failure cases, and evidence so the owner can understand and contribute design
-decisions while using AI agents for implementation.
+Architecture documentation explains component contracts, responsibility boundaries,
+failure cases and validation before implementation. Decisions stay open for
+discussion and direct design contributions.

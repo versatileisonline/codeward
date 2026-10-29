@@ -1,7 +1,7 @@
 # ADR-0003: Committed writes and durability
 
 Status: Accepted — logical save contract; platform adapter evidence pending.
-Owner decision: 2026-10-29, concrete handoff approval. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
+Decision date: 2026-10-29, concrete handoff approval. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
 Target: Milestone 1. No implemented persistence guarantee.
 
 ## Context and alternatives
@@ -118,5 +118,5 @@ requirement; power-loss support is a separately evidenced claim.
 
 Use synthetic data only. Unsaved generation/edits, external website updates,
 missing/corrupted-file reconstruction, backups and authentic rollback detection
-remain outside this contract. The owner accepted the combined handoff on
+remain outside this contract. The combined handoff was accepted on
 2026-10-29; implementation and platform evidence belong to authorized later work.

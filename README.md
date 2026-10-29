@@ -4,8 +4,8 @@ Local password manager targeting macOS, Windows, and Linux desktops.
 
 The initial version will run offline, store credentials in a local encrypted vault,
 and support a handwritten offline recovery secret for an intact vault. No account
-or telemetry is required. The owner accepted Milestone 1's design and authorized
-Milestone 2 on 2026-10-29. Rust owns the core; Tauri hosts a React/TypeScript UI.
+or telemetry is required. Milestone 1's design was accepted and Milestone 2 implementation
+was authorized on 2026-10-29. Rust owns the core; Tauri hosts a React/TypeScript UI.
 The planned application installs and opens in its own window. The exact vault
 format, save contract and initial validation matrix are specified; actual runtime
 support remains unverified. The initial audience is a small private friends/family
@@ -43,7 +43,7 @@ prototype, and this documentation branch contains no application code.
 
 Rust, Tauri and React/TypeScript are selected. Crypto selections are RustCrypto
 Argon2id for master-password derivation, HKDF-SHA256 for the generated recovery
-secret, and XChaCha20-Poly1305 for contents/key slots. The owner approved a binary
+secret, and XChaCha20-Poly1305 for contents/key slots. The selected format uses a binary
 envelope with an encrypted JSON snapshot, a starting Argon2id profile and a 16 MiB
 file limit in [ADR-0002](docs/adr/0002-vault-security-and-format.md). The accepted
 [format specification](docs/vault-format-v1.md) defines exact bytes and recovery

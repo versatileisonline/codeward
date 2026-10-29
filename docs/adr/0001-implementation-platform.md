@@ -1,7 +1,7 @@
 # ADR-0001: Implementation platform
 
 Status: Accepted — design and validation plan; runtime evidence outstanding.
-Owner decisions: 2026-10-28; concrete handoff approved 2026-10-29.
+Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2); approval recorded in the handoff.
 Target: Milestone 1. This records decisions, not a language-comparison essay.
 
@@ -9,16 +9,16 @@ Target: Milestone 1. This records decisions, not a language-comparison essay.
 
 | Area | Decision |
 | --- | --- |
-| Implementation language | Rust for the application core; the owner also wants to learn Rust. |
-| Desktop host and UI | Tauri with a React/TypeScript interface, selected by the owner on 2026-10-28. |
+| Implementation language | Rust for the framework-independent application core. |
+| Desktop host and UI | Tauri with a React/TypeScript interface, selected on 2026-10-28. |
 | Delivery | Installed desktop application with its own window and bundled interface assets. Users do not start a localhost server or open a browser tab. |
 | Runtime | Offline, local vault, no mandatory accounts, telemetry, or hosted service. |
 | Platforms | Target macOS, Windows, and Linux. The bounded matrix below defines initial validation targets; actual support requires evidence. |
 | Separation | UI sends limited commands to the Rust core; the core controls vault access, sessions, recovery, and persistence. The encrypted vault lives locally. |
 | Audience | Private prototype for roughly 20 friends/family at most; each person uses a local vault. Public distribution and shared vaults are outside initial scope. |
 
-The Rust/C++ comparison stays in chat at the owner's request. Language selection
-alone does not complete this platform ADR or authorize application implementation.
+Language selection alone does not complete the platform contract; the accepted
+handoff records implementation authorization.
 
 ## Selected UI architecture
 
@@ -76,7 +76,7 @@ verify platform-specific adapters and installers against the declared matrix.
 
 ## Acceptance gate
 
-The owner accepted the concrete matrix, permission contract and evidence plan
-through the [handoff](../milestone-1-handoff.md) on 2026-10-29. Do not advertise
+The concrete matrix, permission contract and evidence plan were accepted through
+the [handoff](../milestone-1-handoff.md) on 2026-10-29. Do not advertise
 support until native/packaged validation passes. Exact release/feature/advisory
 review remains a prerequisite for using packages, not an unreviewed product policy.

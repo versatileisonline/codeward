@@ -1,30 +1,20 @@
 # Milestone roadmap
 
 Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
-Milestone 1 design review is complete; Milestone 2 entry is authorized. The owner selected a Rust core, installed desktop
-delivery, Tauri with React/TypeScript, UI/core/local-vault separation, and
-macOS/Windows/Linux targets, recorded in [ADR-0001](adr/0001-implementation-platform.md).
-The owner accepted the concrete [Milestone 1 handoff](milestone-1-handoff.md) on
-2026-10-29 and authorized starting the Rust core. Runtime behavior remains unverified. Later milestones require owner
-review of the previous gate and retain the [charter](charter.md)'s scope.
-
-The owner has also confirmed one random vault data key with independent master-password
-and recovery slots, plus a reusable paper secret. ADR-0002/0004 record this model;
-RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 are selected. The owner
-approved the binary envelope/encrypted JSON structure, starting profile, recovery
-representation, authentication boundaries and 16 MiB whole-file cap. The owner
-approved the logical crash-safe save protocol on 2026-10-29. The exact format,
-session, lifecycle and platform defaults were accepted in the combined review.
-Exact package pinning/advisory review precedes use; measurements remain future work.
+Milestone 1 design review is complete; Milestone 2 entry is authorized. The
+[accepted handoff](milestone-1-handoff.md) records approval on 2026-10-29 and defines
+the Rust core, Tauri/React interface, three desktop target families, exact vault
+format, crypto profiles, reusable recovery, save contract and session policies.
+Exact dependency/security review precedes use; runtime evidence remains pending.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
-| 0 — Foundation and system design | Charter, requirements, threat model, Mermaid diagrams, roadmap, ADR placeholders, Git practices | Documentation-only branch/PR reviewed by owner; recovery/file restoration and committed/unsaved distinctions clear. No implementation or technology selection. |
+| 0 — Foundation and system design | Charter, requirements, threat model, Mermaid diagrams, roadmap, ADR placeholders, Git practices | Documentation-only branch/PR reviewed and approved; recovery/file restoration and committed/unsaved distinctions clear. No implementation or technology selection. |
 | 1 — Design decisions | Complete UI/platform boundaries around the chosen Rust core; resolve security/format, recovery, commits, session policy and validation | ADR-0001–0005 accepted after review; threat model, declared macOS/Windows/Linux matrix, storage assumptions and fault-test matrix updated. No hidden unresolved security/persistence contracts. |
 | 2 — Vault core and persistence | Create/unlock/lock, record persistence, coherent access metadata, safe errors | FR-01/02/09 and NFR-02/03/04/08 demonstrated with synthetic data, malformed input, conflicting writes and interruptions. No premature save acknowledgement. |
 | 3 — Offline recovery | Paper enrollment/confirmation, forgotten-password access and replacement master password | FR-06/07/10 verified offline; invalid secret/interrupted access changes preserve valid state; file-loss limits explicit. |
 | 4 — Desktop prototype | Credential UI, generation, search, save indicators, deletion and session locking for declared macOS/Windows/Linux targets | FR-03/04/05/08 and NFR-01/05/06/07/09 demonstrated per target, including keyboard/assistive technology, UI/core command checks, lock events, errors and draft-loss boundaries. |
-| 5 — Validation and hardening | Integrated checks, dependency/security review, documented limits, reproducible packaging | All initial requirements have evidence or owner-reviewed scope changes; recovery/fault tests pass; offline runtime and secret handling verified. Use synthetic data until prototype review is satisfied. |
+| 5 — Validation and hardening | Integrated checks, dependency/security review, documented limits, reproducible packaging | All initial requirements have evidence or reviewed scope changes; recovery/fault tests pass; offline runtime and secret handling verified. Use synthetic data until prototype review is satisfied. |
 
 Recovery metadata belongs in the Milestone 1 design and Milestone 2 coherent
 persistence contract, even though its user workflow arrives in Milestone 3. Do not
@@ -32,9 +22,10 @@ design a vault requiring an incompatible recovery retrofit.
 
 ## Milestone 1 acceptance and Milestone 2 entry
 
-The owner explicitly approved the complete handoff on 2026-10-29 and authorized
-Milestone 2. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). This records owner approval in
-chat; it does not claim a GitHub approval review or authorize merging the PR.
+The complete handoff was approved on 2026-10-29 and Milestone 2 implementation
+was authorized. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
+The design was merged in PR #2; application work and documentation follow-ups
+proceed in separate focused reviews.
 
 Begin with a framework-independent Rust core, bounded envelope parsing and exact
 AAD bytes using synthetic fixtures. Review/pin dependencies before using them;
@@ -51,17 +42,16 @@ documentation only. Actual
 cross-platform text-input/accessibility checks, packaged offline behavior, IPC
 permissions, and secret-handling behavior will eventually need executable evidence.
 Before any such feasibility spike, explain the question and smallest synthetic-data
-experiment to the owner and obtain explicit authorization. Do not scaffold the app,
+experiment and obtain explicit authorization. Do not scaffold the app,
 install dependencies, or create a mock executable under this design-only request.
 
 Product implementation starts in Milestone 2 after the remaining security/recovery,
-save, session, and platform decisions pass the Milestone 1 review gate and the owner
-authorizes implementation. A narrowly authorized feasibility spike does not itself
+save, session, and platform decisions pass the Milestone 1 review gate and
+implementation is explicitly authorized. A narrowly authorized feasibility spike does not itself
 complete that gate or authorize the product build.
 
-The owner has now supplied implementation authorization through the concrete
-handoff review. Do not request the same policy approval again or require completed
-measurements before beginning the implementation that will produce them.
+The accepted handoff now authorizes implementation. Measurements and native
+validation follow the agreed evidence plan rather than being claimed in advance.
 
 ## Review inputs and implementation prerequisites
 
