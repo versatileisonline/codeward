@@ -1,6 +1,6 @@
 # ADR-0004: Offline recovery-secret lifecycle
 
-Status: Accepted — reusable-secret transcription/lifecycle contract; implementation unverified.
+Status: Accepted — paper-code component tested; integrated recovery/lifecycle unverified.
 Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
@@ -38,14 +38,15 @@ Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2)
   an independent random 32-byte salt stored in the recovery slot.
 - Feed decoded secret bytes into HKDF, excluding display separators and checksum.
   Bind context to Codeward, format version, vault ID and recovery-wrapping purpose.
-- Base32 alphabet, padding/unused-bit rules, group sizes, checksum algorithm/length,
-  allowed normalization and exact context bytes still need specification. Do not
-  invent those choices from the approved 52-character representation.
+- The accepted [normative format](../vault-format-v1.md) defines the alphabet,
+  padding/unused-bit rules, groups, checksum, normalization and context bytes.
 - Keep transcription confirmation in Rust. Do not replace generated entropy with a
   user-chosen secret. Master-password input has separate exact UTF-8 preservation
   rules in [ADR-0002](0002-vault-security-and-format.md).
 
-These are confirmed design choices, not implemented or measured behavior.
+These are confirmed design choices. The paper-code component and HKDF primitive
+now have [bounded test evidence](../milestone-2-progress.md); enrollment state,
+vault access and committed password replacement remain unimplemented.
 Routine recovery preserves the same reusable secret, HKDF salt and recovery slot;
 the replacement password slot changes the header authenticated by the payload.
 

@@ -8,10 +8,11 @@ and [platform plan](../platform-validation.md) contain the concrete contracts an
 validation sequence. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
 
 Milestone 2 implementation is authorized. Exact package/security review precedes
-use; measurements and native runtime evidence remain future work. Design approval
+use; full target measurements and native runtime evidence remain future work. Design approval
 does not establish implemented behavior or permission to merge.
-The current [core evidence](../milestone-2-progress.md) covers structural parsing,
-in-memory encoding and public authentication metadata only.
+The current [core evidence](../milestone-2-progress.md) covers parsing/encoding,
+public authentication metadata, crypto primitives, paper-code validation and an
+initial single-host derivation measurement. Integrated workflows remain absent.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |

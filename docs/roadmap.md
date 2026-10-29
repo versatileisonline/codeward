@@ -5,7 +5,8 @@ Milestone 1 design review is complete; Milestone 2 is in progress. The
 [accepted handoff](milestone-1-handoff.md) records approval on 2026-10-29 and defines
 the Rust core, Tauri/React interface, three desktop target families, exact vault
 format, crypto profiles, reusable recovery, save contract and session policies.
-Exact dependency/security review precedes use; runtime evidence remains pending.
+Exact dependency/security review precedes use; bounded core evidence is recorded
+below, while integrated/native runtime evidence remains pending.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
@@ -37,14 +38,17 @@ platform-specific evidence exists.
 
 ## Current Milestone 2 slice
 
-The Rust library implements structural envelope parsing, in-memory encoding and
-exact public AAD/HKDF context construction in two separate slices. It has 22
-passing synthetic integration tests on macOS;
-[progress evidence](milestone-2-progress.md) lists scope and limits. It has
-no third-party dependencies and implements no decryption, JSON schema validation,
-file I/O, session lifecycle or commit protocol. The milestone remains in progress.
-Next review/pin dependency releases before implementing the crypto/schema layer,
-then develop fault-injected persistence and validate native adapters separately.
+The Rust library implements envelope parsing/encoding, exact public authentication
+metadata, fixed-profile cryptographic primitives and paper-code handling in modular
+commits. [Dependency review](dependency-review.md) covers the exact crypto graph.
+40 tests and one compile-fail doctest pass on macOS;
+[progress evidence](milestone-2-progress.md) records vectors, negative cases,
+secret-lifetime limits and an initial Argon2 timing/process-memory observation.
+
+No integrated creation/unlock, credential schema, file I/O, session lifecycle or
+commit protocol exists. Next review JSON dependencies and implement strict bounded
+credential decoding, then integrate authenticated slots/payload with schema gating.
+Fault-injected persistence and separately validated native adapters follow.
 
 ## When implementation becomes necessary
 
@@ -108,4 +112,5 @@ guarantee is inferred from that authorization.
    receive accurate errors without destroying a usable prior state.
 
 These are future integrated validation targets. Only the bounded core format
-tests described above have been implemented; no end-to-end workflow exists yet.
+and crypto/paper-code tests described above have been implemented; no end-to-end
+workflow exists yet.

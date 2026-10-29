@@ -1,10 +1,10 @@
 # Codeward core
 
-Milestone 2 format slices: dependency-free structural parsing, encoding and public
-AEAD/HKDF metadata construction for the [accepted format](../../docs/vault-format-v1.md).
-Rust 1.99.1 is pinned in the workspace. No third-party crates or runtime services
-are used in this slice; cryptographic package pinning/security review precedes
-the later implementation that uses them.
+Milestone 2 library: structural parsing/encoding, public authentication metadata,
+bounded cryptographic primitives and paper-secret transcription checks for the
+[accepted format](../../docs/vault-format-v1.md). Rust 1.99.1 is pinned.
+[Exact crypto pins/features and advisory review](../../docs/dependency-review.md)
+are recorded; there are no runtime services.
 
 `UnauthenticatedEnvelope::parse` borrows already-read bytes without allocating,
 rejects unsupported profiles and malformed lengths, and returns only encrypted
@@ -21,8 +21,20 @@ AAD is constructed from the exact original header bytes. Slots exclude changing
 revision and each other; the payload includes the complete header and both slots.
 The deterministic hex fixtures have an independent Python-standard-library
 generator and are deliberately not valid encrypted vaults.
-The 22 integration tests cover parsing/metadata (17) and encoding (5), including
-an exact independent byte fixture, varied round trips and size boundaries.
+`crypto` provides fixed-profile master/recovery derivation and bounded authenticated
+encryption. Owned keys/plaintext and explicit Argon2 work memory use zeroizing
+buffers. One master derivation runs per process; a new OS-generated nonce object
+is consumed on each encryption attempt. `open` returns authenticated bytes, not
+validated credentials or session authorization. Do not expose these low-level
+operations as generic UI commands.
+
+`recovery` encodes/validates the canonical paper code and checks transcription
+confirmation. Application enrollment/display rules and complete recovery are absent.
+
+40 tests cover parsing/metadata (17), encoding (5), crypto (9) and paper codes (9).
+One compile-fail doctest verifies nonce ownership. Published primitive vectors and
+independent Python/C fixtures supplement negative and round-trip cases. See
+[evidence and measurements](../../docs/milestone-2-progress.md) for exact limits.
 
 From the workspace root with the pinned Rust toolchain installed:
 
@@ -32,6 +44,9 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 ```
 
-No unlock, KDF/AEAD operation, recovery transcription, credential schema, file
+The optional synthetic timing example runs with
+`cargo run --release --locked --offline --example measure_master`.
+
+No integrated vault creation/unlock, credential schema, file
 reader/writer, native durability adapter, session implementation or desktop UI
 exists yet. Never use these fixtures or this incomplete library for real credentials.

@@ -117,10 +117,12 @@ File size, public crypto parameters and the stable vault ID remain exposed.
 
 The starting Argon2id profile is 64 MiB, 3 passes and 4 lanes; the entire file is
 limited to 16 MiB. Version 1 excludes attachments, compression, per-record encryption
-and append-only history. Exact envelope/AAD bytes, schema, parser sublimits,
-dependency review and measurements remain open. The 256-bit reusable paper secret,
+and append-only history. Exact bytes/schema/sublimits are accepted in the normative
+format; current dependency review, core tests and initial measurements are recorded
+in [Milestone 2 progress](milestone-2-progress.md). The 256-bit reusable paper secret,
 52-character Base32 representation plus checksum and remaining lifecycle decisions
-are in [ADR-0004](adr/0004-offline-recovery.md). These are design choices, not working code.
+are in [ADR-0004](adr/0004-offline-recovery.md). Integrated vault/recovery lifecycle
+behavior remains unimplemented.
 
 ## Vault lifecycle
 

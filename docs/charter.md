@@ -34,7 +34,8 @@ forgetting the master password. Work in small milestones with explicit review ga
 - Use RustCrypto Argon2id for master-password derivation, HKDF-SHA256 for the
   generated recovery secret, and XChaCha20-Poly1305 for vault/key-slot encryption.
   The selected starting profile and binary envelope/encrypted JSON structure are
-  recorded in ADR-0002; exact format bytes and compatible releases still need review.
+  recorded in ADR-0002. Exact bytes are accepted; current crypto release review and
+  bounded core evidence are in [Milestone 2 progress](milestone-2-progress.md).
 - Preserve committed credentials across application crashes and failed saves.
 - Complete all initial runtime workflows offline, without mandatory accounts,
   telemetry, or a hosted service.

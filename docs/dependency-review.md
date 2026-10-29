@@ -96,7 +96,8 @@ Review exact published manifests and feature lists for
 [getrandom](https://docs.rs/crate/getrandom/0.4.3/features),
 [zeroize](https://docs.rs/crate/zeroize/1.9.1/features),
 [HMAC](https://docs.rs/crate/hmac/0.13.0/features) and
-[Poly1305](https://docs.rs/crate/poly1305/0.9.1/features).
+[Poly1305](https://docs.rs/crate/poly1305/0.9.1/features) and
+[ctutils](https://docs.rs/crate/ctutils/0.4.7/features).
 Registry version metadata is available at
 `https://crates.io/api/v1/crates/<package>/<version>`; compare checksums with
 `Cargo.lock`. Inspect the host and declared target graphs with
