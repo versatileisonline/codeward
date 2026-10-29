@@ -15,7 +15,8 @@ audience size does not change the per-vault threat model.
 | Paper recovery copy | Theft, transcription errors, loss, co-location with the computer |
 | Session memory and displayed contents | Another local user, screen capture, malware, OS facilities |
 
-Boundaries: person/UI, UI/Rust core, core/filesystem, core/OS session,
+Boundaries: person/React UI, WebView/Tauri IPC adapter, adapter/Rust core,
+core/filesystem, core/OS session,
 and person/physical notebook. Treat UI requests and file input as untrusted until validated. Assume
 OS/hardware behave as documented; same-user malware or privileged compromise can
 violate this assumption. There is no initial runtime network dependency.
@@ -35,7 +36,8 @@ violate this assumption. There is no initial runtime network dependency.
 | T-09 | Malware/keylogger/debugger/privileged process observes use. | Minimize secret lifetime, avoid logging, lock on chosen triggers (FR-08, NFR-05). | Initial release cannot defeat a compromised OS or guarantee active-secret protection. Advanced defenses deferred, risk retained. |
 | T-10 | Diagnostics/temp files/display/OS memory leak secrets. | Review persistence, diagnostics, UI exposure and lifetime (NFR-02/05/07). | Swap, dumps, screenshots, memory remnants depend on stack/platform; no absolute erasure claim. Review clipboard risk if copying is added. |
 | T-11 | Website password changed, then app crashes before local save. | Distinguish generated/draft/saved (FR-04/05). | Website updates are outside local transaction. Unsaved generation excluded; no browser recovery promise. |
-| T-12 | Faulty or compromised UI invokes privileged actions or retains plaintext. | Validate bounded commands and session state in the Rust core; limit returned data; avoid UI file/key access (NFR-09). | UI can observe plaintext it is authorized to display. Logical separation alone does not isolate a process or defeat OS compromise; review actual framework, permissions and secret lifetime before implementation. |
+| T-12 | Faulty or compromised UI invokes privileged actions or retains plaintext. | Scope custom Tauri commands to intended callers; Rust validates session, vault, payload and revision; minimize returned data; avoid UI file/key access (NFR-09). | Compromised unlocked UI can invoke permitted reveals and observe displayed/entered plaintext. IPC permissions are not proof of human intent, and clearing JavaScript references cannot prove erasure. |
+| T-13 | Late secret-bearing reply or notification restores data after locking or switching vaults. | Core-owned session generations, scoped references, stale-reply rejection and status-only notifications under NFR-09. | Previously exposed plaintext cannot be revoked; verify lock/in-flight-commit coordination and UI redaction before relying on it. |
 
 ## Assumptions and follow-through
 
@@ -56,3 +58,8 @@ imports, backups, or other integrations.
 For each declared platform, review file permissions, local-storage durability,
 session events, memory/dump limits, and installer/runtime dependencies. No platform
 security behavior is assumed identical solely because the core is shared Rust.
+
+The [UI/core contract](ui-core-contract.md) also requires bundled assets, restrictive
+content loading, no remote runtime origins, and no broad filesystem/shell access
+from React. Custom-command permissions must be deliberately configured and verified;
+framework defaults are not evidence of a restricted application command surface.

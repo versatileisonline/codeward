@@ -12,6 +12,7 @@ Root:
 - [requirements.md](docs/requirements.md): Required behavior and acceptance checks.
 - [threat-model.md](docs/threat-model.md): Security threats and limits.
 - [system-design.md](docs/system-design.md): System design and Mermaid diagrams.
+- [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-0-review.md](docs/milestone-0-review.md): Foundation checklist and verification.
 

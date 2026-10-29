@@ -1,8 +1,8 @@
 # System design
 
-Status: logical design with owner-confirmed Rust core, installed desktop delivery,
-and macOS/Windows/Linux targets. Boxes describe responsibilities, not a selected
-UI toolkit, process model, file layout, or algorithm. There is no KeePassXC
+Status: logical design with owner-selected Rust core, Tauri host, React/TypeScript
+UI, installed desktop delivery, and macOS/Windows/Linux targets. The IPC topology
+is selected; exact file layout, protocol schema and algorithms remain open. There is no KeePassXC
 format-compatibility or identical-internals commitment.
 
 ## System context
@@ -42,17 +42,20 @@ or network communication. Isolated future boxes describe scope, not approved API
 | Persistence | Commit complete states safely, preserve prior state on failure, report outcomes |
 
 The Rust core owns session control, credential operations, vault access/recovery,
-and persistence. UI toolkit, security components, file format, and commit mechanism
-still require ADR review.
+and persistence. React owns presentation, and a thin Tauri adapter connects IPC to
+core operations. Security components, file format, commit mechanism and detailed
+session policies still require ADR review. See the [UI/core contract](ui-core-contract.md).
 
 ## Installed application separation
 
 ```mermaid
 flowchart TB
     subgraph app["Installed Codeward application"]
-        ui["Interface: credentials, forms and save status"]
+        ui["React and TypeScript UI in system WebView"]
+        adapter["Thin Tauri command adapter"]
         core["Rust core: vault access, sessions, recovery and persistence"]
-        ui <-->|"Limited commands and minimal results"| core
+        ui <-->|"Limited IPC commands and minimal results"| adapter
+        adapter <-->|"Typed core operations"| core
     end
     core <-->|"Read and commit encrypted data"| vault["Local vault file"]
 ```
@@ -67,8 +70,12 @@ memory erasure, process isolation, or protection against a compromised OS.
 
 The installed app bundles its interface assets and opens its own window. Users
 do not start a localhost server or open a browser tab; no runtime network service
-is required. Tauri with TypeScript/React remains a recommendation. The command
-boundary may become an in-process API or IPC depending on that later UI decision.
+is required. Tauri/React is selected. Keep Tauri and React details out of the core's
+application operations so those contracts can be tested independently. The adapter
+passes trusted caller context; the Rust core still validates each operation.
+
+Command/data limits, secret exposure, notification payloads, stale-reply rejection,
+and permission requirements are defined in [ui-core-contract.md](ui-core-contract.md).
 
 Platform-specific filesystem, session-event, and packaging adapters need validation.
 Keep platform assumptions outside the shared vault behavior and define a bounded

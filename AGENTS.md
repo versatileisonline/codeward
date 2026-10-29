@@ -4,7 +4,8 @@
 
 Read [tldr.md](tldr.md) for file locations. Before changing scope or design, read
 `docs/charter.md`, `docs/requirements.md`, `docs/threat-model.md`,
-`docs/system-design.md`, `docs/roadmap.md`, and `docs/adr/README.md` as relevant.
+`docs/system-design.md`, `docs/ui-core-contract.md`, `docs/roadmap.md`, and
+`docs/adr/README.md` as relevant.
 Inspect current Git status and preserve unrelated work; do not assume an old
 branch or chat summary reflects the repository's current state.
 
@@ -41,6 +42,11 @@ stack selection as milestone completion or permission to scaffold/install depend
   key derivation, vault format, and persistence mechanism remain undecided. Record explicit owner
   choices as Milestone 1 progresses. Keep language comparisons and career advice in
   chat; repository ADRs should briefly record decisions, boundaries, and open work.
+- Follow `docs/ui-core-contract.md`: React owns presentation, Tauri exposes limited
+  commands, and Rust authorizes access and owns commits. Session keys/bulk vault state
+  stay in Rust; UI plaintext exists only as required for input/display. Do not claim
+  complete erasure or protection against a compromised unlocked UI. UI permissions,
+  revisions, session generations and targeted replies must be enforced and tested.
 - File recovery, automated backups, online recovery, browser integration, sync,
   and mobile platforms remain deferred. Model malware without claiming protection
   against a compromised OS.

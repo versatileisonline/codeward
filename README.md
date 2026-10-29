@@ -20,6 +20,7 @@ initial audience is a small private friends/family prototype.
 | [Requirements](docs/requirements.md) | Functional/nonfunctional requirements and acceptance evidence |
 | [Threat model](docs/threat-model.md) | Assets, boundaries, threats, assumptions, limitations |
 | [System design](docs/system-design.md) | Logical responsibilities and Mermaid context/lifecycle diagrams |
+| [UI/core contract](docs/ui-core-contract.md) | Commands, data exposure, permissions and lock/save outcomes |
 | [Roadmap](docs/roadmap.md) | Milestones, dependencies, completion gates |
 | [Architecture decisions](docs/adr/README.md) | ADR index, proposals, and open decisions |
 | [Platform decisions](docs/adr/0001-implementation-platform.md) | Selected Rust/Tauri/React stack and desktop targets |

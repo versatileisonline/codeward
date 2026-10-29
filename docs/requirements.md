@@ -52,6 +52,11 @@ revoke access to old vault copies still accessible with old credentials.
 | NFR-08 | Prevent silent overwrites by another writer: enforce one active writer or detect conflicting revisions; mechanism undecided. | Attempt concurrent updates; verify refusal/conflict handling preserves committed data. |
 | NFR-09 | Make the Rust core authoritative for session state, vault access, recovery and commits. UI requests use a limited validated interface; the UI has no direct vault-file access or session-key access. Return only data needed for the current interaction. | Reject locked-state and malformed UI requests; review command permissions and data exposure. Verify plaintext shown for authorized interaction is cleared/redacted on lock, subject to documented platform limits. |
 
+NFR-09 follows the [UI/core contract](ui-core-contract.md): a scoped Tauri command
+surface, trusted caller context, Rust authorization, minimal targeted payloads,
+revision conflicts, and stale-reply rejection after lock. Clearing references is
+not proof of complete erasure, and a compromised unlocked UI can observe permitted plaintext.
+
 ### Persistence boundary
 
 NFR-03 covers application crashes/process termination on supported local storage.

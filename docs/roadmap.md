@@ -27,6 +27,7 @@ design a vault requiring an incompatible recovery retrofit.
    permissions and data exposure, and define OS versions/architectures,
    Linux distribution/desktop targets, installer/runtime prerequisites, and validation.
    Keep the Rust core and installed/offline experience as confirmed inputs.
+   The [UI/core contract](ui-core-contract.md) is the design baseline for this work.
 2. Develop ADR-0002 and ADR-0004 together: define vault protection, master-password
    and paper-secret access relationships, format, dependency criteria, recovery
    enrollment, and credential changes. Review choices before acceptance.

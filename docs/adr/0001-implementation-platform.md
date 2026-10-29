@@ -30,6 +30,9 @@ See Tauri's
 [process model](https://v2.tauri.app/concept/process-model/) and
 [bundled-assets configuration](https://v2.tauri.app/reference/config/#frontenddist).
 No prototype, dependency assessment, or cross-platform UI verification has been done.
+The [UI/core contract](../ui-core-contract.md) defines intended commands, data
+exposure, authorization, lock/reply behavior and save outcomes. Exact schemas and
+remaining policy choices still require review before implementation.
 Exact dependency versions, frontend bundler, plugins, and packaging setup remain open.
 This selection does not authorize scaffolding, dependency installation, or app code.
 
