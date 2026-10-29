@@ -22,8 +22,10 @@ All requirements apply to the initial version unless explicitly deferred.
 - **Intact vault:** complete, authentic, supported vault data with usable access
   and recovery metadata. The recovery secret alone is insufficient.
 
-The evidence below is required in later milestones. No runtime tests have been
-performed: the repository still contains documentation only.
+The acceptance evidence below remains required. Milestone 2 has started with
+dependency-free envelope parsing/AAD construction; its limited test evidence is
+recorded in [milestone-2-progress.md](milestone-2-progress.md). No complete vault,
+unlock, credential or persistence requirement is claimed satisfied by that slice.
 
 ## Functional requirements
 
