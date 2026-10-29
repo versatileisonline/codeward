@@ -2,7 +2,7 @@
 
 Status: Accepted — design and validation plan; runtime evidence outstanding.
 Owner decisions: 2026-10-28; concrete handoff approved 2026-10-29.
-Acceptance PR: pending publication; approval recorded in the handoff.
+Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2); approval recorded in the handoff.
 Target: Milestone 1. This records decisions, not a language-comparison essay.
 
 ## Confirmed decisions

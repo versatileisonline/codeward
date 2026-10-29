@@ -33,7 +33,7 @@ design a vault requiring an incompatible recovery retrofit.
 ## Milestone 1 acceptance and Milestone 2 entry
 
 The owner explicitly approved the complete handoff on 2026-10-29 and authorized
-Milestone 2. Acceptance PR: pending publication. This records owner approval in
+Milestone 2. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). This records owner approval in
 chat; it does not claim a GitHub approval review or authorize merging the PR.
 
 Begin with a framework-independent Rust core, bounded envelope parsing and exact

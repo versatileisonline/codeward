@@ -1,7 +1,7 @@
 # ADR-0005: Sessions, locking and drafts
 
 Status: Accepted — concrete session/draft contract, 2026-10-29.
-Acceptance PR: pending publication. Target: Milestone 1. No implemented session behavior.
+Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1. No implemented session behavior.
 
 ## Context and alternatives
 

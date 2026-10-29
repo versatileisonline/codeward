@@ -4,11 +4,12 @@ Local password manager targeting macOS, Windows, and Linux desktops.
 
 The initial version will run offline, store credentials in a local encrypted vault,
 and support a handwritten offline recovery secret for an intact vault. No account
-or telemetry is required. Milestone 0 established the foundation; Milestone 1 has
-started with Rust for the core, Tauri for the desktop host, and React/TypeScript for
-the UI. The application will install and open in its own window. Exact platform
-support, exact format bytes and persistence protocol remain open. There is no
-implementation yet; the initial audience is a small private friends/family prototype.
+or telemetry is required. The owner accepted Milestone 1's design and authorized
+Milestone 2 on 2026-10-29. Rust owns the core; Tauri hosts a React/TypeScript UI.
+The planned application installs and opens in its own window. The exact vault
+format, save contract and initial validation matrix are specified; actual runtime
+support remains unverified. The initial audience is a small private friends/family
+prototype, and this documentation branch contains no application code.
 
 ## Project foundation
 
@@ -22,6 +23,7 @@ implementation yet; the initial audience is a small private friends/family proto
 | [UI/core contract](docs/ui-core-contract.md) | Commands, data exposure, permissions and lock/save outcomes |
 | [Roadmap](docs/roadmap.md) | Milestones, dependencies, completion gates |
 | [Architecture decisions](docs/adr/README.md) | ADR index, proposals, and open decisions |
+| [Accepted design handoff](docs/milestone-1-handoff.md) | Milestone 1 review record and authorized implementation sequence |
 | [Platform decisions](docs/adr/0001-implementation-platform.md) | Selected Rust/Tauri/React stack and desktop targets |
 | [Git practices](CONTRIBUTING.md) | Branches, reviews, commits, secret handling |
 
@@ -43,6 +45,8 @@ Rust, Tauri and React/TypeScript are selected. Crypto selections are RustCrypto
 Argon2id for master-password derivation, HKDF-SHA256 for the generated recovery
 secret, and XChaCha20-Poly1305 for contents/key slots. The owner approved a binary
 envelope with an encrypted JSON snapshot, a starting Argon2id profile and a 16 MiB
-file limit in [ADR-0002](docs/adr/0002-vault-security-and-format.md). Exact format/
-recovery-code bytes, compatible package versions and persistence protocol remain open.
+file limit in [ADR-0002](docs/adr/0002-vault-security-and-format.md). The accepted
+[format specification](docs/vault-format-v1.md) defines exact bytes and recovery
+encoding; [ADR-0003](docs/adr/0003-committed-writes.md) defines save semantics.
+Exact dependency/security review and native persistence evidence precede use.
 Browser integration, online recovery, sync, and automated backups remain future options.

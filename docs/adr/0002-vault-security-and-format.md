@@ -2,7 +2,7 @@
 
 Status: Accepted — normative format/profile and evidence plan; implementation unverified.
 Owner decisions: 2026-10-28; concrete handoff approved 2026-10-29.
-Acceptance PR: pending publication. Target: Milestone 1 design gate.
+Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
 ## Confirmed key model
 

@@ -1,7 +1,7 @@
 # ADR-0003: Committed writes and durability
 
 Status: Accepted — logical save contract; platform adapter evidence pending.
-Owner decision: 2026-10-29, concrete handoff approval. Acceptance PR: pending publication.
+Owner decision: 2026-10-29, concrete handoff approval. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
 Target: Milestone 1. No implemented persistence guarantee.
 
 ## Context and alternatives

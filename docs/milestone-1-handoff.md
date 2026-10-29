@@ -1,7 +1,7 @@
 # Milestone 1 design handoff
 
 Status: Accepted by owner, 2026-10-29. Implementation entry authorized.
-Acceptance PR: pending publication. No runtime evidence is implied.
+Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). No runtime evidence is implied.
 
 The owner explicitly approved this concrete handoff on 2026-10-29 and authorized
 starting Milestone 2. The acceptance covers ADR-0001–0005, the version 1 byte/schema

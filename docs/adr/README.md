@@ -14,7 +14,7 @@ now concrete in the [Milestone 1 handoff](../milestone-1-handoff.md),
 The owner approved the concrete handoff on 2026-10-29 and explicitly authorized
 Milestone 2. ADR-0001–0005 are Accepted as design contracts. Exact package/security
 review precedes use; measurements and native runtime evidence remain future work.
-Acceptance PR: pending publication. No merge permission is implied.
+Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). No merge permission is implied.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |

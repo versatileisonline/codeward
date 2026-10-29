@@ -14,8 +14,8 @@ Root:
 - [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
-- [vault-format-v1.md](docs/vault-format-v1.md): Proposed exact vault bytes, schema and paper-code encoding.
-- [platform-validation.md](docs/platform-validation.md): Proposed platform matrix and evidence plan.
+- [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
+- [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 
 `docs/adr/`:
 
