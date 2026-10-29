@@ -38,4 +38,6 @@ Root:
 
 - [README.md](crates/codeward-core/README.md): Core boundary and verification commands.
 - [src/envelope.rs](crates/codeward-core/src/envelope.rs): Structural parsing and public authentication metadata.
+- [src/encoding.rs](crates/codeward-core/src/encoding.rs): In-memory envelope encoding from public metadata and encrypted bytes.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
+- [tests/encoding.rs](crates/codeward-core/tests/encoding.rs): Exact encoding fixture, bounds and round-trip tests.

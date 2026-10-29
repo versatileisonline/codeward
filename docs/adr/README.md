@@ -10,6 +10,8 @@ validation sequence. Acceptance record: [PR #2](https://github.com/versatileison
 Milestone 2 implementation is authorized. Exact package/security review precedes
 use; measurements and native runtime evidence remain future work. Design approval
 does not establish implemented behavior or permission to merge.
+The current [core evidence](../milestone-2-progress.md) covers structural parsing,
+in-memory encoding and public authentication metadata only.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |
