@@ -6,16 +6,18 @@ and macOS/Windows/Linux targets with UI/core/local-vault separation. ADR-0001 re
 those confirmed decisions but remains Proposed while support/security details and
 platform evidence are open. ADR-0002/0004 record the confirmed one-key/two-slot model
 and reusable paper secret, plus selected RustCrypto Argon2id, HKDF-SHA256 and
-XChaCha20-Poly1305. Profiles, format, package release review and lifecycle details
-remain open.
+XChaCha20-Poly1305. The owner also approved the binary envelope/encrypted JSON
+structure, starting parameter profile, authentication boundaries, file limit and
+recovery-code representation. Exact byte specifications, package release review,
+measurements and remaining lifecycle details are open.
 ADR-0003/0005 remain placeholders. Application implementation has not been authorized.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |
 | [0001](0001-implementation-platform.md) | Rust/Tauri/React, desktop targets and tooling | Proposed — stack selected; platform details open | Milestone 1 gate |
-| [0002](0002-vault-security-and-format.md) | Security, key relationships, format, compatibility | Proposed — key model/RustCrypto algorithms selected; profile/format open | Milestone 1 gate |
+| [0002](0002-vault-security-and-format.md) | Security, key relationships, format, compatibility | Proposed — structure/starting profile selected; byte specification/review open | Milestone 1 gate |
 | [0003](0003-committed-writes.md) | Crash-safe commits, durability, conflicting writers | Placeholder — undecided | Milestone 1 gate |
-| [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Proposed — reusable secret/HKDF-SHA256 selected; lifecycle details open | Milestone 1 gate |
+| [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Proposed — entropy/representation/HKDF profile selected; byte/lifecycle details open | Milestone 1 gate |
 | [0005](0005-session-and-drafts.md) | Lock triggers, session lifetime, drafts, save feedback | Placeholder — undecided | Milestone 1 gate |
 
 ## Process

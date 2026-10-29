@@ -18,7 +18,7 @@ Root:
 
 - [README.md](docs/adr/README.md): Architecture decision index.
 - [0001-implementation-platform.md](docs/adr/0001-implementation-platform.md): Rust/Tauri/React and desktop platform decisions.
-- [0002-vault-security-and-format.md](docs/adr/0002-vault-security-and-format.md): Crypto selections, key slots, and vault format.
+- [0002-vault-security-and-format.md](docs/adr/0002-vault-security-and-format.md): Crypto parameters, key slots, and vault format.
 - [0003-committed-writes.md](docs/adr/0003-committed-writes.md): Crash-safe saves.
 - [0004-offline-recovery.md](docs/adr/0004-offline-recovery.md): Reusable paper-secret recovery.
 - [0005-session-and-drafts.md](docs/adr/0005-session-and-drafts.md): Locking and unsaved edits.

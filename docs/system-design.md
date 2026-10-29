@@ -3,8 +3,9 @@
 Status: logical design with owner-selected Rust core, Tauri host, React/TypeScript
 UI, installed desktop delivery, and macOS/Windows/Linux targets. The IPC topology
 is selected, along with Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 from RustCrypto.
-Exact file layout, protocol schema, profiles and package versions remain open. There is no KeePassXC
-format-compatibility or identical-internals commitment.
+The owner selected a binary envelope with one encrypted JSON snapshot and a starting
+parameter profile in ADR-0002. Exact byte layout, protocol schema and package
+versions remain open. There is no KeePassXC format-compatibility commitment.
 
 ## System context
 
@@ -44,7 +45,7 @@ or network communication. Isolated future boxes describe scope, not approved API
 
 The Rust core owns session control, credential operations, vault access/recovery,
 and persistence. React owns presentation, and a thin Tauri adapter connects IPC to
-core operations. Security components, file format, commit mechanism and detailed
+core operations. Exact security components/format bytes, commit mechanism and detailed
 session policies still require ADR review. See the [UI/core contract](ui-core-contract.md).
 
 ## Installed application separation
@@ -104,10 +105,20 @@ forgotten password. Updating a slot does not itself rotate the data key or revok
 old vault copies. Protecting future contents after data-key compromise requires a
 reviewed rotation strategy. Missing/corrupted files still need separate file recovery.
 
-The key/slot model and RustCrypto algorithms are selected. Cost profiles, nonce/AAD
-layout, versioned format and library release review remain in
-[ADR-0002](adr/0002-vault-security-and-format.md). Paper-secret
-reuse and remaining lifecycle decisions are in [ADR-0004](adr/0004-offline-recovery.md).
+The owner-selected [ADR-0002](adr/0002-vault-security-and-format.md) construction uses
+a versioned binary envelope, two key slots and one encrypted UTF-8 JSON snapshot.
+Each slot authenticates its own role/derivation metadata, excluding the other slot
+and changing revision; the payload authenticates the complete public header with
+both encrypted slots. A slot change requires payload re-encryption with a fresh
+nonce. Credential titles, URLs, notes, timestamps and internal IDs are encrypted.
+File size, public crypto parameters and the stable vault ID remain exposed.
+
+The starting Argon2id profile is 64 MiB, 3 passes and 4 lanes; the entire file is
+limited to 16 MiB. Version 1 excludes attachments, compression, per-record encryption
+and append-only history. Exact envelope/AAD bytes, schema, parser sublimits,
+dependency review and measurements remain open. The 256-bit reusable paper secret,
+52-character Base32 representation plus checksum and remaining lifecycle decisions
+are in [ADR-0004](adr/0004-offline-recovery.md). These are design choices, not working code.
 
 ## Vault lifecycle
 

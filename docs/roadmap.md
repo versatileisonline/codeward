@@ -10,8 +10,10 @@ review of the previous gate and retain the [charter](charter.md)'s scope.
 
 The owner has also confirmed one random vault data key with independent master-password
 and recovery slots, plus a reusable paper secret. ADR-0002/0004 record this model;
-RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 are now selected. Exact
-profiles, compatible package releases, format and replacement/rotation details remain open.
+RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 are selected. The owner
+approved the binary envelope/encrypted JSON structure, starting profile, recovery
+representation, authentication boundaries and 16 MiB whole-file cap. Exact bytes,
+compatible package releases, measurements and replacement/rotation details remain open.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
@@ -33,10 +35,11 @@ design a vault requiring an incompatible recovery retrofit.
    Linux distribution/desktop targets, installer/runtime prerequisites, and validation.
    Keep the Rust core and installed/offline experience as confirmed inputs.
    The [UI/core contract](ui-core-contract.md) is the design baseline for this work.
-2. Complete ADR-0002 and ADR-0004 around the selected RustCrypto primitives and
-   one-key/two-slot model: define bounded Argon2id profiles, recovery entropy/encoding
-   and HKDF context, nonce/AAD and file layout, compatible versions/features and
-   review evidence, enrollment details, replacement and compromise/key rotation.
+2. Complete ADR-0002 and ADR-0004 around the approved structure and starting profile:
+   specify envelope/slot/AAD/HKDF context bytes, JSON schema, Base32/checksum and
+   normalization rules, parser sublimits and randomness error handling. Review
+   compatible versions/features, evidence plan, enrollment details, replacement
+   and compromise/key rotation. Benchmark the approved profile during authorized code work.
    Review remaining choices before acceptance.
 3. Develop ADR-0003: define the commit/acknowledgement boundary, coherent metadata
    updates, error handling, writer conflicts, and per-platform interruption tests.
@@ -66,15 +69,17 @@ authorizes implementation. A narrowly authorized feasibility spike does not itse
 complete that gate or authorize the product build.
 
 The current request does not authorize coding. The next design discussions cover
-the exact security construction, committed-write protocol, lock/draft rules and
+the remaining security specification, committed-write protocol, lock/draft rules and
 platform matrix. Announce readiness for Milestone 2 when those decisions are reviewed;
 do not begin coding merely because the high-level key model or algorithms are selected.
 
 ## Remaining decisions before coding
 
-1. **Crypto profile and format:** bounded Argon2id settings/salts; recovery entropy,
-   encoding/checksum and HKDF context; nonce/AAD and versioned slot/payload encoding;
+1. **Crypto specification:** exact envelope/slot/AAD/context bytes, JSON schema,
+   Base32 alphabet/checksum/normalization, parser sublimits, randomness handling,
    compatible crate versions/features, security review and replacement/rotation policy.
+   The structure, 64 MiB/3-pass/4-lane starting profile, recovery entropy/representation
+   and 16 MiB file limit are approved; timings remain unmeasured.
 2. **Committed writes (ADR-0003):** save acknowledgement, coherent slot/content
    updates, restart/unknown outcomes, writer conflicts and fault-test plan.
 3. **Sessions (ADR-0005):** timeouts/OS lock events, unsaved drafts, in-flight commits,

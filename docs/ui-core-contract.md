@@ -54,7 +54,10 @@ The Rust core performs derivation/unwrapping and retains the data key. Slot/deri
 metadata is not a reason to send key material or bulk decrypted data to React.
 ADR-0002 selects RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 for those
 operations. They execute in Rust, not in React or generic UI-exposed crypto commands.
-Encoding, re-display, explicit replacement/rotation and interrupted-change details
+The selected recovery representation is 52 grouped Base32 characters plus a checksum
+for 256 random bits; the Rust core validates/decodes it and supplies HKDF only the
+secret bytes. Preserve master-password UTF-8 bytes without silent normalization.
+Exact encoding/checksum, re-display, explicit replacement/rotation and interrupted-change details
 remain in ADR-0002/0004. Reuse is confirmed, not an open policy choice.
 Clipboard commands are not introduced by this contract; copying needs a separate
 policy for exposure and platform clearing limits if added.

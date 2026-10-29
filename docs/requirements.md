@@ -13,9 +13,9 @@ All requirements apply to the initial version unless explicitly deferred.
   the master-password-derived wrapping key or the independent recovery wrapping key.
   Either route is sufficient; this is not a requirement to provide both secrets.
 - **Recovery secret:** an independently app-generated, reusable offline access
-  secret intended for handwritten storage. HKDF-SHA256 derives its wrapping key;
-  entropy, encoding, derivation context and explicit
-  replacement mechanics remain open; ordinary recovery does not consume it.
+  256-bit secret intended for handwritten storage as 52 Base32 characters plus a
+  transcription checksum. HKDF-SHA256 derives its wrapping key. Exact encoding/
+  context bytes and replacement mechanics remain open; ordinary recovery does not consume it.
 - **Draft:** a generated password or edit before a successful commit.
 - **Committed save:** a complete vault update meeting the persistence contract.
   A success indication may appear only after this boundary.
@@ -91,7 +91,10 @@ recovery, and protection against a fully compromised OS are outside initial guar
 Rust, Tauri, React/TypeScript and macOS/Windows/Linux target families are selected. Resolve the
 remaining [ADR decisions](adr/README.md) before implementation, including UI/core
 communication, exact support matrix, security/recovery construction, and writes.
-Argon2id, HKDF-SHA256, XChaCha20-Poly1305 and RustCrypto are selected. Establish
-bounded profiles, entropy/encoding, authenticated file layout, compatible library
-versions, performance targets and vault size. Format and persistence mechanism
-remain undecided; selecting algorithms does not authorize implementation.
+Argon2id, HKDF-SHA256, XChaCha20-Poly1305 and RustCrypto are selected. ADR-0002
+records the approved starting profile (64 MiB, 3 passes, 4 lanes), binary envelope
+with an encrypted JSON snapshot, authentication boundaries and 16 MiB whole-file
+limit. ADR-0004 records the generated 256-bit recovery secret and representation.
+Specify exact bytes/schema/checksum/parser sublimits and review compatible library
+versions before coding. Derivation timing targets are unmeasured; design approval
+does not authorize implementation.
