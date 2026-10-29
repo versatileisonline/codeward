@@ -4,8 +4,10 @@ Status: logical design with owner-selected Rust core, Tauri host, React/TypeScri
 UI, installed desktop delivery, and macOS/Windows/Linux targets. The IPC topology
 is selected, along with Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 from RustCrypto.
 The owner selected a binary envelope with one encrypted JSON snapshot and a starting
-parameter profile in ADR-0002. Exact byte layout, protocol schema and package
-versions remain open. There is no KeePassXC format-compatibility commitment.
+parameter profile in ADR-0002. The [handoff](milestone-1-handoff.md) now supplies
+accepted contracts, including the [byte specification](vault-format-v1.md).
+The owner approved implementation entry on 2026-10-29; runtime evidence is pending. There is no KeePassXC
+format-compatibility commitment.
 
 ## System context
 
@@ -80,8 +82,8 @@ Command/data limits, secret exposure, notification payloads, stale-reply rejecti
 and permission requirements are defined in [ui-core-contract.md](ui-core-contract.md).
 
 Platform-specific filesystem, session-event, and packaging adapters need validation.
-Keep platform assumptions outside the shared vault behavior and define a bounded
-Linux distribution/desktop matrix before claiming support.
+Keep platform assumptions outside shared vault behavior; the proposed bounded
+matrix and storage experiment plan are in [platform-validation.md](platform-validation.md).
 
 ## Vault key and unlock slots
 
@@ -187,6 +189,9 @@ an interrupted operation as saved.
 5. Drafts have no durability promise; displaying/copying does not commit them.
 6. Conflicting writers must not silently overwrite each other.
 
-Operations, durability, temporary files, writer exclusion, and power-loss
-assumptions remain in [ADR-0003](adr/0003-committed-writes.md). Neither a recovery
-secret nor a save protocol reconstructs the only missing vault file.
+The owner-approved logical protocol in [ADR-0003](adr/0003-committed-writes.md)
+uses whole-envelope staging/publication, explicit acknowledgement barriers, stable
+writer exclusion and reconciliation of unknown outcomes. Platform adapters remain
+unverified; no blanket OS-crash/power-loss guarantee is made. The accepted lock/draft
+defaults are in ADR-0005. Neither paper recovery nor this protocol reconstructs
+the only missing vault file.

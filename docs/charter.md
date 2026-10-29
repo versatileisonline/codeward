@@ -1,9 +1,11 @@
 # Project charter
 
-Status: Milestone 0 foundation with owner-confirmed Milestone 1 scope updates.
-Updated: 2026-10-28. Rust/Tauri/React and RustCrypto primitives are selected;
-the starting profile and format structure are also selected. Exact support,
-format bytes and persistence details remain open.
+Status: Milestone 1 design accepted; Milestone 2 entry authorized.
+Updated: 2026-10-29. Rust/Tauri/React, RustCrypto primitives, the starting profile
+and format structure are selected. The logical save protocol is approved; concrete
+remaining proposals are ready in the [Milestone 1 handoff](milestone-1-handoff.md).
+The owner accepted that handoff on 2026-10-29 and authorized core implementation.
+No runtime support/security claim is verified.
 
 ## Purpose
 
@@ -19,7 +21,8 @@ forgetting the master password. Work in small milestones with explicit review ga
 - Rust core separated from a React/TypeScript interface hosted by Tauri and the local
   vault file. Users launch an
   application window without opening a browser tab or starting a localhost server.
-  Supported OS versions/architectures, packaging, and Linux distributions remain open.
+  A bounded initial matrix and packaging plan are proposed in
+  [platform-validation.md](platform-validation.md); runtime evidence is pending.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
 - Generate passwords on demand and explicitly save them with credentials.
 - Use a master password for normal access and a separate handwritten recovery

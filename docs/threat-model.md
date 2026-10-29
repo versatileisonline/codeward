@@ -67,6 +67,22 @@ For each declared platform, review file permissions, local-storage durability,
 session events, memory/dump limits, and installer/runtime dependencies. No platform
 security behavior is assumed identical solely because the core is shared Rust.
 
+The [Milestone 1 handoff](milestone-1-handoff.md) now collects the concrete
+contracts accepted by the owner on 2026-10-29. The approved logical save protocol stages a whole
+encrypted envelope, coordinates Codeward writers and distinguishes publication,
+persistence and acknowledgement. Arbitrary external writers can bypass advisory
+coordination; authentic rollback after trusted state is lost remains unresolved.
+There is no blanket power-loss claim.
+
+The proposed [format](vault-format-v1.md) bounds/encodes every field and the paper
+checksum; checksum success is not authentication. ADR-0005's accepted five-minute lock,
+volatile-draft discard and timed reveal defaults still require runtime evidence. They do
+not establish complete erasure, endpoint protection or draft durability. ADR-0004
+proposes explicit confirmed paper-slot replacement and defers in-place data-key
+rotation, retaining T-14's compromise risk rather than claiming a repair feature.
+The [platform plan](platform-validation.md) separates design contracts from native
+adapter, OS/storage-crash and packaged-runtime evidence still to be obtained.
+
 The [UI/core contract](ui-core-contract.md) also requires bundled assets, restrictive
 content loading, no remote runtime origins, and no broad filesystem/shell access
 from React. Custom-command permissions must be deliberately configured and verified;

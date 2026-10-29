@@ -46,7 +46,8 @@ be refined before implementation without widening privileges silently.
 | `get_operation_status` | Request/operation reference | Proven commit outcome/revision if available, otherwise an explicit unresolved outcome; no credential payload |
 
 Closing/canceling releases the relevant volatile operation context and denies new
-access. Dirty-draft and in-flight-write policies must be finalized in ADR-0005.
+access. ADR-0005 defines the accepted dirty-draft and in-flight-write policies;
+acceptance is not implemented behavior.
 The reusable paper secret opens the independent recovery slot for the same vault
 key as the master-password slot. Routine recovery commits a new master-password
 slot and keeps the paper secret valid; it never returns the old master password.
@@ -57,10 +58,11 @@ operations. They execute in Rust, not in React or generic UI-exposed crypto comm
 The selected recovery representation is 52 grouped Base32 characters plus a checksum
 for 256 random bits; the Rust core validates/decodes it and supplies HKDF only the
 secret bytes. Preserve master-password UTF-8 bytes without silent normalization.
-Exact encoding/checksum, re-display, explicit replacement/rotation and interrupted-change details
-remain in ADR-0002/0004. Reuse is confirmed, not an open policy choice.
-Clipboard commands are not introduced by this contract; copying needs a separate
-policy for exposure and platform clearing limits if added.
+The [format proposal](vault-format-v1.md) supplies exact encoding/checksum/context
+bytes for review. ADR-0004 proposes no later secret redisplay, explicit confirmed
+slot replacement and deferral of in-place data-key rotation. Reuse remains confirmed.
+ADR-0005 recommends omitting app clipboard commands from the initial prototype;
+adding them later needs a separate exposure/clearing policy and command review.
 
 ## Authorization and payload rules
 
@@ -77,8 +79,9 @@ policy for exposure and platform clearing limits if added.
    bounds, and revisions in Rust. TypeScript types and hidden buttons are not access control.
 4. Require expected revisions on existing-data mutations to prevent stale writes.
    Carry request IDs for outcome correlation; do not log secret-bearing arguments.
-   Durable operation lookup/deduplication and restart behavior remain an ADR-0003
-   decision. A timeout or lost reply does not prove that nothing committed.
+   ADR-0003 selects in-memory result tracking without a durable operation ledger;
+   restart reloads the actual vault and may leave historical request status unknown.
+   A timeout or lost reply does not prove that nothing committed.
 5. Return explicitly shaped data. Summaries, usernames, queries and notes remain
    private even when they are not passwords. Return no credential data while locked.
 
@@ -145,6 +148,12 @@ The installed app opens its own window and uses its bundled UI. A development
 server, if later used, is development tooling; users do not start one. Internal
 WebView/IPC protocol URLs do not authorize a remote service. Verify actual packaged
 offline behavior and platform prerequisites before claiming support.
+
+ADR-0001 proposes a single allowed main window, explicit custom-command
+permissions, bounded paginated summaries and decimal-string revisions/generations
+at the TypeScript boundary. The [platform plan](platform-validation.md) records
+the test matrix. The owner accepted these contracts in the handoff; validate them before exposing
+commands. Authorization and duplicate/bounds checks remain in Rust.
 
 ## Required evidence before relying on the boundary
 

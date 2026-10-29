@@ -1,8 +1,8 @@
 # ADR-0002: Vault security and format
 
-Status: Proposed — key model, RustCrypto algorithms, format structure and starting profile selected; byte specification/review open.
-Owner decision: 2026-10-28, Codeward design conversation. Review PR: pending.
-Target: Milestone 1. No application implementation is authorized.
+Status: Accepted — normative format/profile and evidence plan; implementation unverified.
+Owner decisions: 2026-10-28; concrete handoff approved 2026-10-29.
+Acceptance PR: pending publication. Target: Milestone 1 design gate.
 
 ## Confirmed key model
 
@@ -17,7 +17,8 @@ Target: Milestone 1. No application implementation is authorized.
   protected key slots and necessary public format/derivation metadata in the vault;
   never plaintext unlock secrets or an unwrapped vault key.
 - Authenticate slot/payload data and bind metadata to the intended vault and slot
-  roles under the selected construction below. Exact byte encodings remain open.
+  roles under the selected construction below. The format document linked below
+  defines the accepted exact byte encodings.
 
 This is a key-wrapping design, consistent with established
 [data-key and key-encryption-key guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#encrypting-stored-keys).
@@ -64,7 +65,8 @@ passwords as entered UTF-8 bytes without trimming, case changes or Unicode norma
 
 HKDF input is the decoded random recovery-secret bytes, excluding display separators
 and checksum. Its unambiguously encoded context identifies Codeward, the format
-version, vault ID and recovery-wrapping purpose. Exact context bytes remain open.
+version, vault ID and recovery-wrapping purpose. The normative format document
+defines the exact context bytes.
 HKDF does not harden a weak user-chosen password or create additional entropy;
 see [RFC 5869](https://www.rfc-editor.org/rfc/rfc5869.html#section-3).
 
@@ -136,15 +138,26 @@ copy, changing slots alone cannot protect newer contents encrypted with that sam
 key. Compromise handling must consider both replacing exposed unlock secrets and
 rotating the vault key; that workflow still requires design and review.
 
-## Still open before acceptance
+## Exact specification and remaining evidence
 
-- Exact envelope/slot/AAD/HKDF context bytes and payload schema, checksum choice,
-  Base32 alphabet/padding/normalization rules and parser sublimits (see ADR-0004).
-- Randomness provider/error handling, compatible package versions/features and
-  supporting memory-handling helpers; these are not automatically selected here.
-- Benchmark the approved starting profile and review offline guessing through both
-  paths, migration, residual rollback risk and key-rotation policy.
-- Dependency/security review and negative tests coordinated with ADR-0003/0004.
+The [version 1 format](../vault-format-v1.md) specifies offsets,
+identifiers, endianness, slot/payload AAD, HKDF context, schema, parser sublimits,
+Base32/checksum and candidate component release lines. The owner accepted those
+details through the concrete handoff on 2026-10-29. That document is the normative
+byte specification; the conceptual
+descriptions above do not authorize alternate encodings.
+
+Recommend OS randomness through `getrandom` and owned-buffer cleanup through
+`zeroize`, subject to exact release/feature/advisory review before dependency setup.
+Fail closed on randomness errors; do not silently use library parameter defaults.
+Follow the format's pinning and negative-test plan. No package is installed here.
+
+Keep the approved KDF costs provisional pending measurements during authorized
+implementation. Review vectors and exact dependency compatibility before relying
+on the implementation. Version 1 supports no automatic migrations or data-key
+rotation; unsupported formats are rejected unchanged. ADR-0004 records the proposed
+explicit replacement boundary and residual compromise risk. Future migration/key
+rotation requires its own reviewed transaction design; changing slots is not rotation.
 
 The paper secret cannot recreate missing or corrupted vault data. No file backup,
 cloud recovery, KeePassXC compatibility, custom cryptography or runtime guarantee
@@ -152,8 +165,8 @@ is introduced by selecting this model.
 
 ## Acceptance gate
 
-Keep this ADR Proposed until the remaining byte/component details, negative-test
-plan and residual-risk assessment against FR-01/02/07/09 and NFR-02/05 receive owner
-review. The owner has approved the structure, authentication boundaries, starting
-profile and limits above; implementation, measured tuning and security claims are
-not complete. This decision does not authorize coding or dependency setup.
+The owner accepted the concrete format/component direction, negative-test plan
+and residual-risk assessment against FR-01/02/07/09 and NFR-02/05 through the
+handoff on 2026-10-29. Exact dependency pinning/advisory review is the first
+authorized setup step, before any package is used. Design acceptance does not
+claim measured tuning, independent security review or implementation evidence.

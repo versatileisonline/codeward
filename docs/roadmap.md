@@ -1,19 +1,21 @@
 # Milestone roadmap
 
 Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
-Milestone 1 is in progress. The owner selected a Rust core, installed desktop
+Milestone 1 design review is complete; Milestone 2 entry is authorized. The owner selected a Rust core, installed desktop
 delivery, Tauri with React/TypeScript, UI/core/local-vault separation, and
 macOS/Windows/Linux targets, recorded in [ADR-0001](adr/0001-implementation-platform.md).
-Detailed platform support and security/persistence mechanisms remain open;
-implementation is explicitly outside this update. Later milestones require owner
+The owner accepted the concrete [Milestone 1 handoff](milestone-1-handoff.md) on
+2026-10-29 and authorized starting the Rust core. Runtime behavior remains unverified. Later milestones require owner
 review of the previous gate and retain the [charter](charter.md)'s scope.
 
 The owner has also confirmed one random vault data key with independent master-password
 and recovery slots, plus a reusable paper secret. ADR-0002/0004 record this model;
 RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 are selected. The owner
 approved the binary envelope/encrypted JSON structure, starting profile, recovery
-representation, authentication boundaries and 16 MiB whole-file cap. Exact bytes,
-compatible package releases, measurements and replacement/rotation details remain open.
+representation, authentication boundaries and 16 MiB whole-file cap. The owner
+approved the logical crash-safe save protocol on 2026-10-29. The exact format,
+session, lifecycle and platform defaults were accepted in the combined review.
+Exact package pinning/advisory review precedes use; measurements remain future work.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
@@ -28,30 +30,19 @@ Recovery metadata belongs in the Milestone 1 design and Milestone 2 coherent
 persistence contract, even though its user workflow arrives in Milestone 3. Do not
 design a vault requiring an incompatible recovery retrofit.
 
-## Next Milestone 1 steps
+## Milestone 1 acceptance and Milestone 2 entry
 
-1. Complete ADR-0001 around the selected Rust/Tauri/React stack: finalize command
-   permissions and data exposure, and define OS versions/architectures,
-   Linux distribution/desktop targets, installer/runtime prerequisites, and validation.
-   Keep the Rust core and installed/offline experience as confirmed inputs.
-   The [UI/core contract](ui-core-contract.md) is the design baseline for this work.
-2. Complete ADR-0002 and ADR-0004 around the approved structure and starting profile:
-   specify envelope/slot/AAD/HKDF context bytes, JSON schema, Base32/checksum and
-   normalization rules, parser sublimits and randomness error handling. Review
-   compatible versions/features, evidence plan, enrollment details, replacement
-   and compromise/key rotation. Benchmark the approved profile during authorized code work.
-   Review remaining choices before acceptance.
-3. Develop ADR-0003: define the commit/acknowledgement boundary, coherent metadata
-   updates, error handling, writer conflicts, and per-platform interruption tests.
-4. Develop ADR-0005: resolve lock events, draft handling, session/secret lifetimes,
-   save feedback, and accessible user interactions across supported targets.
-5. Review the combined design, threat model, and evidence plan with the owner.
-   Advance to Milestone 2 implementation after this gate is accepted.
+The owner explicitly approved the complete handoff on 2026-10-29 and authorized
+Milestone 2. Acceptance PR: pending publication. This records owner approval in
+chat; it does not claim a GitHub approval review or authorize merging the PR.
 
-For each step, discuss the contract, boundary, failure cases, and validation with
-the owner. A design recommendation is not an accepted choice; diagrams describe
-intended behavior, not a working app. Linux is in scope but requires its own
-support matrix and verification; it is not automatically covered by a shared codebase.
+Begin with a framework-independent Rust core, bounded envelope parsing and exact
+AAD bytes using synthetic fixtures. Review/pin dependencies before using them;
+add schema, cryptographic and persistence behavior in focused tested slices. Keep
+implementation on a separate branch based on the approved documentation while
+the Milestone 1 PR remains open. The gate accepts the contracts and evidence plan,
+not runtime results. Native adapters remain blocked from real-vault use until
+platform-specific evidence exists.
 
 ## When implementation becomes necessary
 
@@ -68,32 +59,30 @@ save, session, and platform decisions pass the Milestone 1 review gate and the o
 authorizes implementation. A narrowly authorized feasibility spike does not itself
 complete that gate or authorize the product build.
 
-The current request does not authorize coding. The next design discussions cover
-the remaining security specification, committed-write protocol, lock/draft rules and
-platform matrix. Announce readiness for Milestone 2 when those decisions are reviewed;
-do not begin coding merely because the high-level key model or algorithms are selected.
+The owner has now supplied implementation authorization through the concrete
+handoff review. Do not request the same policy approval again or require completed
+measurements before beginning the implementation that will produce them.
 
-## Remaining decisions before coding
+## Review inputs and implementation prerequisites
 
-1. **Crypto specification:** exact envelope/slot/AAD/context bytes, JSON schema,
-   Base32 alphabet/checksum/normalization, parser sublimits, randomness handling,
-   compatible crate versions/features, security review and replacement/rotation policy.
-   The structure, 64 MiB/3-pass/4-lane starting profile, recovery entropy/representation
-   and 16 MiB file limit are approved; timings remain unmeasured.
-2. **Committed writes (ADR-0003):** save acknowledgement, coherent slot/content
-   updates, restart/unknown outcomes, writer conflicts and fault-test plan.
-3. **Sessions (ADR-0005):** timeouts/OS lock events, unsaved drafts, in-flight commits,
-   UI redaction and secret lifetimes.
-4. **Platform baseline and review (ADR-0001):** supported versions/architectures,
-   Linux distribution/desktop targets, packaging/runtime prerequisites and validation
-   plan; owner review of the combined Milestone 1 design before Milestone 2.
+- [Vault format proposal](vault-format-v1.md): exact bytes, AAD/HKDF context,
+  JSON schema/limits, Base32/checksum, randomness/error rules and component review.
+- [ADR-0003](adr/0003-committed-writes.md): approved logical protocol, unknown
+  outcomes, writer exclusion, coherent slots and interruption matrix.
+- [ADR-0005](adr/0005-session-and-drafts.md): concrete lock/draft/display defaults
+  and coordination with commits.
+- [Platform plan](platform-validation.md): proposed bounded matrix, native adapter
+  candidates, unsupported storage and required evidence. An unproven adapter does
+  not gain real-vault support from acceptance of this evidence plan.
+- [ADR-0004](adr/0004-offline-recovery.md): explicit replacement proposal and a
+  clear deferral of in-place data-key rotation without a compromise-repair claim.
 
 The design gate approves explicit policies, provisional bounded profiles and the
 evidence plan; it must not pretend that measurements already exist. Argon2id timing,
 library integration and packaged cross-platform checks require code and will be
 performed during authorized implementation, or a separately authorized minimal
-feasibility spike if needed to resolve a design question earlier. No coding starts
-under the current request, and no date is promised before the owner accepts that gate.
+feasibility spike if needed to resolve a design question earlier. Coding is now authorized under the accepted handoff; no delivery date or runtime
+guarantee is inferred from that authorization.
 
 ## Future options, separately scoped
 

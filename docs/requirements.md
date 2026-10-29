@@ -15,7 +15,7 @@ All requirements apply to the initial version unless explicitly deferred.
 - **Recovery secret:** an independently app-generated, reusable offline access
   256-bit secret intended for handwritten storage as 52 Base32 characters plus a
   transcription checksum. HKDF-SHA256 derives its wrapping key. Exact encoding/
-  context bytes and replacement mechanics remain open; ordinary recovery does not consume it.
+  context and replacement contracts were accepted on 2026-10-29; ordinary recovery does not consume it.
 - **Draft:** a generated password or edit before a successful commit.
 - **Committed save:** a complete vault update meeting the persistence contract.
   A success indication may appear only after this boundary.
@@ -32,7 +32,7 @@ performed: the repository still contains documentation only.
 | FR-01 | Create a local encrypted vault with one random data key and separate master-password and recovery slots protecting copies of that key. It is ready only after the complete initial state commits. | Create, close, reopen, and unlock offline through each independent route; inspect for no plaintext secrets/unwrapped keys. Interrupt creation; no partial file is presented as ready. |
 | FR-02 | Open, unlock, lock, and close with clear session state. Incorrect credentials must not expose data or modify the file. | Exercise lifecycle and failed unlocks; compare file before/after failure. |
 | FR-03 | Create, view, edit, search, and explicitly delete credentials with title/service, username, password, and optional URL/notes. | Commit mutations, reopen, verify records; cancel deletion and verify no change. |
-| FR-04 | Generate passwords locally on demand using security-appropriate randomness. Controls/policy are decided later. Generation alone does not save a record. | Generate offline; distinguish draft from saved; save and reopen a selected result. |
+| FR-04 | Generate passwords locally on demand using security-appropriate randomness. ADR-0005 defines accepted controls. Generation alone does not save a record. | Generate offline; distinguish draft from saved; save and reopen a selected result. |
 | FR-05 | Show draft, saving, saved, and failed/uncertain states accurately. Never report failed or uncertain commits as saved. | Inject write failure and interrupt acknowledgement; verify UI reports only what is known. |
 | FR-06 | Enroll an independent app-generated reusable paper secret with core-validated transcription confirmation and physical-separation guidance. Never silently persist its plaintext beside the vault. | Confirm a handwritten copy, reject mismatched transcription, inspect artifacts and diagnostics. |
 | FR-07 | Recover offline by opening the recovery slot with a valid paper secret and intact vault; commit a replacement master-password slot under the same persistence contract. Routine recovery preserves the paper secret. | Recover, replace, reopen with new master password; old master password fails on the updated vault. Repeat recovery with the same paper secret. Invalid recovery leaves the file unchanged. |
@@ -41,7 +41,7 @@ performed: the repository still contains documentation only.
 | FR-10 | Explain that missing/deleted/corrupted files require a usable separate copy; the paper secret cannot recreate data. | Review recovery/file-error messages; no initial backup-feature promise. |
 
 FR-07 selects reuse without automatic consumption/replacement after routine recovery.
-ADR-0004 must still define explicit replacement, compromise handling and interrupted
+ADR-0004 defines accepted explicit replacement, compromise limits and interrupted
 changes. Replacing a master password cannot revoke access to old vault copies still
 accessible with old credentials.
 
@@ -61,7 +61,7 @@ for a disclosed vault key must address newer contents as well as old copies.
 | NFR-05 | No plaintext credentials, master passwords, or recovery secrets in logs, routine diagnostics, or persistent temp artifacts. Minimize secret lifetime; release session secrets on lock as the chosen stack permits. | Inspect logs/files; review lifetime, crash reporting, and platform limits; document residual exposure. |
 | NFR-06 | Target installed macOS, Windows, and Linux desktop apps using Tauri, a React/TypeScript UI, and a Rust core. Bundle UI assets locally. Users need neither a browser tab nor a localhost server for runtime workflows. Define OS versions, architectures, Linux distributions and packaging before implementation. | Record a bounded support matrix and installation/runtime prerequisites; install, launch, and exercise offline workflows on each declared target before prototype acceptance. |
 | NFR-07 | Lock/save/recovery/error states are understandable and usable by keyboard and assistive technology. Messages reveal no secrets. | Review future UI with keyboard/VoiceOver and representative errors. |
-| NFR-08 | Prevent silent overwrites by another writer: enforce one active writer or detect conflicting revisions; mechanism undecided. | Attempt concurrent updates; verify refusal/conflict handling preserves committed data. |
+| NFR-08 | Prevent silent overwrites by cooperating Codeward writers. ADR-0003 selects writer exclusion plus stale-revision/base-snapshot checks; validate per platform. | Attempt concurrent updates; verify refusal/conflict handling preserves committed data; document limits for arbitrary external writers. |
 | NFR-09 | Make the Rust core authoritative for session state, vault access, recovery and commits. UI requests use a limited validated interface; the UI has no direct vault-file access or session-key access. Return only data needed for the current interaction. | Reject locked-state and malformed UI requests; review command permissions and data exposure. Verify plaintext shown for authorized interaction is cleared/redacted on lock, subject to documented platform limits. |
 
 NFR-09 follows the [UI/core contract](ui-core-contract.md): a scoped Tauri command
@@ -95,6 +95,9 @@ Argon2id, HKDF-SHA256, XChaCha20-Poly1305 and RustCrypto are selected. ADR-0002
 records the approved starting profile (64 MiB, 3 passes, 4 lanes), binary envelope
 with an encrypted JSON snapshot, authentication boundaries and 16 MiB whole-file
 limit. ADR-0004 records the generated 256-bit recovery secret and representation.
-Specify exact bytes/schema/checksum/parser sublimits and review compatible library
-versions before coding. Derivation timing targets are unmeasured; design approval
-does not authorize implementation.
+The [format proposal](vault-format-v1.md) specifies exact bytes/schema/checksum/
+parser sublimits accepted through the owner-reviewed handoff. The [handoff](milestone-1-handoff.md) and
+[platform plan](platform-validation.md) collect the accepted design and evidence plan.
+Review/pin exact component releases and advisories before use. Derivation timing
+targets and all runtime guarantees remain unmeasured; design acceptance and
+implementation authorization must not be mistaken for completed validation.
