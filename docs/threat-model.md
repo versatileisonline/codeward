@@ -5,6 +5,10 @@ Scope: one person per local vault; installed macOS/Windows/Linux desktop targets
 Rust core, separate UI responsibility, handwritten recovery secret. Private beta
 audience size does not change the per-vault threat model.
 
+Bounded parser/crypto/paper-code evidence is recorded in
+[Milestone 2 progress](milestone-2-progress.md). It does not establish integrated
+unlock, persistence, UI or platform protection against these threats.
+
 ## Assets and boundaries
 
 | Asset | Security concern |

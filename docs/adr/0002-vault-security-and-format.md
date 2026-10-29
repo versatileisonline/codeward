@@ -1,6 +1,6 @@
 # ADR-0002: Vault security and format
 
-Status: Accepted — normative format/profile and evidence plan; implementation unverified.
+Status: Accepted — normative format/profile and evidence plan; integrated vault behavior unverified.
 Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
@@ -34,11 +34,11 @@ and [ADR-0004](0004-offline-recovery.md) for the reusable paper-secret lifecycle
 | Vault contents and both key slots | XChaCha20-Poly1305 authenticated encryption | [`chacha20poly1305`](https://docs.rs/chacha20poly1305/latest/chacha20poly1305/) using its XChaCha variant |
 
 The format and parameter profile below were approved during Milestone 1. Exact
-byte encodings are defined by the normative format document. Package patches and
-features still need review before use; no crypto dependencies are installed here.
-Review compatible releases,
-advisories, audit scope and target support before dependency setup; these decisions
-do not establish audit coverage or runtime evidence for Codeward.
+byte encodings are defined by the normative format document.
+[Dependency review](../dependency-review.md) now records exact crypto patches,
+features and advisories used by the tested primitives. JSON dependencies and
+integrated/native behavior remain future work; these decisions do not establish
+independent audit coverage or complete runtime guarantees for Codeward.
 
 ## Selected starting parameter profile
 
@@ -56,8 +56,10 @@ do not establish audit coverage or runtime evidence for Codeward.
 The Argon2id settings match [RFC 9106's second recommended profile](https://www.rfc-editor.org/rfc/rfc9106.html#section-4),
 chosen as a lower-memory cross-platform starting point instead of its 2 GiB first
 recommendation. The target is roughly 0.5–1 second for derivation on the slowest
-supported computer, not a measured result. Benchmark during authorized implementation
-before finalizing the profile; never silently weaken it on a slower machine.
+supported computer. An initial single-host observation is recorded in
+[progress evidence](../milestone-2-progress.md#initial-master-derivation-measurement);
+the full target benchmark remains outstanding. Never silently weaken the profile
+on a slower machine.
 
 Initially accept only this explicitly supported Argon2id profile. Persist its
 algorithm/version, salt and cost values and validate them before allocation/KDF
@@ -90,8 +92,9 @@ introducing per-record encryption or history management.
 | Payload | Credentials, titles, URLs, notes, timestamps and internal IDs | One authenticated ciphertext under the data key |
 
 The complete public header includes both encrypted slot records and payload nonce/
-length metadata. Exact field order, widths, endianness, identifiers, slot/AAD byte
-encoding and JSON schema are still specification work, not implied implementation.
+length metadata. The accepted normative format defines exact field order, widths,
+endianness, identifiers, authentication bytes and JSON schema. Implemented scope
+and remaining integration work are recorded separately in the progress evidence.
 No attachments, compression, per-record encryption or append-only history in version 1.
 Each content update encrypts a complete new snapshot. File size, format, public
 crypto parameters and stable vault ID remain visible; credential metadata is encrypted.
@@ -118,8 +121,9 @@ file and does not promise partial salvage.
 ## Selected input limits and failure behavior
 
 Limit the entire version 1 vault file to 16 MiB, checked before large allocations.
-Also bound JSON nesting, record counts and field lengths; exact subordinate limits
-remain to be specified. Reject unsupported versions/profiles, invalid lengths,
+Also bound JSON nesting, record counts and field lengths under the normative
+schema; strict credential decoding remains unimplemented. Reject unsupported
+versions/profiles, invalid lengths,
 duplicate fields, truncation and authentication failures without modifying the input.
 
 An authenticated revision can assist conflict identification. It cannot detect
@@ -147,10 +151,10 @@ Base32/checksum and candidate component release lines. Those details were accept
 through the concrete handoff on 2026-10-29. That document is the normative byte
 specification; the conceptual descriptions above do not authorize alternate encodings.
 
-Recommend OS randomness through `getrandom` and owned-buffer cleanup through
-`zeroize`, subject to exact release/feature/advisory review before dependency setup.
+Use reviewed OS randomness through `getrandom` and owned-buffer cleanup through
+`zeroize` as recorded in the dependency review.
 Fail closed on randomness errors; do not silently use library parameter defaults.
-Follow the format's pinning and negative-test plan. No package is installed here.
+Follow the format's pinning and negative-test plan; extend review before new use.
 
 Keep the approved KDF costs provisional pending measurements during authorized
 implementation. Review vectors and exact dependency compatibility before relying

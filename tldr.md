@@ -17,6 +17,7 @@ Root:
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
+- [dependency-review.md](docs/dependency-review.md): Exact crypto package pins, features and advisory review.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 
@@ -39,5 +40,10 @@ Root:
 - [README.md](crates/codeward-core/README.md): Core boundary and verification commands.
 - [src/envelope.rs](crates/codeward-core/src/envelope.rs): Structural parsing and public authentication metadata.
 - [src/encoding.rs](crates/codeward-core/src/encoding.rs): In-memory envelope encoding from public metadata and encrypted bytes.
+- [src/crypto.rs](crates/codeward-core/src/crypto.rs): Bounded derivation/encryption primitives and secret ownership.
+- [src/recovery.rs](crates/codeward-core/src/recovery.rs): Paper-code formatting, validation and transcription confirmation.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
 - [tests/encoding.rs](crates/codeward-core/tests/encoding.rs): Exact encoding fixture, bounds and round-trip tests.
+- [src/crypto/tests.rs](crates/codeward-core/src/crypto/tests.rs): Primitive vectors and failure/bounds tests.
+- [src/recovery/tests.rs](crates/codeward-core/src/recovery/tests.rs): Paper-code fixtures and transcription-error tests.
+- [examples/measure_master.rs](crates/codeward-core/examples/measure_master.rs): Synthetic local derivation timing.

@@ -22,10 +22,10 @@ All requirements apply to the initial version unless explicitly deferred.
 - **Intact vault:** complete, authentic, supported vault data with usable access
   and recovery metadata. The recovery secret alone is insufficient.
 
-The acceptance evidence below remains required. Milestone 2 has started with
-dependency-free envelope parsing/AAD construction; its limited test evidence is
+The acceptance evidence below remains required. Milestone 2 has envelope handling,
+crypto primitives and paper-code validation; its bounded test evidence is
 recorded in [milestone-2-progress.md](milestone-2-progress.md). No complete vault,
-unlock, credential or persistence requirement is claimed satisfied by that slice.
+unlock, credential or persistence requirement is claimed satisfied by these components.
 
 ## Functional requirements
 
@@ -101,5 +101,7 @@ The [format proposal](vault-format-v1.md) specifies exact bytes/schema/checksum/
 parser sublimits accepted through the reviewed handoff. The [handoff](milestone-1-handoff.md) and
 [platform plan](platform-validation.md) collect the accepted design and evidence plan.
 Review/pin exact component releases and advisories before use. Derivation timing
-targets and all runtime guarantees remain unmeasured; design acceptance and
-implementation authorization must not be mistaken for completed validation.
+targets across the full platform matrix and integrated runtime guarantees remain
+unverified; an initial local derivation measurement is recorded in the progress
+evidence. Design acceptance and implementation authorization must not be mistaken
+for completed validation.

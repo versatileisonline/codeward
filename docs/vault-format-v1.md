@@ -160,4 +160,7 @@ fixtures with independently computed expected bytes. Negative tests mutate every
 header/slot/payload field, splice slots between vaults, truncate at boundaries,
 exercise malformed/oversized JSON and verify neither unlock route exposes data.
 The checksum needs fixed vectors for unused bits, grouping, transposition, wrong
-characters and normalization. No vectors or runtime results exist in this handoff.
+characters and normalization. The original handoff contained no runtime evidence;
+current primitive/paper-code vectors and limits are recorded in
+[Milestone 2 progress](milestone-2-progress.md). Full encrypted-envelope fixtures,
+schema gating and integrated unlock tests remain outstanding.
