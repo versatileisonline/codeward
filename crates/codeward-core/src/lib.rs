@@ -8,5 +8,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod crypto;
 pub mod encoding;
 pub mod envelope;
