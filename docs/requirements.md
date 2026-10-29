@@ -13,7 +13,8 @@ All requirements apply to the initial version unless explicitly deferred.
   the master-password-derived wrapping key or the independent recovery wrapping key.
   Either route is sufficient; this is not a requirement to provide both secrets.
 - **Recovery secret:** an independently app-generated, reusable offline access
-  secret intended for handwritten storage. Encoding, exact derivation and explicit
+  secret intended for handwritten storage. HKDF-SHA256 derives its wrapping key;
+  entropy, encoding, derivation context and explicit
   replacement mechanics remain open; ordinary recovery does not consume it.
 - **Draft:** a generated password or edit before a successful commit.
 - **Committed save:** a complete vault update meeting the persistence contract.
@@ -54,7 +55,7 @@ for a disclosed vault key must address newer contents as well as old copies.
 | ID | Requirement | Acceptance evidence |
 | --- | --- | --- |
 | NFR-01 | All initial runtime workflows work offline without required accounts, telemetry, analytics, or remote recovery. | Run creation, CRUD, generation, lock, and recovery with network denied; inspect application-initiated network activity. |
-| NFR-02 | Protect stored credential confidentiality/integrity; account for recovery metadata, temporary files, and exposed metadata. | Review the later security/format ADR; inspect artifacts; tampering fails safely. No algorithm is chosen here. |
+| NFR-02 | Protect stored contents and both key slots with RustCrypto XChaCha20-Poly1305. Derive master-password and recovery wrapping keys with Argon2id and HKDF-SHA256 respectively. Account for authenticated metadata, temporary files and exposed metadata. | Review ADR-0002's profile/format and compatible releases; verify test vectors, nonce discipline, parameter bounds and tamper failures. No runtime evidence exists yet. |
 | NFR-03 | Acknowledged commits survive app termination. An interrupted update yields the complete previous or new commit, never a partial mixture or destruction of the last good state. | Terminate before/during/after the defined commit boundary; reopen and compare the entire vault to valid states. |
 | NFR-04 | Storage errors preserve the last committed vault; no false success; explicit retry/discard behavior. | Simulate capacity, permission, and I/O failures; verify records and recovery access stay coherent. |
 | NFR-05 | No plaintext credentials, master passwords, or recovery secrets in logs, routine diagnostics, or persistent temp artifacts. Minimize secret lifetime; release session secrets on lock as the chosen stack permits. | Inspect logs/files; review lifetime, crash reporting, and platform limits; document residual exposure. |
@@ -90,5 +91,7 @@ recovery, and protection against a fully compromised OS are outside initial guar
 Rust, Tauri, React/TypeScript and macOS/Windows/Linux target families are selected. Resolve the
 remaining [ADR decisions](adr/README.md) before implementation, including UI/core
 communication, exact support matrix, security/recovery construction, and writes.
-Establish performance targets and vault size from representative use cases. No
-cryptographic algorithm, format, or persistence mechanism is selected yet.
+Argon2id, HKDF-SHA256, XChaCha20-Poly1305 and RustCrypto are selected. Establish
+bounded profiles, entropy/encoding, authenticated file layout, compatible library
+versions, performance targets and vault size. Format and persistence mechanism
+remain undecided; selecting algorithms does not authorize implementation.

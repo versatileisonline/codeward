@@ -1,6 +1,6 @@
 # ADR-0004: Offline recovery-secret lifecycle
 
-Status: Proposed — reusable paper secret and recovery slot confirmed; details open.
+Status: Proposed — reusable paper secret and HKDF-SHA256 selected; lifecycle details open.
 Owner decision: 2026-10-28, Codeward design conversation. Review PR: pending.
 Target: Milestone 1. No application implementation is authorized.
 
@@ -9,6 +9,10 @@ Target: Milestone 1. No application implementation is authorized.
 - Rust generates an independent, high-entropy recovery secret for handwritten
   storage. It protects a separate slot containing the same vault data key as the
   normal master-password slot; see [ADR-0002](0002-vault-security-and-format.md).
+- Derive its wrapping key with HKDF-SHA256 using RustCrypto `hkdf` and `sha2`,
+  with recovery-specific context and vault binding. Protect the slot with
+  XChaCha20-Poly1305 from RustCrypto `chacha20poly1305`. These algorithms are selected;
+  exact compatible versions, encoding and derivation context layout remain open.
 - The user transcribes and confirms the secret during enrollment. The core checks
   the transcription before the vault is presented as ready, and the initial data
   and access metadata must commit coherently. Do not persist a plaintext paper
@@ -45,8 +49,9 @@ strategy; no complete compromise-recovery feature is claimed by this decision.
 - Randomness source, entropy, human-readable encoding, checksum/error detection,
   normalization, and transcription UX. A checksum can help detect errors; it is
   not proof of authorization. No word list, code length, or encoding is selected.
-- Recovery wrapping-key derivation, authenticated slot metadata and format with
-  ADR-0002. No KDF, cipher, library, or parameter set is selected here.
+- Recovery entropy requirement, HKDF salt/context encoding, authenticated slot
+  metadata, and compatible library versions/features with ADR-0002. HKDF is not
+  a password-hardening function; do not substitute a short or user-chosen secret.
 - Display/re-display and in-memory lifetime policy; do not add stored recovery
   material merely to enable re-display without review.
 - Explicit replacement after paper loss/disclosure, data-key compromise handling,

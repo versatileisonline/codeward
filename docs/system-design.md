@@ -2,7 +2,8 @@
 
 Status: logical design with owner-selected Rust core, Tauri host, React/TypeScript
 UI, installed desktop delivery, and macOS/Windows/Linux targets. The IPC topology
-is selected; exact file layout, protocol schema and algorithms remain open. There is no KeePassXC
+is selected, along with Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 from RustCrypto.
+Exact file layout, protocol schema, profiles and package versions remain open. There is no KeePassXC
 format-compatibility or identical-internals commitment.
 
 ## System context
@@ -85,11 +86,11 @@ Linux distribution/desktop matrix before claiming support.
 
 ```mermaid
 flowchart TB
-    password["Master password"] -->|"Password key derivation"| normal["Open master-password key slot"]
-    recovery["Reusable handwritten recovery secret"] -->|"Independent recovery key derivation"| backup["Open recovery key slot"]
+    password["Master password"] -->|"Argon2id"| normal["Open master-password slot with XChaCha20-Poly1305"]
+    recovery["Reusable handwritten recovery secret"] -->|"HKDF-SHA256"| backup["Open recovery slot with XChaCha20-Poly1305"]
     normal --> key["Same random vault data key"]
     backup --> key
-    key --> contents["Decrypt and authenticate vault contents"]
+    key --> contents["Decrypt and authenticate vault contents with XChaCha20-Poly1305"]
 ```
 
 Each slot stores a separately protected copy of the same per-vault data key.
@@ -103,8 +104,9 @@ forgotten password. Updating a slot does not itself rotate the data key or revok
 old vault copies. Protecting future contents after data-key compromise requires a
 reviewed rotation strategy. Missing/corrupted files still need separate file recovery.
 
-The key/slot model is confirmed; exact primitives, metadata authentication and
-file layout remain in [ADR-0002](adr/0002-vault-security-and-format.md). Paper-secret
+The key/slot model and RustCrypto algorithms are selected. Cost profiles, nonce/AAD
+layout, versioned format and library release review remain in
+[ADR-0002](adr/0002-vault-security-and-format.md). Paper-secret
 reuse and remaining lifecycle decisions are in [ADR-0004](adr/0004-offline-recovery.md).
 
 ## Vault lifecycle
