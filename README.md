@@ -9,7 +9,8 @@ was authorized on 2026-10-29. Rust owns the core; Tauri hosts a React/TypeScript
 The planned application installs and opens in its own window. The exact vault
 format, save contract and initial validation matrix are specified; actual runtime
 support remains unverified. The initial audience is a small private friends/family
-prototype, and this documentation branch contains no application code.
+prototype. Milestone 2 has begun with a small Rust envelope parser and authenticated
+metadata builder; there is no usable password manager yet.
 
 ## Project foundation
 
@@ -24,6 +25,7 @@ prototype, and this documentation branch contains no application code.
 | [Roadmap](docs/roadmap.md) | Milestones, dependencies, completion gates |
 | [Architecture decisions](docs/adr/README.md) | ADR index, proposals, and open decisions |
 | [Accepted design handoff](docs/milestone-1-handoff.md) | Milestone 1 review record and authorized implementation sequence |
+| [Core progress](docs/milestone-2-progress.md) | Implemented scope, test evidence and remaining Milestone 2 work |
 | [Platform decisions](docs/adr/0001-implementation-platform.md) | Selected Rust/Tauri/React stack and desktop targets |
 | [Git practices](CONTRIBUTING.md) | Branches, reviews, commits, secret handling |
 
@@ -50,3 +52,10 @@ file limit in [ADR-0002](docs/adr/0002-vault-security-and-format.md). The accept
 encoding; [ADR-0003](docs/adr/0003-committed-writes.md) defines save semantics.
 Exact dependency/security review and native persistence evidence precede use.
 Browser integration, online recovery, sync, and automated backups remain future options.
+
+## Working on the core
+
+Install the pinned Rust toolchain, then run the commands in the
+[core README](crates/codeward-core/README.md). The first slice uses no third-party
+crates. Parsing validates structure only; it does not authenticate or decrypt a
+vault, and no storage/durability behavior is implemented yet. Use synthetic data.

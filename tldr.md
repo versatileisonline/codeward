@@ -4,6 +4,8 @@ Root:
 
 - [README.md](README.md): Project overview.
 - [CONTRIBUTING.md](CONTRIBUTING.md): Git and review practices.
+- [Cargo.toml](Cargo.toml): Rust workspace.
+- [rust-toolchain.toml](rust-toolchain.toml): Pinned compiler and developer tools.
 
 `docs/`:
 
@@ -14,6 +16,7 @@ Root:
 - [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
+- [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 
@@ -30,3 +33,9 @@ Root:
 `.github/`:
 
 - [pull_request_template.md](.github/pull_request_template.md): PR checklist.
+
+`crates/codeward-core/`:
+
+- [README.md](crates/codeward-core/README.md): Core boundary and verification commands.
+- [src/envelope.rs](crates/codeward-core/src/envelope.rs): Structural parsing and public authentication metadata.
+- [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.

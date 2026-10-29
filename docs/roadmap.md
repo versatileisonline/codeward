@@ -1,7 +1,7 @@
 # Milestone roadmap
 
 Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
-Milestone 1 design review is complete; Milestone 2 entry is authorized. The
+Milestone 1 design review is complete; Milestone 2 is in progress. The
 [accepted handoff](milestone-1-handoff.md) records approval on 2026-10-29 and defines
 the Rust core, Tauri/React interface, three desktop target families, exact vault
 format, crypto profiles, reusable recovery, save contract and session policies.
@@ -34,6 +34,16 @@ implementation on a separate branch based on the approved documentation while
 the Milestone 1 PR remains open. The gate accepts the contracts and evidence plan,
 not runtime results. Native adapters remain blocked from real-vault use until
 platform-specific evidence exists.
+
+## Current Milestone 2 slice
+
+The first Rust library implements structural envelope validation and exact public
+AAD/HKDF context construction. It has 17 passing synthetic integration tests on
+macOS; [progress evidence](milestone-2-progress.md) lists scope and limits. It has
+no third-party dependencies and implements no decryption, JSON schema validation,
+file I/O, session lifecycle or commit protocol. The milestone remains in progress.
+Next review/pin dependency releases before implementing the crypto/schema layer,
+then develop fault-injected persistence and validate native adapters separately.
 
 ## When implementation becomes necessary
 
