@@ -15,7 +15,6 @@ initial audience is a small private friends/family prototype.
 | Document | Purpose |
 | --- | --- |
 | [File map](tldr.md) | Quick guide to where information lives |
-| [Agent context](AGENTS.md) | Project context and working rules for future iterations |
 | [Project charter](docs/charter.md) | Goals, scope, exclusions, success criteria |
 | [Requirements](docs/requirements.md) | Functional/nonfunctional requirements and acceptance evidence |
 | [Threat model](docs/threat-model.md) | Assets, boundaries, threats, assumptions, limitations |
@@ -25,7 +24,6 @@ initial audience is a small private friends/family prototype.
 | [Architecture decisions](docs/adr/README.md) | ADR index, proposals, and open decisions |
 | [Platform decisions](docs/adr/0001-implementation-platform.md) | Selected Rust/Tauri/React stack and desktop targets |
 | [Git practices](CONTRIBUTING.md) | Branches, reviews, commits, secret handling |
-| [Milestone 0 review](docs/milestone-0-review.md) | Deliverables and owner checklist |
 
 ## Recovery and save boundaries
 

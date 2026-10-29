@@ -3,7 +3,6 @@
 Root:
 
 - [README.md](README.md): Project overview.
-- [AGENTS.md](AGENTS.md): Project context and agent working rules.
 - [CONTRIBUTING.md](CONTRIBUTING.md): Git and review practices.
 
 `docs/`:
@@ -14,7 +13,6 @@ Root:
 - [system-design.md](docs/system-design.md): System design and Mermaid diagrams.
 - [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
-- [milestone-0-review.md](docs/milestone-0-review.md): Foundation checklist and verification.
 
 `docs/adr/`:
 

@@ -89,5 +89,5 @@ do not begin coding merely because the high-level key model is now selected.
 5. Try invalid credentials, tampered input, inaccessible storage and missing files;
    receive accurate errors without destroying a usable prior state.
 
-These are future targets, not runtime tests performed in Milestone 0. See the
-[current review](milestone-0-review.md) for documentation deliverables.
+These are future validation targets. No application or runtime tests have been
+implemented yet.
