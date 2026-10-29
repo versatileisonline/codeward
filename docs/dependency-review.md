@@ -20,9 +20,12 @@ All direct requirements use exact `=version` pins and `default-features = false`
 | `zeroize` | 1.9.1 | `alloc` | Owned secret buffers and explicit Argon2 work memory |
 | `hmac` | 0.13.0 | `zeroize` | Enable available cleanup in HKDF's existing dependency |
 | `poly1305` | 0.9.1 | `zeroize` | Enable available cleanup in AEAD's existing dependency |
+| `ctutils` | 0.4.7 | None | Fixed-length recovery-secret/checksum comparisons |
 
-The last two direct declarations unify features on already-required packages;
-they do not introduce alternative primitives. The resolved feature tree excludes
+The HMAC/Poly1305 declarations unify cleanup features on already-required packages;
+ctutils is also already resolved through the crypto graph and is pinned directly
+for recovery confirmation. These do not introduce alternative primitives.
+The resolved feature tree excludes
 PHC/password-verifier support, parallel Rayon execution, reduced-round AEAD,
 browser randomness and generic KDF integration features. `password-hash` and
 `phc` still occur in Cargo's lockfile resolution but are not enabled in the build.
