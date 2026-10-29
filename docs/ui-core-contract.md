@@ -1,7 +1,7 @@
 # UI/core contract
 
 Status: Milestone 1 design baseline, 2026-10-28. Rust, Tauri, and React/TypeScript
-are owner-selected. This is a behavioral contract, not implemented commands or a
+are selected. This is a behavioral contract, not implemented commands or a
 final transport schema. Security/recovery, commit, and session details remain in
 [ADR-0002](adr/0002-vault-security-and-format.md),
 [ADR-0004](adr/0004-offline-recovery.md),
@@ -152,7 +152,7 @@ offline behavior and platform prerequisites before claiming support.
 ADR-0001 proposes a single allowed main window, explicit custom-command
 permissions, bounded paginated summaries and decimal-string revisions/generations
 at the TypeScript boundary. The [platform plan](platform-validation.md) records
-the test matrix. The owner accepted these contracts in the handoff; validate them before exposing
+the test matrix. The handoff establishes these contracts; validate them before exposing
 commands. Authorization and duplicate/bounds checks remain in Rust.
 
 ## Required evidence before relying on the boundary
