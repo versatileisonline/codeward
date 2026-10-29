@@ -37,9 +37,10 @@ platform-specific evidence exists.
 
 ## Current Milestone 2 slice
 
-The first Rust library implements structural envelope validation and exact public
-AAD/HKDF context construction. It has 17 passing synthetic integration tests on
-macOS; [progress evidence](milestone-2-progress.md) lists scope and limits. It has
+The Rust library implements structural envelope parsing, in-memory encoding and
+exact public AAD/HKDF context construction in two separate slices. It has 22
+passing synthetic integration tests on macOS;
+[progress evidence](milestone-2-progress.md) lists scope and limits. It has
 no third-party dependencies and implements no decryption, JSON schema validation,
 file I/O, session lifecycle or commit protocol. The milestone remains in progress.
 Next review/pin dependency releases before implementing the crypto/schema layer,
@@ -106,5 +107,5 @@ guarantee is inferred from that authorization.
 5. Try invalid credentials, tampered input, inaccessible storage and missing files;
    receive accurate errors without destroying a usable prior state.
 
-These are future validation targets. No application or runtime tests have been
-implemented yet.
+These are future integrated validation targets. Only the bounded core format
+tests described above have been implemented; no end-to-end workflow exists yet.
