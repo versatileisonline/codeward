@@ -1,7 +1,8 @@
 # Project charter
 
 Status: Milestone 0 foundation with owner-confirmed Milestone 1 scope updates.
-Updated: 2026-10-28. Rust/Tauri/React are selected; support/security details remain open.
+Updated: 2026-10-28. Rust/Tauri/React and RustCrypto primitives are selected;
+support, crypto profiles/format and persistence details remain open.
 
 ## Purpose
 
@@ -25,6 +26,9 @@ forgetting the master password. Work in small milestones with explicit review ga
 - Protect each vault with one random data key and two independent protected key
   slots. Either the master password or reusable paper secret can open its slot;
   routine recovery replaces the master-password slot without consuming the paper secret.
+- Use RustCrypto Argon2id for master-password derivation, HKDF-SHA256 for the
+  generated recovery secret, and XChaCha20-Poly1305 for vault/key-slot encryption.
+  Detailed profiles, compatible release set and file format still require review.
 - Preserve committed credentials across application crashes and failed saves.
 - Complete all initial runtime workflows offline, without mandatory accounts,
   telemetry, or a hosted service.

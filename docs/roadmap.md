@@ -10,7 +10,8 @@ review of the previous gate and retain the [charter](charter.md)'s scope.
 
 The owner has also confirmed one random vault data key with independent master-password
 and recovery slots, plus a reusable paper secret. ADR-0002/0004 record this model;
-the specific algorithms, library, format and replacement/rotation details remain open.
+RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 are now selected. Exact
+profiles, compatible package releases, format and replacement/rotation details remain open.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
@@ -32,10 +33,11 @@ design a vault requiring an incompatible recovery retrofit.
    Linux distribution/desktop targets, installer/runtime prerequisites, and validation.
    Keep the Rust core and installed/offline experience as confirmed inputs.
    The [UI/core contract](ui-core-contract.md) is the design baseline for this work.
-2. Complete ADR-0002 and ADR-0004 around the confirmed one-key/two-slot and reusable
-   paper-secret model: select reviewed primitives/library/parameters, format and
-   metadata binding, enrollment details, explicit replacement and compromise/key
-   rotation behavior. Review remaining choices before acceptance.
+2. Complete ADR-0002 and ADR-0004 around the selected RustCrypto primitives and
+   one-key/two-slot model: define bounded Argon2id profiles, recovery entropy/encoding
+   and HKDF context, nonce/AAD and file layout, compatible versions/features and
+   review evidence, enrollment details, replacement and compromise/key rotation.
+   Review remaining choices before acceptance.
 3. Develop ADR-0003: define the commit/acknowledgement boundary, coherent metadata
    updates, error handling, writer conflicts, and per-platform interruption tests.
 4. Develop ADR-0005: resolve lock events, draft handling, session/secret lifetimes,
@@ -50,7 +52,8 @@ support matrix and verification; it is not automatically covered by a shared cod
 
 ## When implementation becomes necessary
 
-Recording the stack, UI/core contract and vault/recovery model requires documentation only. Actual
+Recording the stack, UI/core contract, key model and algorithm choices requires
+documentation only. Actual
 cross-platform text-input/accessibility checks, packaged offline behavior, IPC
 permissions, and secret-handling behavior will eventually need executable evidence.
 Before any such feasibility spike, explain the question and smallest synthetic-data
@@ -65,7 +68,27 @@ complete that gate or authorize the product build.
 The current request does not authorize coding. The next design discussions cover
 the exact security construction, committed-write protocol, lock/draft rules and
 platform matrix. Announce readiness for Milestone 2 when those decisions are reviewed;
-do not begin coding merely because the high-level key model is now selected.
+do not begin coding merely because the high-level key model or algorithms are selected.
+
+## Remaining decisions before coding
+
+1. **Crypto profile and format:** bounded Argon2id settings/salts; recovery entropy,
+   encoding/checksum and HKDF context; nonce/AAD and versioned slot/payload encoding;
+   compatible crate versions/features, security review and replacement/rotation policy.
+2. **Committed writes (ADR-0003):** save acknowledgement, coherent slot/content
+   updates, restart/unknown outcomes, writer conflicts and fault-test plan.
+3. **Sessions (ADR-0005):** timeouts/OS lock events, unsaved drafts, in-flight commits,
+   UI redaction and secret lifetimes.
+4. **Platform baseline and review (ADR-0001):** supported versions/architectures,
+   Linux distribution/desktop targets, packaging/runtime prerequisites and validation
+   plan; owner review of the combined Milestone 1 design before Milestone 2.
+
+The design gate approves explicit policies, provisional bounded profiles and the
+evidence plan; it must not pretend that measurements already exist. Argon2id timing,
+library integration and packaged cross-platform checks require code and will be
+performed during authorized implementation, or a separately authorized minimal
+feasibility spike if needed to resolve a design question earlier. No coding starts
+under the current request, and no date is promised before the owner accepts that gate.
 
 ## Future options, separately scoped
 

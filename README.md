@@ -7,7 +7,7 @@ and support a handwritten offline recovery secret for an intact vault. No accoun
 or telemetry is required. Milestone 0 established the foundation; Milestone 1 has
 started with Rust for the core, Tauri for the desktop host, and React/TypeScript for
 the UI. The application will install and open in its own window. Exact platform
-support and security/persistence mechanisms remain open. There is no implementation yet; the
+support, crypto profile/file format, and persistence protocol remain open. There is no implementation yet; the
 initial audience is a small private friends/family prototype.
 
 ## Project foundation
@@ -39,6 +39,8 @@ initial audience is a small private friends/family prototype.
 - Newly generated passwords and edits that have not been committed are excluded
   from persistence guarantees.
 
-Rust, Tauri and React/TypeScript are selected. Algorithms, key derivation, vault
-format, and persistence mechanism remain undecided.
+Rust, Tauri and React/TypeScript are selected. Crypto selections are RustCrypto
+Argon2id for master-password derivation, HKDF-SHA256 for the generated recovery
+secret, and XChaCha20-Poly1305 for contents/key slots. Cost profiles, compatible
+package versions, recovery encoding, vault format and persistence protocol remain open.
 Browser integration, online recovery, sync, and automated backups remain future options.

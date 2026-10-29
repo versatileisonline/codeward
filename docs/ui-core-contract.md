@@ -52,6 +52,8 @@ key as the master-password slot. Routine recovery commits a new master-password
 slot and keeps the paper secret valid; it never returns the old master password.
 The Rust core performs derivation/unwrapping and retains the data key. Slot/derivation
 metadata is not a reason to send key material or bulk decrypted data to React.
+ADR-0002 selects RustCrypto Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 for those
+operations. They execute in Rust, not in React or generic UI-exposed crypto commands.
 Encoding, re-display, explicit replacement/rotation and interrupted-change details
 remain in ADR-0002/0004. Reuse is confirmed, not an open policy choice.
 Clipboard commands are not introduced by this contract; copying needs a separate
