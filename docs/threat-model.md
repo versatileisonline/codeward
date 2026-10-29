@@ -1,7 +1,9 @@
 # Threat model
 
 Status: initial design model; no implemented or audited security claims.
-Scope: one person, local macOS app, local vault, handwritten recovery secret.
+Scope: one person per local vault; installed macOS/Windows/Linux desktop targets,
+Rust core, separate UI responsibility, handwritten recovery secret. Private beta
+audience size does not change the per-vault threat model.
 
 ## Assets and boundaries
 
@@ -9,12 +11,14 @@ Scope: one person, local macOS app, local vault, handwritten recovery secret.
 | --- | --- |
 | Credentials and sensitive metadata | Confidentiality/integrity at rest and during use |
 | Master password and recovery secret | Unauthorized unlock, offline guessing, UI/log disclosure |
+| Vault data key and two protected key slots | Either route grants access; exposed data keys can affect later contents encrypted with the same key |
 | Last committed vault and access metadata | Complete, coherent persistence across failure |
-| Paper recovery copy | Theft, transcription errors, loss, co-location with the Mac |
+| Paper recovery copy | Theft, transcription errors, loss, co-location with the computer |
 | Session memory and displayed contents | Another local user, screen capture, malware, OS facilities |
 
-Boundaries: person/application UI, application/filesystem, application/macOS session,
-and person/physical notebook. Treat file input as untrusted until validated. Assume
+Boundaries: person/React UI, WebView/Tauri IPC adapter, adapter/Rust core,
+core/filesystem, core/OS session,
+and person/physical notebook. Treat UI requests and file input as untrusted until validated. Assume
 OS/hardware behave as documented; same-user malware or privileged compromise can
 violate this assumption. There is no initial runtime network dependency.
 
@@ -22,19 +26,28 @@ violate this assumption. There is no initial runtime network dependency.
 
 | ID | Scenario | Initial response / requirement | Residual limit and later evidence |
 | --- | --- | --- | --- |
-| T-01 | Locked Mac or copied vault is stolen. | Stored confidentiality/integrity, normal unlock protection, no persisted plaintext (FR-02, NFR-02/05). | Offline guessing remains; strength/cost depend on ADR-0002. An unlocked stolen device may expose active secrets. |
-| T-02 | Attacker obtains notebook and vault. | Treat paper secret as an access credential; separate it physically; confirm transcription (FR-06/07). | Both together may grant access. No service identity check or remote revocation. ADR-0004 assesses guessing/leakage. |
+| T-01 | Locked computer or copied vault is stolen. | RustCrypto Argon2id derives the password wrapping key; HKDF-SHA256 derives the independent generated-secret recovery key; XChaCha20-Poly1305 protects slots and contents (FR-01/02, NFR-02/05). | Attackers can target either slot offline. The approved starting Argon2id profile and 256-bit recovery entropy still need implementation/review evidence; HKDF does not harden a weak secret. An unlocked stolen device can expose active secrets. |
+| T-02 | Attacker obtains notebook and vault. | Treat the reusable 256-bit paper secret as an independent recovery-slot credential; separate it physically and confirm transcription in Rust (FR-06/07). | Valid paper secret plus usable matching file grants access without the master password. Reuse is intentional; exact encoding, replacement and compromise handling remain in ADR-0004. No remote revocation. |
 | T-03 | User forgets master password. | Offline recovery and replacement password against intact vault (FR-07). | Loss of both valid unlock paths can make contents inaccessible. No operator override. |
-| T-04 | Vault deleted, only Mac lost, or only file corrupted. | Explain file-recovery distinction; preserve input on error (FR-09/10). | Paper secret cannot restore data. Backup/restore features are deferred; this availability threat remains unresolved initially. |
+| T-04 | Vault deleted, only computer lost, or only file corrupted. | Explain file-recovery distinction; preserve input on error (FR-09/10). | Paper secret cannot restore data. Backup/restore features are deferred; this availability threat remains unresolved initially. |
 | T-05 | App terminates during creation/save. | Complete committed states, acknowledgement after commit, coherent recovery metadata (FR-01/05, NFR-03/04). | Drafts may be lost. ADR-0003 defines power-loss boundary and fault matrix. |
 | T-06 | Capacity, permissions, or I/O fail. | Preserve prior commit; report failure without false success (NFR-04). | No progress guarantee on unavailable storage. Test each failure stage. |
-| T-07 | Malicious or damaged input is opened. | Validate format/integrity before exposure; no destructive repair (FR-09, NFR-02). | Parser defects remain possible. Negative tests/security review follow format selection. |
+| T-07 | Malicious or damaged input is opened. | Validate the 16 MiB whole-file cap, supported KDF profile and structural bounds before expensive work; authenticate payload and validate its schema before exposure. Reject duplicate fields/truncation without modifying input (FR-09, NFR-02). | Parser defects remain possible. Exact parser sublimits and negative tests/security review remain open; permit only one derivation attempt at a time. |
 | T-08 | Older authentic copy replaces latest vault, or another writer overwrites it. | Prevent silent concurrent overwrites (NFR-08); do not claim integrity detects authentic old copies. | Rollback detection across lost local state is unresolved. Future backup/sync versioning needs review. |
 | T-09 | Malware/keylogger/debugger/privileged process observes use. | Minimize secret lifetime, avoid logging, lock on chosen triggers (FR-08, NFR-05). | Initial release cannot defeat a compromised OS or guarantee active-secret protection. Advanced defenses deferred, risk retained. |
 | T-10 | Diagnostics/temp files/display/OS memory leak secrets. | Review persistence, diagnostics, UI exposure and lifetime (NFR-02/05/07). | Swap, dumps, screenshots, memory remnants depend on stack/platform; no absolute erasure claim. Review clipboard risk if copying is added. |
 | T-11 | Website password changed, then app crashes before local save. | Distinguish generated/draft/saved (FR-04/05). | Website updates are outside local transaction. Unsaved generation excluded; no browser recovery promise. |
+| T-12 | Faulty or compromised UI invokes privileged actions or retains plaintext. | Scope custom Tauri commands to intended callers; Rust validates session, vault, payload and revision; minimize returned data; avoid UI file/key access (NFR-09). | Compromised unlocked UI can invoke permitted reveals and observe displayed/entered plaintext. IPC permissions are not proof of human intent, and clearing JavaScript references cannot prove erasure. |
+| T-13 | Late secret-bearing reply or notification restores data after locking or switching vaults. | Core-owned session generations, scoped references, stale-reply rejection and status-only notifications under NFR-09. | Previously exposed plaintext cannot be revoked; verify lock/in-flight-commit coordination and UI redaction before relying on it. |
+| T-14 | Attacker obtains a vault key using an old file and an exposed old unlock secret. | Distinguish replacing a protected slot from rotating the data key; design compromise handling in ADR-0002/0004 and coherent writes in ADR-0003. | Old files cannot be revoked. Updating only a slot does not protect later ciphertext under the already-exposed data key; complete rotation behavior is still open. |
+| T-15 | New encryption reuses a nonce under the same key, or metadata is accepted under the wrong vault/slot role. | Fresh random 24-byte nonces for every new encryption/retry; each slot authenticates its role/derivation metadata and the payload authenticates the complete header including both encrypted slots (ADR-0002). | Exact bytes, randomness failure handling and validation are still unimplemented. Slot changes require fresh payload encryption; AEAD alone does not detect replay of an authentic old vault. |
 
 ## Assumptions and follow-through
+
+The selected envelope exposes file size, format, public crypto parameters and a
+stable vault ID. Titles, URLs, notes, timestamps and internal credential IDs belong
+inside the encrypted JSON payload. This is a metadata boundary, not size-hiding or
+protection against replacing the entire file with an older authentic copy.
 
 The person can retain a legible paper copy separately; the app cannot verify its
 ongoing physical security. Losing recovery media does not authorize transmitting
@@ -49,3 +62,28 @@ offline guessing through both paths, exposed metadata, and reviewed security
 components without inventing cryptography. ADR-0003 must define failure behavior.
 Revisit this model for accepted ADRs and before adding services, extensions,
 imports, backups, or other integrations.
+
+For each declared platform, review file permissions, local-storage durability,
+session events, memory/dump limits, and installer/runtime dependencies. No platform
+security behavior is assumed identical solely because the core is shared Rust.
+
+The [Milestone 1 handoff](milestone-1-handoff.md) now collects the concrete
+contracts accepted by the owner on 2026-10-29. The approved logical save protocol stages a whole
+encrypted envelope, coordinates Codeward writers and distinguishes publication,
+persistence and acknowledgement. Arbitrary external writers can bypass advisory
+coordination; authentic rollback after trusted state is lost remains unresolved.
+There is no blanket power-loss claim.
+
+The proposed [format](vault-format-v1.md) bounds/encodes every field and the paper
+checksum; checksum success is not authentication. ADR-0005's accepted five-minute lock,
+volatile-draft discard and timed reveal defaults still require runtime evidence. They do
+not establish complete erasure, endpoint protection or draft durability. ADR-0004
+proposes explicit confirmed paper-slot replacement and defers in-place data-key
+rotation, retaining T-14's compromise risk rather than claiming a repair feature.
+The [platform plan](platform-validation.md) separates design contracts from native
+adapter, OS/storage-crash and packaged-runtime evidence still to be obtained.
+
+The [UI/core contract](ui-core-contract.md) also requires bundled assets, restrictive
+content loading, no remote runtime origins, and no broad filesystem/shell access
+from React. Custom-command permissions must be deliberately configured and verified;
+framework defaults are not evidence of a restricted application command surface.

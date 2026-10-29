@@ -1,8 +1,13 @@
 # System design
 
-Status: logical design only. Boxes are responsibilities, not chosen libraries,
-processes, programming languages, file layouts, or algorithms. There is no
-KeePassXC format-compatibility or identical-internals commitment.
+Status: logical design with owner-selected Rust core, Tauri host, React/TypeScript
+UI, installed desktop delivery, and macOS/Windows/Linux targets. The IPC topology
+is selected, along with Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 from RustCrypto.
+The owner selected a binary envelope with one encrypted JSON snapshot and a starting
+parameter profile in ADR-0002. The [handoff](milestone-1-handoff.md) now supplies
+accepted contracts, including the [byte specification](vault-format-v1.md).
+The owner approved implementation entry on 2026-10-29; runtime evidence is pending. There is no KeePassXC
+format-compatibility commitment.
 
 ## System context
 
@@ -10,10 +15,10 @@ KeePassXC format-compatibility or identical-internals commitment.
 flowchart LR
     person["Personal user"]
     paper["Physical notebook: recovery secret"]
-    subgraph device["User's Mac: initial runtime boundary"]
+    subgraph device["User's computer: macOS, Windows or Linux"]
         app["Codeward: local application"]
         vault["Local encrypted vault file"]
-        session["macOS session events and local storage"]
+        session["OS session events and local storage"]
         app <-->|"Read / commit complete states"| vault
         session -->|"Lock / sleep events and storage outcomes"| app
     end
@@ -27,7 +32,7 @@ flowchart LR
 ```
 
 The paper secret reaches the app through explicit enrollment display/user entry.
-The notebook is outside the Mac boundary. Initial runtime has no required service
+The notebook is outside the computer boundary. Initial runtime has no required service
 or network communication. Isolated future boxes describe scope, not approved APIs.
 
 ## Logical responsibilities
@@ -40,8 +45,82 @@ or network communication. Isolated future boxes describe scope, not approved API
 | Vault access/recovery | Validate input, authenticate, protect contents, manage access metadata |
 | Persistence | Commit complete states safely, preserve prior state on failure, report outcomes |
 
-These boundaries support later modular work without choosing Rust/C++, UI,
-cryptography, or storage. Security construction/dependencies require ADR review.
+The Rust core owns session control, credential operations, vault access/recovery,
+and persistence. React owns presentation, and a thin Tauri adapter connects IPC to
+core operations. Exact security components/format bytes, commit mechanism and detailed
+session policies still require ADR review. See the [UI/core contract](ui-core-contract.md).
+
+## Installed application separation
+
+```mermaid
+flowchart TB
+    subgraph app["Installed Codeward application"]
+        ui["React and TypeScript UI in system WebView"]
+        adapter["Thin Tauri command adapter"]
+        core["Rust core: vault access, sessions, recovery and persistence"]
+        ui <-->|"Limited IPC commands and minimal results"| adapter
+        adapter <-->|"Typed core operations"| core
+    end
+    core <-->|"Read and commit encrypted data"| vault["Local vault file"]
+```
+
+The same logical separation applies on all three desktop target families. The UI
+collects intent and displays results; the Rust core validates each request, gates
+actions on session state, and reports committed outcomes. The UI does not read or
+write the vault directly or hold the core's session keys. Authorized display of a
+credential can expose transient plaintext in the UI; minimize that exposure and
+define lock/redaction behavior in ADR-0005. Separation does not imply perfect
+memory erasure, process isolation, or protection against a compromised OS.
+
+The installed app bundles its interface assets and opens its own window. Users
+do not start a localhost server or open a browser tab; no runtime network service
+is required. Tauri/React is selected. Keep Tauri and React details out of the core's
+application operations so those contracts can be tested independently. The adapter
+passes trusted caller context; the Rust core still validates each operation.
+
+Command/data limits, secret exposure, notification payloads, stale-reply rejection,
+and permission requirements are defined in [ui-core-contract.md](ui-core-contract.md).
+
+Platform-specific filesystem, session-event, and packaging adapters need validation.
+Keep platform assumptions outside shared vault behavior; the proposed bounded
+matrix and storage experiment plan are in [platform-validation.md](platform-validation.md).
+
+## Vault key and unlock slots
+
+```mermaid
+flowchart TB
+    password["Master password"] -->|"Argon2id"| normal["Open master-password slot with XChaCha20-Poly1305"]
+    recovery["Reusable handwritten recovery secret"] -->|"HKDF-SHA256"| backup["Open recovery slot with XChaCha20-Poly1305"]
+    normal --> key["Same random vault data key"]
+    backup --> key
+    key --> contents["Decrypt and authenticate vault contents with XChaCha20-Poly1305"]
+```
+
+Each slot stores a separately protected copy of the same per-vault data key.
+Either valid secret can unlock its slot without the other secret. The file holds
+encrypted contents, both protected slots and required public metadata, not the
+plaintext secrets or unwrapped data key. Rust performs key derivation, unwrapping
+and content validation; React receives only permitted interaction data.
+
+Recovery permits setting a replacement master-password slot without exposing the
+forgotten password. Updating a slot does not itself rotate the data key or revoke
+old vault copies. Protecting future contents after data-key compromise requires a
+reviewed rotation strategy. Missing/corrupted files still need separate file recovery.
+
+The owner-selected [ADR-0002](adr/0002-vault-security-and-format.md) construction uses
+a versioned binary envelope, two key slots and one encrypted UTF-8 JSON snapshot.
+Each slot authenticates its own role/derivation metadata, excluding the other slot
+and changing revision; the payload authenticates the complete public header with
+both encrypted slots. A slot change requires payload re-encryption with a fresh
+nonce. Credential titles, URLs, notes, timestamps and internal IDs are encrypted.
+File size, public crypto parameters and the stable vault ID remain exposed.
+
+The starting Argon2id profile is 64 MiB, 3 passes and 4 lanes; the entire file is
+limited to 16 MiB. Version 1 excludes attachments, compression, per-record encryption
+and append-only history. Exact envelope/AAD bytes, schema, parser sublimits,
+dependency review and measurements remain open. The 256-bit reusable paper secret,
+52-character Base32 representation plus checksum and remaining lifecycle decisions
+are in [ADR-0004](adr/0004-offline-recovery.md). These are design choices, not working code.
 
 ## Vault lifecycle
 
@@ -110,6 +189,9 @@ an interrupted operation as saved.
 5. Drafts have no durability promise; displaying/copying does not commit them.
 6. Conflicting writers must not silently overwrite each other.
 
-Operations, durability, temporary files, writer exclusion, and power-loss
-assumptions remain in [ADR-0003](adr/0003-committed-writes.md). Neither a recovery
-secret nor a save protocol reconstructs the only missing vault file.
+The owner-approved logical protocol in [ADR-0003](adr/0003-committed-writes.md)
+uses whole-envelope staging/publication, explicit acknowledgement barriers, stable
+writer exclusion and reconciliation of unknown outcomes. Platform adapters remain
+unverified; no blanket OS-crash/power-loss guarantee is made. The accepted lock/draft
+defaults are in ADR-0005. Neither paper recovery nor this protocol reconstructs
+the only missing vault file.

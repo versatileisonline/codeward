@@ -3,7 +3,6 @@
 Root:
 
 - [README.md](README.md): Project overview.
-- [AGENTS.md](AGENTS.md): Project context and agent working rules.
 - [CONTRIBUTING.md](CONTRIBUTING.md): Git and review practices.
 
 `docs/`:
@@ -12,16 +11,19 @@ Root:
 - [requirements.md](docs/requirements.md): Required behavior and acceptance checks.
 - [threat-model.md](docs/threat-model.md): Security threats and limits.
 - [system-design.md](docs/system-design.md): System design and Mermaid diagrams.
+- [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
-- [milestone-0-review.md](docs/milestone-0-review.md): Foundation checklist and verification.
+- [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
+- [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
+- [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 
 `docs/adr/`:
 
 - [README.md](docs/adr/README.md): Architecture decision index.
-- [0001-implementation-platform.md](docs/adr/0001-implementation-platform.md): Language and macOS tooling.
-- [0002-vault-security-and-format.md](docs/adr/0002-vault-security-and-format.md): Vault security and format.
+- [0001-implementation-platform.md](docs/adr/0001-implementation-platform.md): Rust/Tauri/React and desktop platform decisions.
+- [0002-vault-security-and-format.md](docs/adr/0002-vault-security-and-format.md): Crypto parameters, key slots, and vault format.
 - [0003-committed-writes.md](docs/adr/0003-committed-writes.md): Crash-safe saves.
-- [0004-offline-recovery.md](docs/adr/0004-offline-recovery.md): Paper-secret recovery.
+- [0004-offline-recovery.md](docs/adr/0004-offline-recovery.md): Reusable paper-secret recovery.
 - [0005-session-and-drafts.md](docs/adr/0005-session-and-drafts.md): Locking and unsaved edits.
 - [template.md](docs/adr/template.md): New decision template.
 

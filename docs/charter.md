@@ -1,20 +1,39 @@
 # Project charter
 
-Status: proposed Milestone 0 baseline for owner review. Date: 2026-10-28.
+Status: Milestone 1 design accepted; Milestone 2 entry authorized.
+Updated: 2026-10-29. Rust/Tauri/React, RustCrypto primitives, the starting profile
+and format structure are selected. The logical save protocol is approved; concrete
+remaining proposals are ready in the [Milestone 1 handoff](milestone-1-handoff.md).
+The owner accepted that handoff on 2026-10-29 and authorized core implementation.
+No runtime support/security claim is verified.
 
 ## Purpose
 
-Build a personal, local-first macOS password manager with understandable credential
+Build a personal, local-first desktop password manager with understandable credential
 storage, local password generation, and an offline path to regain access after
 forgetting the master password. Work in small milestones with explicit review gates.
 
 ## Confirmed initial-version scope
 
-- One person using a local macOS application and a local encrypted vault.
+- An installed desktop application targeting macOS, Windows, and Linux, with a
+  local encrypted vault for each person. Initial private prototype audience:
+  roughly 20 friends/family at most; no public release or shared-vault service.
+- Rust core separated from a React/TypeScript interface hosted by Tauri and the local
+  vault file. Users launch an
+  application window without opening a browser tab or starting a localhost server.
+  A bounded initial matrix and packaging plan are proposed in
+  [platform-validation.md](platform-validation.md); runtime evidence is pending.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
 - Generate passwords on demand and explicitly save them with credentials.
 - Use a master password for normal access and a separate handwritten recovery
   secret for access to an intact vault when the master password is forgotten.
+- Protect each vault with one random data key and two independent protected key
+  slots. Either the master password or reusable paper secret can open its slot;
+  routine recovery replaces the master-password slot without consuming the paper secret.
+- Use RustCrypto Argon2id for master-password derivation, HKDF-SHA256 for the
+  generated recovery secret, and XChaCha20-Poly1305 for vault/key-slot encryption.
+  The selected starting profile and binary envelope/encrypted JSON structure are
+  recorded in ADR-0002; exact format bytes and compatible releases still need review.
 - Preserve committed credentials across application crashes and failed saves.
 - Complete all initial runtime workflows offline, without mandatory accounts,
   telemetry, or a hosted service.
@@ -25,7 +44,7 @@ forgetting the master password. Work in small milestones with explicit review ga
 
 The recovery secret is an alternative access credential, not a copy of the vault.
 Losing the device and its only vault file cannot be repaired with the paper secret.
-Keep it physically separate from the Mac and vault. Someone with both a usable
+Keep it physically separate from the computer and vault. Someone with both a usable
 recovery secret and its intact vault may gain access.
 
 Crash safety concerns committed data. A password that has only been generated,
@@ -43,9 +62,14 @@ is outside Codeward's transaction boundary.
 | Browser integration | Extensions, autofill, imports, website password changes |
 | Sync and sharing | Cloud synchronization, multiple devices, collaborative/family vaults |
 | Advanced endpoint defenses | Stronger malware resistance; no claim to defeat a compromised OS |
-| Other platforms | Support beyond macOS |
+| Mobile platforms | Phone/tablet applications; desktop target families are already in scope |
 
 These are possibilities, not commitments or prerequisites for the prototype.
+
+macOS, Windows, and Linux are target families, not implemented compatibility claims.
+Define a bounded support matrix and validate packaging, session events, accessibility,
+and storage behavior on each declared target before prototype acceptance. Linux
+support does not imply every distribution or desktop environment is supported.
 
 ## Success and change control
 
@@ -62,3 +86,7 @@ not implemented capabilities.
 The owner reviews milestone completion and scope changes. Record unresolved
 design choices in [ADRs](adr/README.md); a placeholder or proposal is not an accepted
 choice. Begin each later milestone after its preceding gate is reviewed.
+
+Learning follows architecture: discuss component contracts, ownership boundaries,
+failure cases, and evidence so the owner can understand and contribute design
+decisions while using AI agents for implementation.
