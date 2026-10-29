@@ -59,7 +59,7 @@ Browser integration, online recovery, sync, and automated backups remain future 
 Install the pinned Rust toolchain, then run the commands in the
 [core README](crates/codeward-core/README.md). The
 [dependency review](docs/dependency-review.md) records exact crypto pins and features;
-[progress evidence](docs/milestone-2-progress.md) records 40 passing tests plus a
+[progress evidence](docs/milestone-2-progress.md) records 41 passing tests plus a
 compile-fail doctest and an initial single-host timing measurement. Parsing checks
 structure only; crypto primitives do not yet establish a validated unlocked vault.
 No storage/durability behavior is implemented. Use synthetic data.

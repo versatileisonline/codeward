@@ -41,7 +41,7 @@ platform-specific evidence exists.
 The Rust library implements envelope parsing/encoding, exact public authentication
 metadata, fixed-profile cryptographic primitives and paper-code handling in modular
 commits. [Dependency review](dependency-review.md) covers the exact crypto graph.
-40 tests and one compile-fail doctest pass on macOS;
+41 tests and one compile-fail doctest pass on macOS;
 [progress evidence](milestone-2-progress.md) records vectors, negative cases,
 secret-lifetime limits and an initial Argon2 timing/process-memory observation.
 

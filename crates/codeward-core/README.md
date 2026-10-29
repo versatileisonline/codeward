@@ -31,7 +31,7 @@ operations as generic UI commands.
 `recovery` encodes/validates the canonical paper code and checks transcription
 confirmation. Application enrollment/display rules and complete recovery are absent.
 
-40 tests cover parsing/metadata (17), encoding (5), crypto (9) and paper codes (9).
+41 tests cover parsing/metadata (17), encoding (5), crypto (10) and paper codes (9).
 One compile-fail doctest verifies nonce ownership. Published primitive vectors and
 independent Python/C fixtures supplement negative and round-trip cases. See
 [evidence and measurements](../../docs/milestone-2-progress.md) for exact limits.

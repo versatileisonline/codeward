@@ -4,8 +4,9 @@ Status: in progress, 2026-10-29. Format, crypto primitives and paper-code handli
 the milestone is not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
-The parser/metadata step remains in [draft PR #4](https://github.com/versatileisonline/codeward/pull/4).
-The encoder has its own [draft PR #5](https://github.com/versatileisonline/codeward/pull/5).
+The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonline/codeward/pull/4),
+the encoder in [PR #5](https://github.com/versatileisonline/codeward/pull/5), and the
+cryptographic foundation in [PR #6](https://github.com/versatileisonline/codeward/pull/6).
 Separate subsequent commits add encoding, reviewed crypto dependencies,
 cryptographic primitives and paper-secret transcription checks. No integrated
 vault creation/unlock or storage behavior is claimed.
@@ -98,7 +99,7 @@ Host: macOS 26.3.1 (25D2128), Apple silicon. The following pass with the pinned 
 
 | Check | Observed result |
 | --- | --- |
-| `cargo test --workspace --locked --offline` | 40 tests pass: 17 parser/metadata, 5 encoding, 9 crypto, 9 paper-code; plus 1 compile-fail doctest |
+| `cargo test --workspace --locked --offline` | 41 tests pass: 17 parser/metadata, 5 encoding, 10 crypto, 9 paper-code; plus 1 compile-fail doctest |
 | `cargo fmt --all -- --check` | Pass |
 | `cargo clippy --workspace --all-targets --locked --offline -- -D warnings` | Pass |
 | Synthetic fixture regeneration | Structural generator uses Python standard library; crypto/paper generator additionally uses installed argon2-cffi 25.1.0 / bindings 25.1.0 for independent C Argon2 results; checked-in outputs reproduce |
@@ -150,6 +151,25 @@ and `/usr/bin/time -l target/release/examples/measure_master` on macOS. This is 
 small, noisy single-host observation, not a performance guarantee or the required
 slowest-target benchmark. The rough 0.5–1 second target remains unevaluated across
 the platform matrix; no cost was changed in response to this faster host.
+
+## Review findings and verification
+
+The pre-merge review checked the core source, tests and accepted byte/profile
+contracts across PR #4–6. No blocking parser or encoder defect was found. One
+resource-handling defect in the crypto helper was fixed: unsupported password
+lengths could allocate the 64 MiB Argon2 work buffer before the upstream library
+rejected them. The helper now checks Argon2's existing maximum before locking or
+allocation. A new test covers the length boundary using scalar lengths, without
+allocating a multi-gigabyte password. Source review verifies the guard's placement.
+This does not introduce a new application password policy or alter KDF costs.
+
+The exact PR #4 and #5 snapshots were tested in isolated temporary source copies:
+17 and 22 tests respectively, plus rustfmt and Clippy with warnings denied.
+The corrected combined core passes 41 tests plus the nonce compile-fail doctest.
+These are local macOS checks; the PRs have no hosted check runs/statuses at review.
+This review does not replace an independent security audit or establish integrated
+vault, schema, storage or platform guarantees. PR #4's old documentation target
+must become `main`; each subsequent PR targets `main` after its dependency merges.
 
 ## Remaining work
 
