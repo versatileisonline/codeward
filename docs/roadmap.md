@@ -8,6 +8,10 @@ Detailed platform support and security/persistence mechanisms remain open;
 implementation is explicitly outside this update. Later milestones require owner
 review of the previous gate and retain the [charter](charter.md)'s scope.
 
+The owner has also confirmed one random vault data key with independent master-password
+and recovery slots, plus a reusable paper secret. ADR-0002/0004 record this model;
+the specific algorithms, library, format and replacement/rotation details remain open.
+
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
 | 0 — Foundation and system design | Charter, requirements, threat model, Mermaid diagrams, roadmap, ADR placeholders, Git practices | Documentation-only branch/PR reviewed by owner; recovery/file restoration and committed/unsaved distinctions clear. No implementation or technology selection. |
@@ -28,9 +32,10 @@ design a vault requiring an incompatible recovery retrofit.
    Linux distribution/desktop targets, installer/runtime prerequisites, and validation.
    Keep the Rust core and installed/offline experience as confirmed inputs.
    The [UI/core contract](ui-core-contract.md) is the design baseline for this work.
-2. Develop ADR-0002 and ADR-0004 together: define vault protection, master-password
-   and paper-secret access relationships, format, dependency criteria, recovery
-   enrollment, and credential changes. Review choices before acceptance.
+2. Complete ADR-0002 and ADR-0004 around the confirmed one-key/two-slot and reusable
+   paper-secret model: select reviewed primitives/library/parameters, format and
+   metadata binding, enrollment details, explicit replacement and compromise/key
+   rotation behavior. Review remaining choices before acceptance.
 3. Develop ADR-0003: define the commit/acknowledgement boundary, coherent metadata
    updates, error handling, writer conflicts, and per-platform interruption tests.
 4. Develop ADR-0005: resolve lock events, draft handling, session/secret lifetimes,
@@ -45,7 +50,7 @@ support matrix and verification; it is not automatically covered by a shared cod
 
 ## When implementation becomes necessary
 
-Recording the stack and UI/core contract requires documentation only. Actual
+Recording the stack, UI/core contract and vault/recovery model requires documentation only. Actual
 cross-platform text-input/accessibility checks, packaged offline behavior, IPC
 permissions, and secret-handling behavior will eventually need executable evidence.
 Before any such feasibility spike, explain the question and smallest synthetic-data
@@ -56,6 +61,11 @@ Product implementation starts in Milestone 2 after the remaining security/recove
 save, session, and platform decisions pass the Milestone 1 review gate and the owner
 authorizes implementation. A narrowly authorized feasibility spike does not itself
 complete that gate or authorize the product build.
+
+The current request does not authorize coding. The next design discussions cover
+the exact security construction, committed-write protocol, lock/draft rules and
+platform matrix. Announce readiness for Milestone 2 when those decisions are reviewed;
+do not begin coding merely because the high-level key model is now selected.
 
 ## Future options, separately scoped
 

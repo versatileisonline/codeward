@@ -16,9 +16,11 @@ Milestone 1 is in progress. The owner selected Rust for the core and macOS, Wind
 and Linux as desktop targets, and approved the UI/core/local-vault separation.
 The owner has now selected Tauri with a React/TypeScript UI. ADR-0001 records these
 decisions but remains Proposed while support/security details and platform evidence
-are open. The other four ADRs
-remain placeholders; tooling, algorithms, format, recovery construction, and
-persistence mechanisms remain undecided.
+are open. The owner also confirmed one random vault data key, separate independent
+master-password and recovery slots protecting copies of that key, and a reusable
+handwritten recovery secret. ADR-0002/0004 are Proposed with those decisions recorded;
+primitives, format, derivation parameters and replacement/rotation details remain
+open. ADR-0003/0005 remain placeholders for writes and session policies.
 No app code, build system, or dependencies exist. See [the review record](docs/milestone-0-review.md)
 for the foundation evidence. Repository edits for design decisions are authorized;
 application implementation is explicitly prohibited for this update. Do not treat
@@ -35,11 +37,17 @@ stack selection as milestone completion or permission to scaffold/install depend
 - Normal access uses a master password. A handwritten offline recovery secret
   restores access only with an intact compatible vault; it cannot recreate a
   deleted, missing, or corrupted file. Keep access recovery and file recovery distinct.
+- One random data key protects each vault. Independent master-password and recovery
+  slots protect copies of that same key; either secret can unlock without the other.
+  The paper secret is app-generated and reusable, with transcription confirmation.
+  Routine recovery sets a replacement master password without consuming the paper
+  secret. Slot changes alone do not rotate the data key or revoke old copies.
 - Crash safety applies to committed writes. Preserve a complete old or new state
   across interrupted updates and acknowledge saves only after commit. Newly
   generated passwords and other uncommitted edits have no durability guarantee.
 - Rust core, Tauri host, and React/TypeScript UI are selected. Cryptographic algorithms,
-  key derivation, vault format, and persistence mechanism remain undecided. Record explicit owner
+  exact derivation, vault format, and persistence mechanism remain undecided. Do not
+  treat prior Argon2id/cipher recommendations as selections. Record explicit owner
   choices as Milestone 1 progresses. Keep language comparisons and career advice in
   chat; repository ADRs should briefly record decisions, boundaries, and open work.
 - Follow `docs/ui-core-contract.md`: React owns presentation, Tauri exposes limited

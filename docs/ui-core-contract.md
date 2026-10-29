@@ -47,7 +47,13 @@ be refined before implementation without widening privileges silently.
 
 Closing/canceling releases the relevant volatile operation context and denies new
 access. Dirty-draft and in-flight-write policies must be finalized in ADR-0005.
-Recovery-secret reuse/rotation, encoding, and re-display policy remain in ADR-0004.
+The reusable paper secret opens the independent recovery slot for the same vault
+key as the master-password slot. Routine recovery commits a new master-password
+slot and keeps the paper secret valid; it never returns the old master password.
+The Rust core performs derivation/unwrapping and retains the data key. Slot/derivation
+metadata is not a reason to send key material or bulk decrypted data to React.
+Encoding, re-display, explicit replacement/rotation and interrupted-change details
+remain in ADR-0002/0004. Reuse is confirmed, not an open policy choice.
 Clipboard commands are not introduced by this contract; copying needs a separate
 policy for exposure and platform clearing limits if added.
 

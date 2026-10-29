@@ -31,6 +31,9 @@ initial audience is a small private friends/family prototype.
 
 - The paper recovery secret restores access after losing the master password,
   provided the encrypted vault file remains intact and the secret is valid for it.
+- One random vault key protects the contents. Separate master-password and recovery
+  slots protect copies of that same key; either unlock path works independently.
+  The paper secret is reusable and is not consumed by routine recovery.
 - It cannot recreate a deleted, missing, or corrupted file. Vault-file recovery
   and backup features are deferred.
 - An acknowledged save must survive an application crash under the defined storage

@@ -12,8 +12,9 @@ All requirements apply to the initial version unless explicitly deferred.
 - **Key slots:** two separately protected copies of the same vault key, opened by
   the master-password-derived wrapping key or the independent recovery wrapping key.
   Either route is sufficient; this is not a requirement to provide both secrets.
-- **Recovery secret:** a separate offline access secret intended for handwritten
-  storage. Its encoding, lifecycle, and construction remain undecided.
+- **Recovery secret:** an independently app-generated, reusable offline access
+  secret intended for handwritten storage. Encoding, exact derivation and explicit
+  replacement mechanics remain open; ordinary recovery does not consume it.
 - **Draft:** a generated password or edit before a successful commit.
 - **Committed save:** a complete vault update meeting the persistence contract.
   A success indication may appear only after this boundary.
@@ -32,15 +33,16 @@ performed: the repository still contains documentation only.
 | FR-03 | Create, view, edit, search, and explicitly delete credentials with title/service, username, password, and optional URL/notes. | Commit mutations, reopen, verify records; cancel deletion and verify no change. |
 | FR-04 | Generate passwords locally on demand using security-appropriate randomness. Controls/policy are decided later. Generation alone does not save a record. | Generate offline; distinguish draft from saved; save and reopen a selected result. |
 | FR-05 | Show draft, saving, saved, and failed/uncertain states accurately. Never report failed or uncertain commits as saved. | Inject write failure and interrupt acknowledgement; verify UI reports only what is known. |
-| FR-06 | Enroll the paper secret with transcription confirmation and physical-separation guidance. Never silently persist its plaintext beside the vault. | Confirm a handwritten copy, reject mismatched transcription, inspect artifacts and diagnostics. |
-| FR-07 | Recover offline with a valid secret and intact vault; allow a replacement master password and commit it under the same persistence contract. | Recover, replace, reopen with new master password; old master password fails on the updated vault. Invalid recovery leaves the file unchanged. |
+| FR-06 | Enroll an independent app-generated reusable paper secret with core-validated transcription confirmation and physical-separation guidance. Never silently persist its plaintext beside the vault. | Confirm a handwritten copy, reject mismatched transcription, inspect artifacts and diagnostics. |
+| FR-07 | Recover offline by opening the recovery slot with a valid paper secret and intact vault; commit a replacement master-password slot under the same persistence contract. Routine recovery preserves the paper secret. | Recover, replace, reopen with new master password; old master password fails on the updated vault. Repeat recovery with the same paper secret. Invalid recovery leaves the file unchanged. |
 | FR-08 | Support explicit lock and automatic lock on agreed inactivity/OS session events for each supported platform. Resolve timeout and dirty-state policies before implementation. | Verify chosen triggers on the declared macOS/Windows/Linux matrix hide credentials/end access and never misreport drafts as saved. |
 | FR-09 | Detect unsupported, incomplete, or tampered vault input before exposing contents; preserve the input file on failure. | Open representative malformed/tampered files; controlled failure without destructive repair. |
 | FR-10 | Explain that missing/deleted/corrupted files require a usable separate copy; the paper secret cannot recreate data. | Review recovery/file-error messages; no initial backup-feature promise. |
 
-FR-07 does not choose secret reuse/rotation/replacement. ADR-0004 must specify that
-behavior and interrupted-change handling. Replacing a master password cannot
-revoke access to old vault copies still accessible with old credentials.
+FR-07 selects reuse without automatic consumption/replacement after routine recovery.
+ADR-0004 must still define explicit replacement, compromise handling and interrupted
+changes. Replacing a master password cannot revoke access to old vault copies still
+accessible with old credentials.
 
 The confirmed key-slot model is recorded in
 [ADR-0002](adr/0002-vault-security-and-format.md). A master-password change replaces

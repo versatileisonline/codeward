@@ -22,6 +22,9 @@ forgetting the master password. Work in small milestones with explicit review ga
 - Generate passwords on demand and explicitly save them with credentials.
 - Use a master password for normal access and a separate handwritten recovery
   secret for access to an intact vault when the master password is forgotten.
+- Protect each vault with one random data key and two independent protected key
+  slots. Either the master password or reusable paper secret can open its slot;
+  routine recovery replaces the master-password slot without consuming the paper secret.
 - Preserve committed credentials across application crashes and failed saves.
 - Complete all initial runtime workflows offline, without mandatory accounts,
   telemetry, or a hosted service.
