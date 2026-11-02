@@ -70,7 +70,6 @@ def generate():
     vault_id, data_key, recovery_secret = bytes(range(16)), bytes(range(0x30,0x50)), bytes(range(32))
     master_salt, master_nonce = bytes(range(0x10,0x20)), bytes(range(0x20,0x38))
     recovery_salt, recovery_nonce = bytes(range(0x70,0x90)), bytes(range(0x90,0xA8))
-    payload_nonce = bytes(range(0xE0,0xF8))
     master_key = hash_secret_raw(b'synthetic password', master_salt, 3, 65536, 4, 32, Type.ID, 19)
     info = b'Codeward/recovery-wrap/v1\0' + struct.pack('<HH', 1, 1) + vault_id
     prk = hmac.digest(recovery_salt, recovery_secret, 'sha256')
@@ -80,10 +79,12 @@ def generate():
     recovery_metadata = bytes([2,2,0,0]) + recovery_salt + recovery_nonce
     master_slot = seal(master_key, master_nonce, b'Codeward/slot/v1\0' + common + master_metadata, data_key)
     recovery_slot = seal(recovery_key, recovery_nonce, b'Codeward/slot/v1\0' + common + recovery_metadata, data_key)
-    for index, (name, plaintext) in enumerate([('authenticated-v1.hex', (ROOT/'credentials-v1.json').read_bytes()),
-                            ('authenticated-invalid-schema.hex', b'{"schema":1,"schema":1,"credentials":[]}')]):
+    for index, (name, revision, plaintext) in enumerate([
+            ('authenticated-v1.hex', 1, (ROOT/'credentials-v1.json').read_bytes()),
+            ('authenticated-invalid-schema.hex', 1, b'{"schema":1,"schema":1,"credentials":[]}'),
+            ('authenticated-max-revision.hex', (1 << 64) - 1, (ROOT/'credentials-v1.json').read_bytes())]):
         payload_nonce = bytes((b + index) % 256 for b in range(0xE0,0xF8))
-        header = common + struct.pack('<QII', 1, 280, len(plaintext) + 16) + master_metadata + master_slot + recovery_metadata + recovery_slot + payload_nonce
+        header = common + struct.pack('<QII', revision, 280, len(plaintext) + 16) + master_metadata + master_slot + recovery_metadata + recovery_slot + payload_nonce
         assert len(header) == 280
         envelope = header + seal(data_key, payload_nonce, b'Codeward/payload/v1\0' + header, plaintext)
         text = envelope.hex()
