@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/codeward-core"]
+members = ["crates/codeward-core", "crates/codeward-storage-macos"]
 resolver = "3"
 
 [workspace.package]

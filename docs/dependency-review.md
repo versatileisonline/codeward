@@ -5,6 +5,8 @@ This is a release/feature/advisory integration review, not an independent audit
 of these libraries or Codeward. The accepted algorithms, costs and file bytes
 are unchanged. Credential JSON dependencies and the extended advisory snapshot are recorded
 separately in [json-dependency-review.md](json-dependency-review.md).
+The [macOS storage foundation review](macos-storage-foundation.md) records direct
+reuse of existing libc 0.2.191, its native-call boundary and advisory snapshot limits.
 
 ## Direct pins and enabled features
 

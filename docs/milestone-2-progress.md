@@ -2,7 +2,7 @@
 
 Status: in progress, 2026-11-02. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
-Native storage and complete application workflows remain absent. The milestone
+Native committed storage and complete application workflows remain absent. The milestone
 is not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
@@ -15,8 +15,10 @@ implementation PRs are merged into `main`. The credential-schema slice was merge
 in [PR #8](https://github.com/versatileisonline/codeward/pull/8), following guidance
 cleanup in [PR #7](https://github.com/versatileisonline/codeward/pull/7). The current
 authenticated-vault slice was merged in [PR #9](https://github.com/versatileisonline/codeward/pull/9).
-The next slice adds the transaction/session-admission component described below;
-native storage commits and complete application sessions remain absent.
+The transaction/session-admission slice was merged in
+[PR #10](https://github.com/versatileisonline/codeward/pull/10). The current native
+macOS foundation adds bounded reads and writer exclusion; native storage commits
+and complete application sessions remain absent.
 
 ## Implemented first slice
 
@@ -238,11 +240,39 @@ process-kill, OS-crash, power-loss, permissions, disk-capacity or multi-process 
 `Storage`/`WriterLease` define the trusted adapter contract: bounded reads before
 allocation, stable companion exclusion, validated path identity, restrictive
 exclusive same-directory staging, checked whole writes/close/sync, atomic publication
-and declared persistence barriers. Only the test model implements it. No native
-lock, path/alias handling, filesystem write or durability guarantee is established.
+and declared persistence barriers. Only the test model implements the complete
+writable interface. The separate native foundation below supplies read/exclusion
+prerequisites; no native vault write or durability guarantee is established.
 No dependency, feature, vault bytes, schema, primitive or KDF-cost change was made.
 Existing pinned SHA-256/HMAC now also provide internal fingerprint/intent matching;
 the [dependency review](dependency-review.md) records this use and snapshot limits.
+
+## Native macOS read and exclusion foundation
+
+Implemented 2026-11-02 in a separate
+[`codeward-storage-macos` crate](../crates/codeward-storage-macos/README.md), preserving
+the core's unsafe-code prohibition. Reviewed thin native calls use existing locked
+libc 0.2.191 without adding a registry package/version/feature. The
+[native evidence](macos-storage-foundation.md) records its dependency/API review,
+descriptor ownership, mode/location limits and tests.
+
+Absolute unambiguous paths resolve through retained no-follow directory handles.
+The effective-user-owned parent and reported local writable nonremovable APFS
+are checked. One stable companion per directory uses nonblocking OS exclusion,
+so aliases and different vault names there share writer ownership. No companion
+is truncated or unlinked. Explicit lease-drop unlock corrects an observed transient
+reacquisition failure; 100 native-suite repetitions passed after that focused fix.
+Reads reject linked/nonregular/POSIX-exposed files, check the 16 MiB limit before
+buffer reservation, cap every append and detect observed file/parent/companion changes.
+Returned bytes still require authentication/schema validation in the core.
+
+Fourteen native test functions include thirteen assertion cases and a subprocess
+helper. Actual process contention, normal exit and killed lock-holder release
+were exercised, alongside caps, changing files, links, POSIX modes and substitutions.
+These are native read/exclusion tests, not commit-interruption or storage-crash
+evidence. ACL grants and cloud-location policy remain unvalidated. The foundation
+does not implement writable Storage/WriterLease, staging, publication or barriers,
+and is restricted to synthetic data. There is no macOS storage support claim.
 
 ## Toolchain and component review
 
@@ -256,6 +286,9 @@ are excluded from Git; no shell startup files were changed.
 The first two slices were dependency-free. The crypto foundation pinned nine
 direct packages and 28 registry packages; the JSON slice adds two direct pins and
 eleven locked packages, for eleven direct and 39 total registry packages.
+The macOS adapter pins already-resolved libc directly, adding no registry
+package/version or resolved feature; the [native review](macos-storage-foundation.md)
+records the boundary and reused advisory snapshot.
 Reviewed host/Windows/Linux feature graphs do not enable PHC helpers, reduced
 rounds or browser randomness. Graph inspection is not cross-platform execution.
 The separate JSON review covers its graph.
@@ -266,7 +299,7 @@ Host: macOS 26.3.1 (25D2128), Apple silicon. Rechecked 2026-11-02 with the pinne
 
 | Check | Observed result |
 | --- | --- |
-| `cargo test --workspace --locked --offline` | 90 tests pass: 17 parser/metadata, 5 envelope encoding, 10 crypto, 9 paper-code, 20 credentials, 13 vault, 16 transaction/session admission; plus 3 compile-fail doctests |
+| `cargo test --workspace --locked --offline` | 104 runtime test functions pass: 90 core and 14 macOS (including the subprocess helper); plus 3 compile-fail doctests |
 | `cargo fmt --all -- --check` | Pass |
 | `cargo clippy --workspace --all-targets --locked --offline -- -D warnings` | Pass |
 | Synthetic fixture regeneration | Full encrypted fixtures regenerated on 2026-11-02 with the test-only Python reference model and existing argon2-cffi 25.1.0; earlier component fixture evidence remains recorded above |
@@ -343,15 +376,15 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 
 ## Remaining work
 
-1. Validate native storage adapters against ADR-0003, starting with synthetic macOS
-   experiments and separate Windows/Linux validation. Implement bounded file reads,
-   native exclusion/path identity, staged writes, barriers and residue handling.
+1. Extend the synthetic macOS foundation with staged writes, atomic publication,
+   persistence barriers and residue handling under ADR-0003. Validate ACL and
+   location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous
    authentication cancellation, draft ownership and automatic snapshot refresh.
    Later UI/OS event adapters must enforce the accepted lock/redaction policy.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 
-There is no credential store ready for use, native file reader/writer, save guarantee,
+There is no credential store ready for use, native writer, save guarantee,
 complete application/OS session implementation, native committed recovery or desktop UI.
 OS-crash/power-loss evidence and packaged support remain outstanding.

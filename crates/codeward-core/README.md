@@ -91,6 +91,8 @@ The optional synthetic timing example runs with
 Run `cargo run --locked --offline --example vault_round_trip` for a synthetic
 in-memory creation/edit/lock/recovery demonstration. It prints no secret values.
 
-No native file reader/writer, durability adapter, complete application session
+The separate [macOS foundation](../codeward-storage-macos/README.md) experiments
+with handle-rooted bounded reads and OS writer exclusion using synthetic data.
+No native writer, durability adapter, complete application session
 implementation or desktop UI exists yet. Never use these fixtures or this
 incomplete library for real credentials.
