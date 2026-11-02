@@ -26,8 +26,12 @@ The acceptance evidence below remains required. Milestone 2 has envelope handlin
 crypto primitives, paper-code validation, strict credential JSON handling and
 authenticated in-memory creation/access/update preparation.
 [Bounded evidence](milestone-2-progress.md) distinguishes those components from
-committed storage, application sessions and UI workflows still required for full
+native committed storage, complete application sessions and UI workflows still required for full
 requirement acceptance.
+
+Session-bound mutation admission and the logical commit protocol also have
+fault-injected model evidence. These tests do not satisfy native persistence,
+OS locking or packaged application acceptance.
 
 ## Functional requirements
 

@@ -342,7 +342,9 @@ impl<L: WriterLease> Committer<L> {
         Ok(status)
     }
 
-    /// Known committed revision only. Pending/unknown candidates never advance it.
+    /// Authenticated baseline loaded on open, or the last barrier-completed update.
+    /// Pending/unknown candidates never advance it. Loading visible bytes after
+    /// restart does not prove a previous process's barriers or historical outcome.
     pub fn committed_revision(&self) -> Option<u64> {
         self.fingerprint.map(|base| base.revision)
     }

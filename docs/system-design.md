@@ -8,7 +8,8 @@ parameter profile in ADR-0002. The [handoff](milestone-1-handoff.md) now supplie
 accepted contracts, including the [byte specification](vault-format-v1.md).
 Implementation entry was approved on 2026-10-29.
 [Core evidence](milestone-2-progress.md) now includes authenticated in-memory
-operations; storage/application/desktop validation remains pending. There is no
+operations and fault-injected transaction/session-admission tests; native
+storage/application/desktop validation remains pending. There is no
 KeePassXC format-compatibility commitment.
 
 ## System context
@@ -124,7 +125,8 @@ format; current dependency review, core tests and initial measurements are recor
 in [Milestone 2 progress](milestone-2-progress.md). The 256-bit reusable paper secret,
 52-character Base32 representation plus checksum and remaining lifecycle decisions
 are in [ADR-0004](adr/0004-offline-recovery.md). In-memory authenticated access and
-encrypted candidate preparation are implemented; committed vault/recovery and
+encrypted candidate preparation are implemented. The logical commit/admission
+protocol has fault-model tests; native committed vault/recovery and complete
 application session lifecycles remain unimplemented.
 
 ## Vault lifecycle

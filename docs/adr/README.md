@@ -12,16 +12,17 @@ use; full target measurements and native runtime evidence remain future work. De
 does not establish implemented behavior or permission to merge.
 The current [core evidence](../milestone-2-progress.md) covers parsing/encoding,
 public authentication metadata, crypto primitives, paper-code validation, strict
-credential JSON handling, authenticated in-memory vault operations and an initial
-single-host derivation measurement. Committed/application workflows remain absent.
+credential JSON handling, authenticated in-memory vault operations, fault-injected
+commit/session-admission tests and an initial single-host derivation measurement.
+Native persistence and complete application workflows remain absent.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |
 | [0001](0001-implementation-platform.md) | Rust/Tauri/React, desktop targets and tooling | Accepted — platform/boundary design; validation pending | Milestone 1 gate |
 | [0002](0002-vault-security-and-format.md) | Security, key relationships, format, compatibility | Accepted — authenticated core tested; committed workflow pending | Milestone 1 gate |
-| [0003](0003-committed-writes.md) | Crash-safe commits, durability, conflicting writers | Accepted — logical protocol; adapter validation required | Milestone 1 gate |
+| [0003](0003-committed-writes.md) | Crash-safe commits, durability, conflicting writers | Accepted — logical protocol model-tested; native adapter validation required | Milestone 1 gate |
 | [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Accepted — paper/core recovery preparation tested; committed workflow pending | Milestone 1 gate |
-| [0005](0005-session-and-drafts.md) | Lock triggers, session lifetime, drafts, save feedback | Accepted — session/draft contract; implementation pending | Milestone 1 gate |
+| [0005](0005-session-and-drafts.md) | Lock triggers, session lifetime, drafts, save feedback | Accepted — admission/commit locking model-tested; full session/draft implementation pending | Milestone 1 gate |
 
 ## Process
 

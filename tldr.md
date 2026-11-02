@@ -53,6 +53,11 @@ Root:
 - [src/vault/enrollment.rs](crates/codeward-core/src/vault/enrollment.rs): Confirmed paper enrollment and empty encrypted-vault preparation.
 - [src/vault/updates.rs](crates/codeward-core/src/vault/updates.rs): Coherent content/password-change candidates and revision checks.
 - [src/vault/tests.rs](crates/codeward-core/src/vault/tests.rs): Independent fixture, authentication, schema and enrollment tests; update tests live beside their module.
+- [src/transaction.rs](crates/codeward-core/src/transaction.rs): Scoped request/status types, complete-file fingerprints and atomic publication admission.
+- [src/transaction/session.rs](crates/codeward-core/src/transaction/session.rs): Secret-owning admission, generation revocation and explicit reload.
+- [src/transaction/worker.rs](crates/codeward-core/src/transaction/worker.rs): Encrypted commit stages, bounded request history and unknown-outcome reconciliation.
+- [src/transaction/storage.rs](crates/codeward-core/src/transaction/storage.rs): Trusted exclusive storage-adapter contract; no native implementation.
+- [src/transaction/tests.rs](crates/codeward-core/src/transaction/tests.rs): Commit fault, scope, lock and recovery tests using the in-memory model in tests/model.rs.
 - [tests/fixtures/generate_vault.py](crates/codeward-core/tests/fixtures/generate_vault.py): Vector-checked independent synthetic encrypted envelopes.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
 - [tests/encoding.rs](crates/codeward-core/tests/encoding.rs): Exact encoding fixture, bounds and round-trip tests.

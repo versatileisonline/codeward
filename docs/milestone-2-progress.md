@@ -1,8 +1,9 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-02. In-memory authenticated vault operations now
-join the format, crypto, paper-code and credential components. The milestone is
-not complete.
+Status: in progress, 2026-11-02. Authenticated vault operations now compose with
+session-bound mutation admission and a fault-injected committed-write model.
+Native storage and complete application workflows remain absent. The milestone
+is not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
 The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonline/codeward/pull/4),
@@ -13,8 +14,9 @@ cryptographic primitives and paper-secret transcription checks. All three
 implementation PRs are merged into `main`. The credential-schema slice was merged
 in [PR #8](https://github.com/versatileisonline/codeward/pull/8), following guidance
 cleanup in [PR #7](https://github.com/versatileisonline/codeward/pull/7). The current
-authenticated-vault slice adds in-memory creation/access/update preparation;
-storage commits and application sessions remain absent.
+authenticated-vault slice was merged in [PR #9](https://github.com/versatileisonline/codeward/pull/9).
+The next slice adds the transaction/session-admission component described below;
+native storage commits and complete application sessions remain absent.
 
 ## Implemented first slice
 
@@ -153,8 +155,8 @@ paper salt/slot. Content preparation retains both slots without Argon2. Both pat
 check the expected authenticated revision, reject overflow and use fresh encryption
 nonces. Preparation never advances the source object or mutates borrowed bytes.
 `VaultCandidate` contains only complete encrypted bytes; it is not a saved/ready
-vault or completed recovery. Live-file conflict checks and mutation admission,
-reconciliation, commit acknowledgement and session generations remain future work.
+vault or completed recovery. The transaction component below adds admission,
+base checks, reconciliation and commit acknowledgement through a trusted adapter.
 
 Header encoding and slot/payload AAD construction are shared with the existing
 format components, avoiding a second implementation of offsets/context. No Rust
@@ -183,6 +185,65 @@ recovery password replacement at revision 3. It prints no secret values and perf
 no vault-file I/O. Storage durability, application/OS lock events, IPC permissions,
 packaging and Windows/Linux execution remain outstanding.
 
+## Transaction and session-admission component
+
+Implemented 2026-11-02 under ADR-0003/0005 and the UI/core boundary. The
+[`transaction` module](../crates/codeward-core/src/transaction.rs) owns caller,
+opened-vault and generation binding, expected revisions and bounded request status.
+It composes authenticated master access, restricted paper recovery and confirmed
+creation with one encrypted-only commit worker. These are core APIs, not IPC commands.
+
+The session owns decrypted access and a random intent-matching key. The worker
+owns only encrypted base/candidate bytes, fixed-size intent digests, status and an
+exclusive storage lease. Lock increments generation, releases owned access/key
+material and atomically cancels publication that has not been admitted. An admitted
+worker continues without reopening access. A separate-thread test blocks staging
+while the session locks; no storage lock is needed to revoke session access.
+Caller-owned snapshot/input copies and UI redaction remain the caller's responsibility.
+
+The protocol stages a full envelope, rechecks vault ID/revision/full-file SHA-256
+against the exact authenticated source, atomically admits publication against lock,
+publishes and completes the adapter's final barriers. Only barrier success advances
+the committed revision. Initial creation requests atomic no-replace. Definite
+pre-publication failures permit a new explicit request with fresh encryption;
+observed conflicts require reopen/review. Publication ambiguity or barrier failure
+retains OutcomeUnknown and blocks mutations. Reconciliation reads actual bytes
+under exclusion, requires exact known-base/candidate equality plus fresh slot,
+payload and schema authentication, then repeats barriers. Absence after uncertain
+creation requires the adapter's namespace barrier before an Unchanged result.
+Mismatch, failed authentication/read/barrier or repeated interruption stays unknown;
+there is no speculative rollback, stage promotion or cleanup.
+
+Identical authorized requests return the recorded reference before encryption;
+changed arguments or generation reuse are rejected. Per-generation HMAC-SHA256
+digests avoid retaining plaintext replacement passwords or unkeyed password hashes.
+The 64-entry history fails closed at capacity and never evicts IDs to permit replay.
+Post-lock status is caller/scoped and contains no credentials. Reopening loads an
+authenticated visible baseline but loses historical status and cannot prove a
+previous process's barriers; an unavailable result never means an operation did not commit.
+After successful commit, a new mutation requires explicit reload/authentication
+of the current worker base, creating a fresh generation. Automatic secret-snapshot
+refresh, draft management and an asynchronous authentication/session dispatcher
+remain outside this bounded admission slice.
+
+Sixteen new tests cover every modeled staging failure (creation, short write,
+close and sync), read failure, definite/ambiguous publication and final barriers;
+they also cover lost replies, exact-base conflicts, safe explicit retries,
+caller/vault/generation binding, history capacity, lock before/after admission,
+blocked storage, coherent creation/recovery and repeated reconciliation failure.
+Modeled termination at protocol boundaries reopens only full old/new envelopes
+through both access routes. This is in-memory fault injection, not actual
+process-kill, OS-crash, power-loss, permissions, disk-capacity or multi-process evidence.
+
+`Storage`/`WriterLease` define the trusted adapter contract: bounded reads before
+allocation, stable companion exclusion, validated path identity, restrictive
+exclusive same-directory staging, checked whole writes/close/sync, atomic publication
+and declared persistence barriers. Only the test model implements it. No native
+lock, path/alias handling, filesystem write or durability guarantee is established.
+No dependency, feature, vault bytes, schema, primitive or KDF-cost change was made.
+Existing pinned SHA-256/HMAC now also provide internal fingerprint/intent matching;
+the [dependency review](dependency-review.md) records this use and snapshot limits.
+
 ## Toolchain and component review
 
 Pin Rust 1.99.1, edition 2024, with rustfmt and Clippy. Verify against the official
@@ -205,7 +266,7 @@ Host: macOS 26.3.1 (25D2128), Apple silicon. Rechecked 2026-11-02 with the pinne
 
 | Check | Observed result |
 | --- | --- |
-| `cargo test --workspace --locked --offline` | 74 tests pass: 17 parser/metadata, 5 envelope encoding, 10 crypto, 9 paper-code, 20 credentials, 13 vault; plus 3 compile-fail doctests |
+| `cargo test --workspace --locked --offline` | 90 tests pass: 17 parser/metadata, 5 envelope encoding, 10 crypto, 9 paper-code, 20 credentials, 13 vault, 16 transaction/session admission; plus 3 compile-fail doctests |
 | `cargo fmt --all -- --check` | Pass |
 | `cargo clippy --workspace --all-targets --locked --offline -- -D warnings` | Pass |
 | Synthetic fixture regeneration | Full encrypted fixtures regenerated on 2026-11-02 with the test-only Python reference model and existing argon2-cffi 25.1.0; earlier component fixture evidence remains recorded above |
@@ -282,14 +343,15 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 
 ## Remaining work
 
-1. Implement transaction/session admission and the fault-injected commit state
-   machine: writer exclusion, live-file/base checks, unknown-outcome reconciliation
-   and acknowledgement only after commit. Preparation alone cannot authorize save.
-2. Validate native storage adapters against ADR-0003, starting with synthetic macOS
-   experiments and separate Windows/Linux validation. Add file-read allocation caps.
-3. Demonstrate full Milestone 2 acceptance scenarios and remaining session/lifecycle
-   behavior. Later UI and recovery workflows must preserve these core boundaries.
+1. Validate native storage adapters against ADR-0003, starting with synthetic macOS
+   experiments and separate Windows/Linux validation. Implement bounded file reads,
+   native exclusion/path identity, staged writes, barriers and residue handling.
+2. Complete application session/lifecycle orchestration, including asynchronous
+   authentication cancellation, draft ownership and automatic snapshot refresh.
+   Later UI/OS event adapters must enforce the accepted lock/redaction policy.
+3. Demonstrate full Milestone 2 acceptance with real process interruptions,
+   conflicting writers and native storage faults using synthetic data.
 
-There is no credential store ready for use, file reader/writer, save guarantee,
-application/OS session implementation, committed recovery workflow or desktop UI.
+There is no credential store ready for use, native file reader/writer, save guarantee,
+complete application/OS session implementation, native committed recovery or desktop UI.
 OS-crash/power-loss evidence and packaged support remain outstanding.

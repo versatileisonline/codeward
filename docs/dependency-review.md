@@ -26,6 +26,12 @@ All direct requirements use exact `=version` pins and `default-features = false`
 The HMAC/Poly1305 declarations unify cleanup features on already-required packages;
 ctutils is also already resolved through the crypto graph and is pinned directly
 for recovery confirmation. These do not introduce alternative primitives.
+The 2026-11-02 transaction slice also uses the already pinned SHA-256 for complete
+encrypted-file fingerprints and HMAC-SHA256 for volatile request-intent matching.
+Request digests use a fresh random per-session-generation key, released on lock;
+history retains no plaintext replacement-password verifier. This is internal
+request correlation, not a vault-format/KDF change. No pins/features changed;
+the advisory snapshot below was not refreshed for this dependency-unchanged slice.
 The resolved feature tree excludes
 PHC/password-verifier support, parallel Rayon execution, reduced-round AEAD,
 browser randomness and generic KDF integration features. `password-hash` and

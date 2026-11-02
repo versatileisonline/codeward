@@ -11,8 +11,9 @@ format, save contract and initial validation matrix are specified; actual runtim
 support remains unverified. The initial audience is a small private friends/family
 prototype. The Rust core now prepares and authenticates encrypted vaults in memory,
 validates credential snapshots and prepares content/recovery-password changes.
-Committed file storage, application sessions and the desktop interface remain
-unimplemented; Milestone 2 is still in progress.
+Session-bound transaction admission and the committed-write protocol now have
+fault-injected model tests. Native file storage, full application sessions and
+the desktop interface remain unimplemented; Milestone 2 is still in progress.
 
 ## Project foundation
 
@@ -65,4 +66,4 @@ the [JSON review](docs/json-dependency-review.md) covers the credential codec.
 and initial single-host timing measurement. The synthetic
 [vault round-trip example](crates/codeward-core/examples/vault_round_trip.rs) exercises
 creation, content updates and recovery preparation without file writes or secret
-output. No storage/durability behavior is implemented. Use synthetic data.
+output. The transaction model is not native storage/durability evidence. Use synthetic data.
