@@ -180,3 +180,6 @@ impl Permit {
         self.0.load(Ordering::SeqCst) == CANCELED
     }
 }
+
+#[cfg(test)]
+mod tests;
