@@ -8,7 +8,7 @@ The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonl
 the encoder in [PR #5](https://github.com/versatileisonline/codeward/pull/5), and the
 cryptographic foundation in [PR #6](https://github.com/versatileisonline/codeward/pull/6).
 Separate subsequent commits add encoding, reviewed crypto dependencies,
-cryptographic primitives and paper-secret transcription checks. No integrated
+cryptographic primitives and paper-secret transcription checks. All three implementation PRs are merged into `main`. No integrated
 vault creation/unlock or storage behavior is claimed.
 
 ## Implemented first slice
@@ -168,8 +168,8 @@ The exact PR #4 and #5 snapshots were tested in isolated temporary source copies
 The corrected combined core passes 41 tests plus the nonce compile-fail doctest.
 These are local macOS checks; the PRs have no hosted check runs/statuses at review.
 This review does not replace an independent security audit or establish integrated
-vault, schema, storage or platform guarantees. PR #4's old documentation target
-must become `main`; each subsequent PR targets `main` after its dependency merges.
+vault, schema, storage or platform guarantees. PR #4–6 were retargeted to `main`
+in dependency order and merged with merge commits; no hosted CI evidence is claimed.
 
 ## Remaining work
 

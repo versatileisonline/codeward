@@ -1,6 +1,6 @@
 # UI/core contract
 
-Status: Milestone 1 design baseline, 2026-10-28. Rust, Tauri, and React/TypeScript
+Status: Accepted Milestone 1 design contract, 2026-10-29. Rust, Tauri, and React/TypeScript
 are selected. This is a behavioral contract, not implemented commands or a
 final transport schema. Security/recovery, commit, and session details remain in
 [ADR-0002](adr/0002-vault-security-and-format.md),
@@ -58,10 +58,10 @@ operations. They execute in Rust, not in React or generic UI-exposed crypto comm
 The selected recovery representation is 52 grouped Base32 characters plus a checksum
 for 256 random bits; the Rust core validates/decodes it and supplies HKDF only the
 secret bytes. Preserve master-password UTF-8 bytes without silent normalization.
-The [format proposal](vault-format-v1.md) supplies exact encoding/checksum/context
-bytes for review. ADR-0004 proposes no later secret redisplay, explicit confirmed
+The [normative format](vault-format-v1.md) defines accepted encoding/checksum/context
+bytes. ADR-0004 requires no later secret redisplay, explicit confirmed
 slot replacement and deferral of in-place data-key rotation. Reuse remains confirmed.
-ADR-0005 recommends omitting app clipboard commands from the initial prototype;
+ADR-0005 omits app clipboard commands from the initial prototype;
 adding them later needs a separate exposure/clearing policy and command review.
 
 ## Authorization and payload rules
@@ -149,7 +149,7 @@ server, if later used, is development tooling; users do not start one. Internal
 WebView/IPC protocol URLs do not authorize a remote service. Verify actual packaged
 offline behavior and platform prerequisites before claiming support.
 
-ADR-0001 proposes a single allowed main window, explicit custom-command
+ADR-0001 specifies a single allowed main window, explicit custom-command
 permissions, bounded paginated summaries and decimal-string revisions/generations
 at the TypeScript boundary. The [platform plan](platform-validation.md) records
 the test matrix. The handoff establishes these contracts; validate them before exposing
@@ -166,7 +166,6 @@ commands. Authorization and duplicate/bounds checks remain in Rust.
   packaged behavior on the bounded macOS/Windows/Linux matrix.
 - Check password entry, focus, keyboard navigation, accessibility and lock redaction.
 
-These are future tests, not evidence already obtained. No executable, configuration,
-dependencies, mock commands, or runtime tests are created by this design document.
-Follow the [implementation gate](roadmap.md#when-implementation-becomes-necessary)
-before any feasibility code or product implementation.
+These are future boundary tests, not evidence already obtained. The accepted
+[implementation scope](roadmap.md#implementation-and-evidence-boundaries) authorizes
+Milestone 2 core work; UI commands and packaged behavior still require validation.

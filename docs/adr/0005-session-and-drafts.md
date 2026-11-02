@@ -8,7 +8,7 @@ Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2)
 FR-04/05/08 and NFR-05/07/09 require understandable save states and prompt access
 revocation. Retaining drafts across lock would retain sensitive plaintext or require
 a separate encrypted draft store. Autosaving changes would conflict with explicit
-save intent. Recommend volatile drafts and security locking that does not wait for
+save intent. Use volatile drafts and security locking that does not wait for
 a user decision; make potential draft loss clear before it happens.
 
 ## Session policy
@@ -64,7 +64,7 @@ key merely for convenient future password changes. No app clipboard command is
 included initially. OS-level copying/history or a compromised endpoint is not
 controlled by this policy.
 
-Recommend a 24-character generated-password default, configurable from 12 to 128,
+Use a 24-character generated-password default, configurable from 12 to 128,
 uniformly sampled without modulo bias from the chosen nonempty character set.
 Offer ASCII lowercase, uppercase, digits and `!@#$%^&*()-_=+[]{}:,.?`; require at
 least two distinct available characters. Do not force one character from each

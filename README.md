@@ -24,7 +24,7 @@ safe storage and the desktop interface are not implemented yet.
 | [System design](docs/system-design.md) | Logical responsibilities and Mermaid context/lifecycle diagrams |
 | [UI/core contract](docs/ui-core-contract.md) | Commands, data exposure, permissions and lock/save outcomes |
 | [Roadmap](docs/roadmap.md) | Milestones, dependencies, completion gates |
-| [Architecture decisions](docs/adr/README.md) | ADR index, proposals, and open decisions |
+| [Architecture decisions](docs/adr/README.md) | Accepted architecture decisions and change process |
 | [Accepted design handoff](docs/milestone-1-handoff.md) | Milestone 1 review record and authorized implementation sequence |
 | [Core progress](docs/milestone-2-progress.md) | Implemented scope, test evidence and remaining Milestone 2 work |
 | [Platform decisions](docs/adr/0001-implementation-platform.md) | Selected Rust/Tauri/React stack and desktop targets |
