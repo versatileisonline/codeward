@@ -161,3 +161,110 @@ fn rejects_truncation_trailing_data_invalid_utf8_and_bad_string_escapes() {
     assert!(CredentialSnapshot::decode(&invalid_utf8).is_err());
     assert_eq!(invalid_utf8, before);
 }
+
+fn with_text_token(field: &str, token: &str) -> String {
+    let mut record: serde_json::Value = serde_json::from_str(RECORD).unwrap();
+    record.as_object_mut().unwrap().remove(field);
+    let rest = serde_json::to_string(&record).unwrap();
+    format!(r#"{},"{field}":{token}}}"#, rest.strip_suffix('}').unwrap())
+}
+
+#[test]
+fn enforces_each_decoded_field_bound_before_unescaping() {
+    for (field, max) in [
+        ("id", 32),
+        ("title", 512),
+        ("username", 1_024),
+        ("password", 4_096),
+        ("url", 4_096),
+        ("notes", 65_536),
+    ] {
+        for (unit, width) in [(r"\u0061", 1), (r"\u00e9", 2), (r"\ud83d\udd12", 4)] {
+            // IDs accept lowercase hex only; Unicode validity is covered on text.
+            if field == "id" && width != 1 {
+                continue;
+            }
+            for extra in [0, 1] {
+                let token = format!("\"{}{}\"", unit.repeat(max / width), "a".repeat(extra));
+                let json = snapshot(&with_text_token(field, &token));
+                let before = json.clone();
+                assert_eq!(
+                    CredentialSnapshot::decode(json.as_bytes()).is_ok(),
+                    extra == 0,
+                    "{field} width {width}"
+                );
+                assert_eq!(json, before);
+            }
+        }
+        for token in ["null", "0", "true", "[]", "{}"] {
+            assert!(
+                CredentialSnapshot::decode(snapshot(&with_text_token(field, token)).as_bytes())
+                    .is_err()
+            );
+        }
+    }
+}
+
+#[test]
+fn bounds_record_count_and_plaintext_size_at_the_exact_limits() {
+    let mut records = String::new();
+    for i in 0..MAX_CREDENTIALS {
+        if i != 0 {
+            records.push(',');
+        }
+        records.push_str(&RECORD.replace("00000000000000000000000000000001", &format!("{i:032x}")));
+    }
+    let decoded = CredentialSnapshot::decode(snapshot(&records).as_bytes()).unwrap();
+    assert_eq!(decoded.credentials().len(), MAX_CREDENTIALS);
+    records.push(',');
+    records.push_str(RECORD);
+    assert!(CredentialSnapshot::decode(snapshot(&records).as_bytes()).is_err());
+
+    let mut json = br#"{"schema":1,"credentials":[]}"#.to_vec();
+    json.resize(crate::crypto::MAX_PLAINTEXT_LENGTH, b' ');
+    assert!(CredentialSnapshot::decode(&json).is_ok());
+    json.push(b' ');
+    assert!(matches!(
+        CredentialSnapshot::decode(&json),
+        Err(CredentialError::LimitExceeded)
+    ));
+}
+
+#[test]
+fn rejects_oversized_keys_wrong_collection_types_and_excess_depth() {
+    let huge = format!("\"{}\"", r"\u0061".repeat(100_000));
+    for json in [
+        huge.clone(),
+        format!(r#"{{"schema":1,"credentials":{huge}}}"#),
+        snapshot(&huge),
+        snapshot(&format!(r#"{{{huge}:0}}"#)),
+    ] {
+        assert!(CredentialSnapshot::decode(json.as_bytes()).is_err());
+    }
+    for json in [
+        snapshot(&"[".repeat(10_000)),
+        snapshot(&with_text_token("notes", "[[]]")),
+        r#"{"schema":1,"credentials":[[{}]]}"#.to_owned(),
+    ] {
+        assert!(matches!(
+            CredentialSnapshot::decode(json.as_bytes()),
+            Err(CredentialError::LimitExceeded)
+        ));
+    }
+}
+
+#[test]
+fn failures_use_fixed_diagnostics_without_echoing_input() {
+    let marker = "SYNTHETIC_PRIVATE_INPUT_MARKER";
+    for json in [
+        snapshot(RECORD).replace("\"schema\":1", &format!("\"{marker}\":1")),
+        snapshot(&with_text_token("title", &format!("\"{marker}\\q\""))),
+        snapshot(&with_text_token(
+            "title",
+            &format!("\"{}\"", marker.repeat(30)),
+        )),
+    ] {
+        let error = CredentialSnapshot::decode(json.as_bytes()).err().unwrap();
+        assert!(!format!("{error:?}: {error}").contains(marker));
+    }
+}
