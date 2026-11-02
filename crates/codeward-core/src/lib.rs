@@ -14,3 +14,4 @@ pub mod crypto;
 pub mod encoding;
 pub mod envelope;
 pub mod recovery;
+pub mod vault;
