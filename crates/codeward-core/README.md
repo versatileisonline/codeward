@@ -32,7 +32,7 @@ operations as generic UI commands.
 
 `recovery` encodes/validates the canonical paper code and checks transcription
 confirmation. The vault layer adds volatile enrollment lifetime/confirmation;
-application display/session rules and committed recovery remain absent.
+application display rules and native committed recovery remain absent.
 
 `credentials` validates record IDs, field byte limits, timestamp order, unique IDs
 and the exact version 1 JSON schema. Its decoder rejects duplicate/unknown/missing
@@ -51,7 +51,25 @@ replacement master slot and payload while retaining the reusable paper slot.
 Both check expected revisions and return unsaved encrypted bytes. Preparation
 leaves the authenticated source unchanged; it never acknowledges a file commit.
 Consuming `lock` releases owned Rust key/record buffers. Caller copies, application
-permissions, automatic locking, session generations and UI redaction are separate.
+permissions, automatic locking and UI redaction are separate. The transaction
+layer adds the bounded admission/session-generation behavior below.
+
+`transaction` separates a secret-owning `Session` from an encrypted-only
+`Committer` with a retained exclusive `WriterLease`. The trusted `Storage`
+adapter must acquire stable writer exclusion and implement restrictive staging,
+atomic create/replace and persistence barriers; no native implementation exists.
+The worker checks the complete authenticated base's SHA-256, vault ID and revision
+before publication admission. Only final barriers advance the committed revision.
+Ambiguous publication/barrier failure blocks mutations until fresh authentication,
+exact base/candidate comparison and required barriers establish an outcome.
+
+Caller/opened-vault/generation scope gates preparation. A per-generation keyed
+intent digest supports duplicate-request matching without storing passwords.
+History holds at most 64 IDs and fails closed rather than evicting/replaying them.
+Lock releases owned access and cancels pending admission atomically; an admitted
+worker can finish while the session stays locked. After commit, a new mutation
+requires explicit reload/authentication of the worker's current base. This slice
+has no credential-reply API, draft manager, inactivity timer or OS event adapter.
 
 Tests cover format, primitives, paper codes, credentials and composed vault
 operations using published vectors and independent synthetic Python/C fixtures.
@@ -73,6 +91,6 @@ The optional synthetic timing example runs with
 Run `cargo run --locked --offline --example vault_round_trip` for a synthetic
 in-memory creation/edit/lock/recovery demonstration. It prints no secret values.
 
-No file reader/writer, commit protocol, native durability adapter, application
-session implementation or desktop UI exists yet. Never use these fixtures or this
+No native file reader/writer, durability adapter, complete application session
+implementation or desktop UI exists yet. Never use these fixtures or this
 incomplete library for real credentials.

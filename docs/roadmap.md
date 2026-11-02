@@ -45,10 +45,11 @@ The [progress evidence](milestone-2-progress.md) is the current source for test
 counts, vectors, negative cases, memory limits and single-host measurements.
 
 The core prepares encrypted creation/content/recovery-password candidates and
-authenticates both access routes through the schema gate. No file I/O, application
-session lifecycle or commit protocol exists. Next implement transaction/session
-admission and fault-injected persistence, followed by separately validated native
-adapters. Milestone 2 remains incomplete.
+authenticates both access routes through the schema gate. Session-bound admission,
+lock/publication coordination and the committed-write protocol now have model
+tests with injected faults. Next validate native adapters and complete application
+session/lifecycle orchestration. No native file I/O or durability guarantee exists;
+Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries
 
