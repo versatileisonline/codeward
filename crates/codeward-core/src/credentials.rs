@@ -8,6 +8,9 @@ use std::{error::Error, fmt};
 
 use zeroize::Zeroizing;
 
+#[cfg(test)]
+mod bounds;
+
 /// Maximum credentials in one version 1 snapshot.
 pub const MAX_CREDENTIALS: usize = 10_000;
 /// Largest accepted Unix millisecond timestamp (end of year 9999).
