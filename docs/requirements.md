@@ -23,9 +23,11 @@ All requirements apply to the initial version unless explicitly deferred.
   and recovery metadata. The recovery secret alone is insufficient.
 
 The acceptance evidence below remains required. Milestone 2 has envelope handling,
-crypto primitives, paper-code validation and strict credential JSON handling.
-Bounded test evidence is recorded in [milestone-2-progress.md](milestone-2-progress.md). No complete vault,
-unlock, credential or persistence requirement is claimed satisfied by these components.
+crypto primitives, paper-code validation, strict credential JSON handling and
+authenticated in-memory creation/access/update preparation.
+[Bounded evidence](milestone-2-progress.md) distinguishes those components from
+committed storage, application sessions and UI workflows still required for full
+requirement acceptance.
 
 ## Functional requirements
 

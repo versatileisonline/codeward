@@ -6,8 +6,10 @@ is selected, along with Argon2id, HKDF-SHA256 and XChaCha20-Poly1305 from RustCr
 The design uses a binary envelope with one encrypted JSON snapshot and a starting
 parameter profile in ADR-0002. The [handoff](milestone-1-handoff.md) now supplies
 accepted contracts, including the [byte specification](vault-format-v1.md).
-Implementation entry was approved on 2026-10-29; runtime evidence is pending. There is no KeePassXC
-format-compatibility commitment.
+Implementation entry was approved on 2026-10-29.
+[Core evidence](milestone-2-progress.md) now includes authenticated in-memory
+operations; storage/application/desktop validation remains pending. There is no
+KeePassXC format-compatibility commitment.
 
 ## System context
 
@@ -121,8 +123,9 @@ and append-only history. Exact bytes/schema/sublimits are accepted in the normat
 format; current dependency review, core tests and initial measurements are recorded
 in [Milestone 2 progress](milestone-2-progress.md). The 256-bit reusable paper secret,
 52-character Base32 representation plus checksum and remaining lifecycle decisions
-are in [ADR-0004](adr/0004-offline-recovery.md). Integrated vault/recovery lifecycle
-behavior remains unimplemented.
+are in [ADR-0004](adr/0004-offline-recovery.md). In-memory authenticated access and
+encrypted candidate preparation are implemented; committed vault/recovery and
+application session lifecycles remain unimplemented.
 
 ## Vault lifecycle
 

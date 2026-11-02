@@ -30,7 +30,7 @@ pub enum VaultError {
     Format(FormatError),
     /// Randomness, derivation, allocation or authentication failure.
     Crypto(CryptoError),
-    /// Authenticated bytes did not pass the credential schema.
+    /// Credential schema or bounded snapshot encoding failure.
     Credentials(CredentialError),
     /// Invalid or mismatched paper-code transcription.
     Recovery(RecoveryError),
@@ -154,7 +154,7 @@ impl AuthenticatedVault {
 
 /// Restricted recovery context: validates contents without exposing records.
 ///
-/// Future recovery preparation uses this key internally. Dropping the context
+/// Recovery preparation uses this key internally. Dropping the context
 /// releases its owned key/contents; there is no credential-browsing method.
 /// ```compile_fail
 /// use codeward_core::vault::begin_recovery;

@@ -9,9 +9,10 @@ was authorized on 2026-10-29. Rust owns the core; Tauri hosts a React/TypeScript
 The planned application installs and opens in its own window. The exact vault
 format, save contract and initial validation matrix are specified; actual runtime
 support remains unverified. The initial audience is a small private friends/family
-prototype. Milestone 2 now has Rust file-format handling, tested cryptographic
-building blocks, paper-code transcription checks and strict credential JSON handling.
-Full vault creation/unlock, safe storage and the desktop interface are not implemented yet.
+prototype. The Rust core now prepares and authenticates encrypted vaults in memory,
+validates credential snapshots and prepares content/recovery-password changes.
+Committed file storage, application sessions and the desktop interface remain
+unimplemented; Milestone 2 is still in progress.
 
 ## Project foundation
 
@@ -60,7 +61,8 @@ Install the pinned Rust toolchain, then run the commands in the
 [core README](crates/codeward-core/README.md). The
 [dependency review](docs/dependency-review.md) records exact crypto pins and features;
 the [JSON review](docs/json-dependency-review.md) covers the credential codec.
-[Progress evidence](docs/milestone-2-progress.md) records 61 passing tests plus a
-compile-fail doctest and an initial single-host timing measurement. Parsing checks
-structure only; crypto primitives do not yet establish a validated unlocked vault.
-No storage/durability behavior is implemented. Use synthetic data.
+[Progress evidence](docs/milestone-2-progress.md) records the current tests, limits
+and initial single-host timing measurement. The synthetic
+[vault round-trip example](crates/codeward-core/examples/vault_round_trip.rs) exercises
+creation, content updates and recovery preparation without file writes or secret
+output. No storage/durability behavior is implemented. Use synthetic data.
