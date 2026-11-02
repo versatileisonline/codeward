@@ -12,6 +12,7 @@ use crate::envelope::{
 /// This type establishes structure only; its values are not authenticated.
 /// Fresh encryption nonces and cryptographically produced slots belong to callers.
 /// Deliberately has no Debug implementation.
+#[derive(Clone)]
 pub struct HeaderParts {
     /// Stable public vault identifier.
     pub vault_id: [u8; 16],

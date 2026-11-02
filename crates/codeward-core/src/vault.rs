@@ -17,6 +17,7 @@ use crate::{
 };
 
 mod enrollment;
+mod updates;
 pub use enrollment::Enrollment;
 
 /// Application master-password bound in exact UTF-8 bytes, per ADR-0005.
@@ -39,6 +40,10 @@ pub enum VaultError {
     PasswordConfirmationMismatch,
     /// This enrollment has already prepared its candidate and released the code.
     EnrollmentFinished,
+    /// The requested base revision differs from this authenticated source.
+    RevisionConflict,
+    /// The source revision cannot be incremented without overflow.
+    RevisionExhausted,
 }
 
 impl fmt::Display for VaultError {
@@ -53,6 +58,8 @@ impl fmt::Display for VaultError {
                 f.write_str("master-password confirmation does not match")
             }
             Self::EnrollmentFinished => f.write_str("enrollment is no longer available"),
+            Self::RevisionConflict => f.write_str("vault revision conflict"),
+            Self::RevisionExhausted => f.write_str("vault revision is exhausted"),
         }
     }
 }

@@ -1,9 +1,10 @@
 use super::*;
 
-fn fixture(name: &str) -> Vec<u8> {
+pub(super) fn fixture(name: &str) -> Vec<u8> {
     let text = match name {
         "valid" => include_str!("../../tests/fixtures/authenticated-v1.hex"),
         "schema" => include_str!("../../tests/fixtures/authenticated-invalid-schema.hex"),
+        "max" => include_str!("../../tests/fixtures/authenticated-max-revision.hex"),
         _ => unreachable!(),
     };
     text.split_ascii_whitespace()
@@ -15,7 +16,7 @@ fn fixture(name: &str) -> Vec<u8> {
         .collect()
 }
 
-fn paper_code() -> &'static str {
+pub(super) fn paper_code() -> &'static str {
     include_str!("../../tests/fixtures/authenticated-recovery.txt").trim()
 }
 
@@ -198,4 +199,25 @@ fn invalid_confirmation_preserves_enrollment_and_does_not_derive() {
     assert_eq!(&*enrollment.recovery_code().unwrap(), &*code);
     drop(guard);
     assert!(enrollment.prepare("synthetic", "synthetic", &code).is_ok());
+}
+
+#[test]
+fn transplanting_valid_slots_from_another_vault_never_grants_access() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let bytes = fixture("valid");
+    let mut enrollment = Enrollment::begin().unwrap();
+    let other_code = enrollment.recovery_code().unwrap();
+    let other = enrollment
+        .prepare("synthetic password", "synthetic password", &other_code)
+        .unwrap();
+    for (start, end) in [(44, 148), (148, 256), (44, 256)] {
+        let mut spliced = bytes.clone();
+        spliced[start..end].copy_from_slice(&other.as_bytes()[start..end]);
+        let before = spliced.clone();
+        for code in [paper_code(), &other_code] {
+            assert!(begin_recovery(&spliced, code).is_err());
+        }
+        assert!(unlock_with_master(&spliced, "synthetic password").is_err());
+        assert_eq!(spliced, before);
+    }
 }
