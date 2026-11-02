@@ -1,5 +1,5 @@
 use codeward_core::{
-    encoding::EnvelopeParts,
+    encoding::{EnvelopeParts, HeaderParts},
     envelope::{FormatError, HEADER_LENGTH, MAX_FILE_LENGTH, Slot, UnauthenticatedEnvelope},
 };
 
@@ -15,15 +15,17 @@ const fn sequence<const N: usize>(start: u8) -> [u8; N] {
 
 fn parts(payload: &[u8]) -> EnvelopeParts<'_> {
     EnvelopeParts {
-        vault_id: &const { sequence::<16>(0) },
-        revision: 0x0102_0304_0506_0708,
-        master_salt: &const { sequence::<16>(0x10) },
-        master_nonce: &const { sequence::<24>(0x20) },
-        master_protected_key: &const { sequence::<48>(0x40) },
-        recovery_salt: &const { sequence::<32>(0x70) },
-        recovery_nonce: &const { sequence::<24>(0x90) },
-        recovery_protected_key: &const { sequence::<48>(0xB0) },
-        payload_nonce: &const { sequence::<24>(0xE0) },
+        header: HeaderParts {
+            vault_id: sequence::<16>(0),
+            revision: 0x0102_0304_0506_0708,
+            master_salt: sequence::<16>(0x10),
+            master_nonce: sequence::<24>(0x20),
+            master_protected_key: sequence::<48>(0x40),
+            recovery_salt: sequence::<32>(0x70),
+            recovery_nonce: sequence::<24>(0x90),
+            recovery_protected_key: sequence::<48>(0xB0),
+            payload_nonce: sequence::<24>(0xE0),
+        },
         encrypted_payload: payload,
     }
 }
@@ -39,12 +41,18 @@ fn encoding_matches_independent_python_fixture_byte_for_byte() {
         })
         .collect();
     assert_eq!(parts(&[0xA5; 32]).encode().unwrap(), expected);
+    let parsed = UnauthenticatedEnvelope::parse(&expected).unwrap();
+    let header = HeaderParts::from_envelope(&parsed);
+    assert_eq!(
+        &header.encode(parsed.encrypted_payload().len()).unwrap(),
+        parsed.header_bytes()
+    );
 }
 
 #[test]
 fn rejects_zero_revision_and_every_short_tag_length() {
     let mut input = parts(&[0xA5; 16]);
-    input.revision = 0;
+    input.header.revision = 0;
     assert_eq!(input.encode(), Err(FormatError::InvalidRevision));
     for length in 0..16 {
         assert_eq!(
@@ -82,15 +90,17 @@ fn preserves_all_supplied_fields_and_inputs_across_varied_encodings() {
         let original = payload.clone();
         for revision in [1, 256, u64::MAX] {
             let input = EnvelopeParts {
-                vault_id: &id,
-                revision,
-                master_salt: &salt,
-                master_nonce: &nonce,
-                master_protected_key: &key,
-                recovery_salt: &recovery_salt,
-                recovery_nonce: &recovery_nonce,
-                recovery_protected_key: &recovery_key,
-                payload_nonce: &payload_nonce,
+                header: HeaderParts {
+                    vault_id: id,
+                    revision,
+                    master_salt: salt,
+                    master_nonce: nonce,
+                    master_protected_key: key,
+                    recovery_salt,
+                    recovery_nonce,
+                    recovery_protected_key: recovery_key,
+                    payload_nonce,
+                },
                 encrypted_payload: &payload,
             };
             let encoded = input.encode().unwrap();
