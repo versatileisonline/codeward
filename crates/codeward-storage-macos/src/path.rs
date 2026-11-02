@@ -160,6 +160,16 @@ pub struct ReadLease {
     companion: File,
 }
 
+impl Drop for ReadLease {
+    fn drop(&mut self) {
+        // No intentional duplicate descriptor escapes this lease. Explicitly
+        // release the lock before closing so a transient inherited descriptor
+        // during an unrelated concurrent process spawn cannot prolong ownership.
+        // File drop still closes our fd if unlocking reports an OS error.
+        let _ = self.companion.unlock();
+    }
+}
+
 impl ReadLease {
     pub(super) fn verify(&self) -> Result<(), NativeError> {
         self.path.verify()?;
