@@ -47,8 +47,8 @@ or network communication. Isolated future boxes describe scope, not approved API
 
 The Rust core owns session control, credential operations, vault access/recovery,
 and persistence. React owns presentation, and a thin Tauri adapter connects IPC to
-core operations. Exact security components/format bytes, commit mechanism and detailed
-session policies still require ADR review. See the [UI/core contract](ui-core-contract.md).
+core operations. Accepted ADR-0001–0005 define the security/format, commit and session contracts;
+implementation and platform validation remain incomplete. See the [UI/core contract](ui-core-contract.md).
 
 ## Installed application separation
 
@@ -82,7 +82,7 @@ Command/data limits, secret exposure, notification payloads, stale-reply rejecti
 and permission requirements are defined in [ui-core-contract.md](ui-core-contract.md).
 
 Platform-specific filesystem, session-event, and packaging adapters need validation.
-Keep platform assumptions outside shared vault behavior; the proposed bounded
+Keep platform assumptions outside shared vault behavior; the accepted bounded
 matrix and storage experiment plan are in [platform-validation.md](platform-validation.md).
 
 ## Vault key and unlock slots
@@ -176,7 +176,7 @@ vault; updates must retain a complete prior or new commit. Normal saves and acce
 changes share the commit contract. After interrupted acknowledgement, inspect the
 actual committed file on reopen.
 
-Lock/close with drafts requires an explicit policy in ADR-0005; these transitions
+ADR-0005 defines lock/close behavior with drafts; these transitions
 do not authorize silent autosave or promise draft retention. If locking occurs
 during a save/recovery commit, hide credentials while resolving the commit
 coherently. Never postpone a security lock indefinitely for an edit or mislabel

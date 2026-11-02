@@ -30,13 +30,13 @@ violate this assumption. There is no initial runtime network dependency.
 
 | ID | Scenario | Initial response / requirement | Residual limit and later evidence |
 | --- | --- | --- | --- |
-| T-01 | Locked computer or copied vault is stolen. | RustCrypto Argon2id derives the password wrapping key; HKDF-SHA256 derives the independent generated-secret recovery key; XChaCha20-Poly1305 protects slots and contents (FR-01/02, NFR-02/05). | Attackers can target either slot offline. The approved starting Argon2id profile and 256-bit recovery entropy still need implementation/review evidence; HKDF does not harden a weak secret. An unlocked stolen device can expose active secrets. |
+| T-01 | Locked computer or copied vault is stolen. | RustCrypto Argon2id derives the password wrapping key; HKDF-SHA256 derives the independent generated-secret recovery key; XChaCha20-Poly1305 protects slots and contents (FR-01/02, NFR-02/05). | Attackers can target either slot offline. The approved profile and recovery generation have component evidence; integrated unlock remains unverified; HKDF does not harden a weak secret. An unlocked stolen device can expose active secrets. |
 | T-02 | Attacker obtains notebook and vault. | Treat the reusable 256-bit paper secret as an independent recovery-slot credential; separate it physically and confirm transcription in Rust (FR-06/07). | Valid paper secret plus usable matching file grants access without the master password. Reuse is intentional; exact encoding, replacement and compromise handling remain in ADR-0004. No remote revocation. |
 | T-03 | User forgets master password. | Offline recovery and replacement password against intact vault (FR-07). | Loss of both valid unlock paths can make contents inaccessible. No operator override. |
 | T-04 | Vault deleted, only computer lost, or only file corrupted. | Explain file-recovery distinction; preserve input on error (FR-09/10). | Paper secret cannot restore data. Backup/restore features are deferred; this availability threat remains unresolved initially. |
 | T-05 | App terminates during creation/save. | Complete committed states, acknowledgement after commit, coherent recovery metadata (FR-01/05, NFR-03/04). | Drafts may be lost. ADR-0003 defines power-loss boundary and fault matrix. |
 | T-06 | Capacity, permissions, or I/O fail. | Preserve prior commit; report failure without false success (NFR-04). | No progress guarantee on unavailable storage. Test each failure stage. |
-| T-07 | Malicious or damaged input is opened. | Validate the 16 MiB whole-file cap, supported KDF profile and structural bounds before expensive work; authenticate payload and validate its schema before exposure. Reject duplicate fields/truncation without modifying input (FR-09, NFR-02). | Parser defects remain possible. Exact parser sublimits and negative tests/security review remain open; permit only one derivation attempt at a time. |
+| T-07 | Malicious or damaged input is opened. | Validate the 16 MiB whole-file cap, supported KDF profile and structural bounds before expensive work; authenticate payload and validate its schema before exposure. Reject duplicate fields/truncation without modifying input (FR-09, NFR-02). | Parser defects remain possible. Envelope bounds/negative tests have evidence; credential decoding and integrated security review remain outstanding; permit only one derivation attempt at a time. |
 | T-08 | Older authentic copy replaces latest vault, or another writer overwrites it. | Prevent silent concurrent overwrites (NFR-08); do not claim integrity detects authentic old copies. | Rollback detection across lost local state is unresolved. Future backup/sync versioning needs review. |
 | T-09 | Malware/keylogger/debugger/privileged process observes use. | Minimize secret lifetime, avoid logging, lock on chosen triggers (FR-08, NFR-05). | Initial release cannot defeat a compromised OS or guarantee active-secret protection. Advanced defenses deferred, risk retained. |
 | T-10 | Diagnostics/temp files/display/OS memory leak secrets. | Review persistence, diagnostics, UI exposure and lifetime (NFR-02/05/07). | Swap, dumps, screenshots, memory remnants depend on stack/platform; no absolute erasure claim. Review clipboard risk if copying is added. |
@@ -44,7 +44,7 @@ violate this assumption. There is no initial runtime network dependency.
 | T-12 | Faulty or compromised UI invokes privileged actions or retains plaintext. | Scope custom Tauri commands to intended callers; Rust validates session, vault, payload and revision; minimize returned data; avoid UI file/key access (NFR-09). | Compromised unlocked UI can invoke permitted reveals and observe displayed/entered plaintext. IPC permissions are not proof of human intent, and clearing JavaScript references cannot prove erasure. |
 | T-13 | Late secret-bearing reply or notification restores data after locking or switching vaults. | Core-owned session generations, scoped references, stale-reply rejection and status-only notifications under NFR-09. | Previously exposed plaintext cannot be revoked; verify lock/in-flight-commit coordination and UI redaction before relying on it. |
 | T-14 | Attacker obtains a vault key using an old file and an exposed old unlock secret. | Distinguish replacing a protected slot from rotating the data key; design compromise handling in ADR-0002/0004 and coherent writes in ADR-0003. | Old files cannot be revoked. Updating only a slot does not protect later ciphertext under the already-exposed data key; complete rotation behavior is still open. |
-| T-15 | New encryption reuses a nonce under the same key, or metadata is accepted under the wrong vault/slot role. | Fresh random 24-byte nonces for every new encryption/retry; each slot authenticates its role/derivation metadata and the payload authenticates the complete header including both encrypted slots (ADR-0002). | Exact bytes, randomness failure handling and validation are still unimplemented. Slot changes require fresh payload encryption; AEAD alone does not detect replay of an authentic old vault. |
+| T-15 | New encryption reuses a nonce under the same key, or metadata is accepted under the wrong vault/slot role. | Fresh random 24-byte nonces for every new encryption/retry; each slot authenticates its role/derivation metadata and the payload authenticates the complete header including both encrypted slots (ADR-0002). | Exact bytes and primitive randomness failures have component tests; integrated nonce/AAD behavior remains unverified. Slot changes require fresh payload encryption; AEAD alone does not detect replay of an authentic old vault. |
 
 ## Assumptions and follow-through
 
@@ -61,9 +61,9 @@ Vault encryption does not prevent deletion, hardware loss, or unlocked-session
 observation. Device login and full-disk encryption may add protection, but are not
 substitutes for vault security or guarantees made by Codeward.
 
-Before implementation, ADR-0002/0004 must describe key/access relationships,
-offline guessing through both paths, exposed metadata, and reviewed security
-components without inventing cryptography. ADR-0003 must define failure behavior.
+ADR-0002/0004 define key/access relationships, offline guessing through both
+paths, exposed metadata and selected security components. ADR-0003 defines failure
+behavior; implementation evidence must be checked separately.
 Revisit this model for accepted ADRs and before adding services, extensions,
 imports, backups, or other integrations.
 
@@ -78,11 +78,11 @@ persistence and acknowledgement. Arbitrary external writers can bypass advisory
 coordination; authentic rollback after trusted state is lost remains unresolved.
 There is no blanket power-loss claim.
 
-The proposed [format](vault-format-v1.md) bounds/encodes every field and the paper
+The accepted [format](vault-format-v1.md) bounds/encodes every field and the paper
 checksum; checksum success is not authentication. ADR-0005's accepted five-minute lock,
 volatile-draft discard and timed reveal defaults still require runtime evidence. They do
 not establish complete erasure, endpoint protection or draft durability. ADR-0004
-proposes explicit confirmed paper-slot replacement and defers in-place data-key
+accepts explicit confirmed paper-slot replacement and defers in-place data-key
 rotation, retaining T-14's compromise risk rather than claiming a repair feature.
 The [platform plan](platform-validation.md) separates design contracts from native
 adapter, OS/storage-crash and packaged-runtime evidence still to be obtained.
