@@ -161,6 +161,7 @@ header/slot/payload field, splice slots between vaults, truncate at boundaries,
 exercise malformed/oversized JSON and verify neither unlock route exposes data.
 The checksum needs fixed vectors for unused bits, grouping, transposition, wrong
 characters and normalization. The original handoff contained no runtime evidence;
-current primitive/paper-code vectors and credential codec evidence are recorded in
-[Milestone 2 progress](milestone-2-progress.md). Full encrypted-envelope fixtures,
-integrated schema gating and unlock tests remain outstanding.
+current primitive/paper-code vectors, credential codec and authenticated in-memory
+vault evidence are recorded in [Milestone 2 progress](milestone-2-progress.md).
+Full encrypted-envelope fixtures and schema-gated access tests now exist; file
+commits, application/session authorization and platform evidence remain outstanding.

@@ -1,7 +1,8 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-01. Format, crypto primitives, paper-code handling
-and strict credential snapshots; the milestone is not complete.
+Status: in progress, 2026-11-02. In-memory authenticated vault operations now
+join the format, crypto, paper-code and credential components. The milestone is
+not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
 The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonline/codeward/pull/4),
@@ -9,9 +10,11 @@ the encoder in [PR #5](https://github.com/versatileisonline/codeward/pull/5), an
 cryptographic foundation in [PR #6](https://github.com/versatileisonline/codeward/pull/6).
 Separate subsequent commits add encoding, reviewed crypto dependencies,
 cryptographic primitives and paper-secret transcription checks. All three
-implementation PRs are merged into `main`. The current credential-schema slice
-adds validated records and strict JSON decoding/encoding. No integrated
-vault creation/unlock or storage behavior is claimed.
+implementation PRs are merged into `main`. The credential-schema slice was merged
+in [PR #8](https://github.com/versatileisonline/codeward/pull/8), following guidance
+cleanup in [PR #7](https://github.com/versatileisonline/codeward/pull/7). The current
+authenticated-vault slice adds in-memory creation/access/update preparation;
+storage commits and application sessions remain absent.
 
 ## Implemented first slice
 
@@ -30,7 +33,7 @@ slice is not evidence that file loading already has that protection.
 ## Implemented second slice
 
 [`EnvelopeParts::encode`](../crates/codeward-core/src/encoding.rs) assembles the
-exact version 1 layout from borrowed public metadata and already-encrypted slots
+exact version 1 layout from fixed public metadata and already-encrypted slots
 and payload. Fixed-size arrays constrain slot/salt/nonce lengths; the encoder
 emits only the accepted identifiers/profile and zero reserved fields. It rejects
 zero revision, a payload shorter than its tag, and output exceeding the whole-file
@@ -38,7 +41,7 @@ cap before allocating output. Supplied bytes are preserved.
 
 This is an in-memory format encoder, not vault creation or a file writer. It
 does not generate randomness, encrypt, authenticate, validate JSON, increment a
-revision or authorize a mutation. Callers remain responsible for those future
+revision or authorize a mutation. Callers remain responsible for those higher-level
 operations; structurally valid output can contain invalid ciphertext/tags.
 
 Five new tests compare complete output against the independently generated Python
@@ -64,9 +67,9 @@ reservation. Randomness failure returns no partial result and has no fallback.
 
 Primitive authentication returns no plaintext on failure. Successful decryption
 produces authenticated bytes only: the separate credential decoder must validate
-the returned bytes before exposure; access checks and session creation are still
-absent. These library operations are not UI commands.
-They do not yet wire both protected slots into an unlock/create workflow.
+the returned bytes before exposure. The vault layer below composes these primitives
+with both protected slots and schema validation; application authorization and
+session creation remain absent. These library operations are not UI commands.
 
 ## Paper-code component
 
@@ -79,8 +82,9 @@ the checksum before returning a secret that can derive a wrapping key.
 Confirmation compares decoded secrets with the reviewed fixed-length comparison
 primitive. Owned secret/display buffers are cleared on drop. This component does
 not enforce enrollment state, limit display to enrollment, persist confirmation,
-unlock a vault or replace a master password. Those application controls remain
-future work; checksum success alone does not authorize access.
+unlock a vault or replace a master password on its own. The vault layer below adds
+volatile enrollment and authenticated recovery preparation; application display and
+commit controls remain future work. Checksum success alone does not authorize access.
 
 ## Credential schema component
 
@@ -123,9 +127,61 @@ surrogate pairs; these finite tests are not an exhaustive parser/security audit.
 Two Python-standard-library fixtures independently encode synthetic UTF-8 and
 ASCII-escaped snapshots; Rust output matches the compact UTF-8 fixture exactly.
 
-Schema validity does not authenticate input or grant access. No authenticated
-vault operation calls this decoder yet; creation/unlock, authorized mutations,
-file I/O, persistence and session/UI workflows remain unimplemented.
+Schema validity alone does not authenticate input or grant access. The vault layer
+now invokes this decoder only after complete payload authentication; application
+authorization, file I/O and session/UI workflows remain unimplemented.
+
+## Authenticated in-memory vault component
+
+Implemented 2026-11-02 under unchanged bytes, profiles and schema. The
+[`vault` module](../crates/codeward-core/src/vault.rs) first structurally validates
+input, then authenticates the selected slot and complete payload using the original
+header AAD. It returns contents only after strict credential decoding. Wrapping
+keys and temporary plaintext are released when no longer needed. `AuthenticatedVault`
+owns the data key/snapshot in Rust; consuming `lock` releases that owned material.
+This is not an application session, caller authorization or proof of complete erasure.
+
+`Enrollment` generates a paper secret, checks exact master-password confirmation
+and paper transcription, and prepares an encrypted empty candidate. Success drops
+the enrollment secret and disables further display/preparation; failures permit an
+explicit retry with newly generated material. Password inputs are borrowed with
+ADR-0005's 1–4,096 UTF-8 byte bound. Caller display/input copies require cleanup.
+
+`RecoveryAccess` authenticates/validates without a credential-browsing API. It can
+prepare a replacement master slot and payload together, retaining the data key and
+paper salt/slot. Content preparation retains both slots without Argon2. Both paths
+check the expected authenticated revision, reject overflow and use fresh encryption
+nonces. Preparation never advances the source object or mutates borrowed bytes.
+`VaultCandidate` contains only complete encrypted bytes; it is not a saved/ready
+vault or completed recovery. Live-file conflict checks and mutation admission,
+reconciliation, commit acknowledgement and session generations remain future work.
+
+Header encoding and slot/payload AAD construction are shared with the existing
+format components, avoiding a second implementation of offsets/context. No Rust
+runtime dependency, cryptographic profile or on-disk byte change was introduced.
+
+Thirteen new runtime tests cover independent encrypted fixtures through both routes,
+authenticated invalid JSON, wrong secrets, master-password bounds, all single-byte
+mutations of one complete fixture through recovery, selected master-route damage,
+cross-vault slot transplantation, confirmed enrollment, fresh update nonces, retained
+slots, repeated paper recovery, oversized update failure and revision conflicts/
+overflow. Three compile-fail doctests total cover nonce reuse, consumed vault access
+and absence of ordinary browsing on recovery contexts.
+
+The [full-envelope generator](../crates/codeward-core/tests/fixtures/generate_vault.py)
+uses a synthetic Python-standard-library XChaCha/Poly1305 integer reference model
+plus the existing argon2-cffi 25.1.0 C derivation. It checks published HChaCha and
+AEAD vectors from the archived XChaCha draft before producing valid, invalid-schema
+and maximum-revision fixtures. This is test-only reference code, never a runtime
+crypto fallback. Regeneration reproduces the checked-in bytes; ordinary Rust tests
+need no Python or additional package installation. Finite cases are not fuzzing,
+an independent audit, or allocator/randomness failure injection at every layer.
+
+The [synthetic round-trip example](../crates/codeward-core/examples/vault_round_trip.rs)
+ran successfully: initial candidate, one-credential update at revision 2, and
+recovery password replacement at revision 3. It prints no secret values and performs
+no vault-file I/O. Storage durability, application/OS lock events, IPC permissions,
+packaging and Windows/Linux execution remain outstanding.
 
 ## Toolchain and component review
 
@@ -145,14 +201,14 @@ The separate JSON review covers its graph.
 
 ## Verification performed
 
-Host: macOS 26.3.1 (25D2128), Apple silicon. Rechecked 2026-11-01 with the pinned toolchain:
+Host: macOS 26.3.1 (25D2128), Apple silicon. Rechecked 2026-11-02 with the pinned toolchain:
 
 | Check | Observed result |
 | --- | --- |
-| `cargo test --workspace --locked --offline` | 61 tests pass: 17 parser/metadata, 5 envelope encoding, 10 crypto, 9 paper-code, 20 credentials; plus 1 compile-fail doctest |
+| `cargo test --workspace --locked --offline` | 74 tests pass: 17 parser/metadata, 5 envelope encoding, 10 crypto, 9 paper-code, 20 credentials, 13 vault; plus 3 compile-fail doctests |
 | `cargo fmt --all -- --check` | Pass |
 | `cargo clippy --workspace --all-targets --locked --offline -- -D warnings` | Pass |
-| Synthetic fixture regeneration | Credential fixtures regenerated with Python standard library on 2026-11-01; foundation structural/crypto/paper regeneration was recorded on 2026-10-29, including argon2-cffi 25.1.0 / bindings 25.1.0 |
+| Synthetic fixture regeneration | Full encrypted fixtures regenerated on 2026-11-02 with the test-only Python reference model and existing argon2-cffi 25.1.0; earlier component fixture evidence remains recorded above |
 | Documentation/whitespace | Relative links, fences and `git diff --check` checked; existing Mermaid diagrams unchanged |
 
 Tests cover every truncated prefix of a structural fixture, trailing bytes, exact
@@ -160,13 +216,14 @@ and excessive 16 MiB lengths, adversarial declared lengths, unsupported IDs and 
 nonzero reserved-byte values, lower/higher/overflow-sized KDF costs, endian fields,
 input preservation and AAD binding/exclusion behavior. Exact metadata fixtures are
 constructed independently in Python and consumed as checked-in hex by Rust tests.
-They are deliberately not valid encrypted vaults and contain no real keys/secrets.
+The structural/metadata fixtures are deliberately not valid encrypted vaults.
+The separate complete encrypted fixtures above also contain only synthetic data.
 
 Mutating ciphertext can still pass structural parsing; primitive AEAD tests now
 reject modified ciphertext/tags, every nonce/AAD byte, wrong keys, truncation and
 extra bytes. Both layers preserve their inputs. Malformed credential-JSON rejection
-now has standalone component tests; whole-envelope authentication and its
-integration with schema gating remain absent.
+has component tests; whole-envelope authentication now calls the schema gate
+before either ordinary access or restricted recovery is returned.
 
 Known-answer tests use [RFC 9106 section 5.3](https://www.rfc-editor.org/rfc/rfc9106.html#section-5.3),
 [RFC 5869 appendix A.1](https://www.rfc-editor.org/rfc/rfc5869.html#appendix-A.1)
@@ -225,14 +282,14 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 
 ## Remaining work
 
-1. Implement independent slot unlock, payload authentication and schema gating,
-   creation and authorized in-memory mutations. No plaintext may be released merely
-   because structural parsing or standalone schema validation succeeds. Extend
-   secret-lifetime review as integrated operations arrive.
-2. Implement the fault-injected commit state machine, unknown-outcome reconciliation
-   and writer exclusion, then validate native storage adapters against ADR-0003.
-3. Demonstrate the full Milestone 2 acceptance scenarios using synthetic data.
+1. Implement transaction/session admission and the fault-injected commit state
+   machine: writer exclusion, live-file/base checks, unknown-outcome reconciliation
+   and acknowledgement only after commit. Preparation alone cannot authorize save.
+2. Validate native storage adapters against ADR-0003, starting with synthetic macOS
+   experiments and separate Windows/Linux validation. Add file-read allocation caps.
+3. Demonstrate full Milestone 2 acceptance scenarios and remaining session/lifecycle
+   behavior. Later UI and recovery workflows must preserve these core boundaries.
 
-There is no credential store ready for use, vault creation/unlock, file reader or
-writer, save guarantee, native lock/session implementation, recovery workflow or
-desktop UI yet. OS-crash/power-loss evidence and packaged support remain outstanding.
+There is no credential store ready for use, file reader/writer, save guarantee,
+application/OS session implementation, committed recovery workflow or desktop UI.
+OS-crash/power-loss evidence and packaged support remain outstanding.

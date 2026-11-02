@@ -1,6 +1,6 @@
 # ADR-0004: Offline recovery-secret lifecycle
 
-Status: Accepted — paper-code component tested; integrated recovery/lifecycle unverified.
+Status: Accepted — in-memory recovery preparation tested; committed recovery/lifecycle pending.
 Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
@@ -45,8 +45,10 @@ Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2)
   rules in [ADR-0002](0002-vault-security-and-format.md).
 
 These are confirmed design choices. The paper-code component and HKDF primitive
-now have [bounded test evidence](../milestone-2-progress.md); enrollment state,
-vault access and committed password replacement remain unimplemented.
+have [bounded test evidence](../milestone-2-progress.md). The core now gates
+enrollment preparation on confirmation and authenticates a restricted recovery
+context that can prepare a replacement password. File commits, application session
+policy and the user recovery workflow remain unimplemented.
 Routine recovery preserves the same reusable secret, HKDF salt and recovery slot;
 the replacement password slot changes the header authenticated by the payload.
 
@@ -106,4 +108,5 @@ This contract was accepted together with ADR-0002/0003 through the handoff on
 2026-10-29. Implement later tests for repeat recovery with the same confirmed paper secret, invalid input, transcription
 errors, replacement credentials, interrupted access changes, missing/corrupted files,
 and old-copy/compromise limits. Map to FR-06/07/10 and T-02/03/04/14. Preserve offline
-runtime. This is design documentation, not evidence of working recovery.
+runtime. This design contract is supported by the scoped core evidence above; it
+does not establish completed durable recovery or an application workflow.
