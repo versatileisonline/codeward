@@ -129,11 +129,11 @@ secret inside Rust. Do not persist the plaintext code for later redisplay.
 
 ## Components and evidence
 
-Use the already selected RustCrypto packages. For implementation entry, recommend
-`argon2` 0.6, `hkdf` 0.13 with `sha2` 0.11, and `chacha20poly1305` 0.11. Supporting
-recommendations are `getrandom` 0.4 for OS randomness, `zeroize` 1 for owned secret
-buffers, and `serde` 1 / `serde_json` 1 with bounded duplicate-rejecting decoding.
-These are release-line recommendations, not a compatibility/audit certificate.
+The exact reviewed RustCrypto releases, randomness provider and cleanup features
+are recorded in [dependency-review.md](dependency-review.md). For credential JSON,
+`serde` 1 / `serde_json` 1 remain release-line recommendations requiring exact
+review and bounded duplicate-rejecting decoding before use. Package selection is
+not a compatibility/audit certificate.
 
 Before adding dependencies, review and pin exact stable patch releases/features,
 transitive dependencies, MSRV, licenses and current advisories. Disable crypto
@@ -152,7 +152,7 @@ Primary API references: [Argon2 key derivation](https://docs.rs/argon2/0.6.0/arg
 [HKDF](https://docs.rs/hkdf/0.13.0/hkdf/),
 [XChaCha20-Poly1305](https://docs.rs/chacha20poly1305/0.11.0/chacha20poly1305/),
 [getrandom](https://docs.rs/getrandom/0.4.3/getrandom/), and
-[zeroize limits](https://docs.rs/zeroize/1.8.2/zeroize/).
+[zeroize limits](https://docs.rs/zeroize/1.9.1/zeroize/).
 
 Before relying on this format, independently review byte ranges/lengths and AAD,
 use published primitive vectors, and check deterministic synthetic full-envelope

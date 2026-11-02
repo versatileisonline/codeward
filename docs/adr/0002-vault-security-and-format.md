@@ -75,7 +75,8 @@ see [RFC 5869](https://www.rfc-editor.org/rfc/rfc5869.html#section-3).
 
 Use fresh securely generated nonces for every new encryption, including retries
 and rewraps; never deliberately reuse a key/nonce pair. Store nonces and full tags
-with ciphertext. The randomness provider and its error handling still require review.
+with ciphertext. The reviewed provider and primitive failure tests are recorded in the dependency
+review and progress evidence; integrated publication behavior remains unverified.
 
 ## Selected version 1 file structure
 
@@ -159,7 +160,7 @@ Follow the format's pinning and negative-test plan; extend review before new use
 Keep the approved KDF costs provisional pending measurements during authorized
 implementation. Review vectors and exact dependency compatibility before relying
 on the implementation. Version 1 supports no automatic migrations or data-key
-rotation; unsupported formats are rejected unchanged. ADR-0004 records the proposed
+rotation; unsupported formats are rejected unchanged. ADR-0004 records the accepted
 explicit replacement boundary and residual compromise risk. Future migration/key
 rotation requires its own reviewed transaction design; changing slots is not rotation.
 

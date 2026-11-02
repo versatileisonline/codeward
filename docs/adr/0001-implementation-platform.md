@@ -34,7 +34,7 @@ No prototype, dependency assessment, or cross-platform UI verification has been 
 The [UI/core contract](../ui-core-contract.md) defines intended commands, data
 exposure, authorization, lock/reply behavior and save outcomes. Exact schemas and
 the accepted session and persistence policies complete that boundary.
-The proposal below names the bundler, plugin boundary and packaging targets;
+The accepted contract below names the bundler, plugin boundary and packaging targets;
 exact dependency patches/features and installer configuration need review before use.
 The [accepted handoff](../milestone-1-handoff.md) authorizes Milestone 2 core work;
 exact dependency review precedes setup/use.
@@ -43,7 +43,7 @@ exact dependency review precedes setup/use.
 
 Use the [platform validation plan](../platform-validation.md): macOS 26.3.1 on Apple
 silicon/APFS, Windows 11 25H2 on x64/NTFS, and Ubuntu 24.04 LTS on x64/ext4/GNOME
-(Wayland and X11). These are initial test targets, not verified support. Recommend
+(Wayland and X11). These are initial test targets, not verified support. Use
 Tauri 2, React/TypeScript and Vite with bundled assets and no remote runtime content.
 The plan records packaging/prerequisite paths, native persistence candidates and
 smallest synthetic experiments; measurements and package verification follow

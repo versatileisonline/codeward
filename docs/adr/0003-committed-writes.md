@@ -100,7 +100,7 @@ against a compromised OS is claimed.
 
 ## Platforms and validation
 
-The [platform plan](../platform-validation.md) defines the proposed matrix,
+The [platform plan](../platform-validation.md) defines the accepted validation matrix,
 candidate APIs, required barriers and storage exclusions. Linux file and directory
 sync differ; macOS cache flushing needs native review; Windows replacement and
 failure semantics require their own evidence. Reject unsupported adapters instead

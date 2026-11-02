@@ -67,7 +67,7 @@ strategy; no complete compromise-recovery feature is claimed by this decision.
 
 ## Transcription and lifecycle contract
 
-The [format proposal](../vault-format-v1.md) specifies RFC 4648 Base32, no padding,
+The [normative format](../vault-format-v1.md) specifies RFC 4648 Base32, no padding,
 52 secret characters plus an eight-character SHA-256-derived transcription
 checksum, four-character groups and strict ASCII input normalization. It also
 specifies HKDF/AAD bytes, bounds, candidate randomness helpers and negative tests.
@@ -79,7 +79,7 @@ separate transcription-confirmation step validated inside Rust. Never implement
 later redisplay by storing its plaintext or a copy encrypted under the data key.
 Release enrollment secret material on success, cancel or lock. Losing an
 unconfirmed enrollment restarts it; no initial vault is ready before the coherent
-commit. Apply ADR-0005's proposed inactivity/redaction policy.
+commit. Apply ADR-0005's accepted inactivity/redaction policy.
 
 For later explicit paper-secret replacement, require a normal unlocked session
 and fresh master-password reauthentication. Generate a new independent 32-byte
@@ -92,7 +92,7 @@ Routine forgotten-password recovery remains separate: use the existing paper
 secret, keep its salt/slot, commit a replacement master slot and payload under
 ADR-0003, and report completion only after commit. Do not silently replace paper.
 
-Recommend deferring an in-place data-key-rotation workflow in version 1. Explicit
+Version 1 defers an in-place data-key-rotation workflow. Explicit
 slot replacement must explain that old copies remain usable and a disclosed data
 key may expose newer contents. No complete compromise-recovery claim is made.
 If compromise is suspected, stop relying on that vault/key; creating a new vault
