@@ -21,6 +21,7 @@ Root:
 - [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
+- [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
 
 `docs/adr/`:
 
@@ -65,3 +66,12 @@ Root:
 - [src/recovery/tests.rs](crates/codeward-core/src/recovery/tests.rs): Paper-code fixtures and transcription-error tests.
 - [examples/measure_master.rs](crates/codeward-core/examples/measure_master.rs): Synthetic local derivation timing.
 - [examples/vault_round_trip.rs](crates/codeward-core/examples/vault_round_trip.rs): Synthetic in-memory creation/edit/lock/recovery demonstration.
+
+`crates/codeward-storage-macos/`:
+
+- [README.md](crates/codeward-storage-macos/README.md): Native experiment scope and checks.
+- [src/lib.rs](crates/codeward-storage-macos/src/lib.rs): macOS-only boundary and controlled error types.
+- [src/native.rs](crates/codeward-storage-macos/src/native.rs): Small documented descriptor-relative native-call wrappers and filesystem filters.
+- [src/path.rs](crates/codeward-storage-macos/src/path.rs): Retained directory identities and stable companion writer lease.
+- [src/reading.rs](crates/codeward-storage-macos/src/reading.rs): Bounded unauthenticated reads with change detection.
+- [src/reading/tests.rs](crates/codeward-storage-macos/src/reading/tests.rs): Synthetic native path/read and subprocess-lock tests.

@@ -12,7 +12,8 @@ support remains unverified. The initial audience is a small private friends/fami
 prototype. The Rust core now prepares and authenticates encrypted vaults in memory,
 validates credential snapshots and prepares content/recovery-password changes.
 Session-bound transaction admission and the committed-write protocol now have
-fault-injected model tests. Native file storage, full application sessions and
+fault-injected model tests. A synthetic macOS foundation adds bounded reads and
+native writer exclusion. Committed file storage, full application sessions and
 the desktop interface remain unimplemented; Milestone 2 is still in progress.
 
 ## Project foundation

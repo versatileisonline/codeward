@@ -3,6 +3,10 @@
 Status: Accepted initial validation plan, 2026-10-29; no support claims verified.
 Scope: ADR-0001/0003/0005 and NFR-03/04/06/08/09.
 
+The [macOS foundation evidence](macos-storage-foundation.md) now covers bounded
+synthetic reads, descriptor-rooted path checks and native writer exclusion. It
+does not establish writable-adapter acceptance, persistence or packaged support.
+
 ## Bounded starting matrix
 
 | Target | CPU / filesystem | Desktop runtime and planned package |
