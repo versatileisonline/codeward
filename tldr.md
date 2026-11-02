@@ -18,6 +18,7 @@ Root:
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
 - [dependency-review.md](docs/dependency-review.md): Exact crypto package pins, features and advisory review.
+- [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 
