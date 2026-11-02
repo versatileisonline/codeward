@@ -1,9 +1,9 @@
 # Project charter
 
 Status: Milestone 1 design accepted; Milestone 2 entry authorized.
-Updated: 2026-10-29. Rust/Tauri/React, RustCrypto primitives, the starting profile
-and format structure are selected. The logical save protocol is approved; concrete
-remaining proposals are ready in the [Milestone 1 handoff](milestone-1-handoff.md).
+Updated: 2026-11-01. Rust/Tauri/React, RustCrypto primitives, the starting profile
+and format structure are selected. Accepted contracts and the validation sequence
+are recorded in the [Milestone 1 handoff](milestone-1-handoff.md).
 The handoff records design acceptance and core implementation authorization on
 2026-10-29.
 No runtime support/security claim is verified.
@@ -22,7 +22,7 @@ forgetting the master password. Work in small milestones with explicit review ga
 - Rust core separated from a React/TypeScript interface hosted by Tauri and the local
   vault file. Users launch an
   application window without opening a browser tab or starting a localhost server.
-  A bounded initial matrix and packaging plan are proposed in
+  The accepted bounded initial matrix and packaging plan are in
   [platform-validation.md](platform-validation.md); runtime evidence is pending.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
 - Generate passwords on demand and explicitly save them with credentials.
@@ -74,11 +74,6 @@ and storage behavior on each declared target before prototype acceptance. Linux
 support does not imply every distribution or desktop environment is supported.
 
 ## Success and change control
-
-Milestone 0 succeeds when a documentation-only branch/PR provides a clear
-charter, requirements, threat model, Mermaid diagrams, roadmap, ADR placeholders,
-and Git practices to review. It contains no application code, dependencies, build
-system, language/algorithm selection, or vault-format choice.
 
 The later prototype succeeds when a person can create a vault, commit and retrieve
 a credential offline, lock/reopen it, recover using the paper secret and intact

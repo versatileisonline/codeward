@@ -31,9 +31,8 @@ proceed in separate focused reviews.
 Begin with a framework-independent Rust core, bounded envelope parsing and exact
 AAD bytes using synthetic fixtures. Review/pin dependencies before using them;
 add schema, cryptographic and persistence behavior in focused tested slices. Keep
-implementation on a separate branch based on the approved documentation while
-the Milestone 1 PR remains open. The gate accepts the contracts and evidence plan,
-not runtime results. Native adapters remain blocked from real-vault use until
+implementation on focused branches from the reviewed baseline. The gate accepts
+the contracts and evidence plan, not runtime results. Native adapters remain blocked from real-vault use until
 platform-specific evidence exists.
 
 ## Current Milestone 2 slice
@@ -50,36 +49,26 @@ commit protocol exists. Next review JSON dependencies and implement strict bound
 credential decoding, then integrate authenticated slots/payload with schema gating.
 Fault-injected persistence and separately validated native adapters follow.
 
-## When implementation becomes necessary
+## Implementation and evidence boundaries
 
-Recording the stack, UI/core contract, key model and algorithm choices requires
-documentation only. Actual
-cross-platform text-input/accessibility checks, packaged offline behavior, IPC
-permissions, and secret-handling behavior will eventually need executable evidence.
-Before any such feasibility spike, explain the question and smallest synthetic-data
-experiment and obtain explicit authorization. Do not scaffold the app,
-install dependencies, or create a mock executable under this design-only request.
-
-Product implementation starts in Milestone 2 after the remaining security/recovery,
-save, session, and platform decisions pass the Milestone 1 review gate and
-implementation is explicitly authorized. A narrowly authorized feasibility spike does not itself
-complete that gate or authorize the product build.
-
-The accepted handoff now authorizes implementation. Measurements and native
-validation follow the agreed evidence plan rather than being claimed in advance.
+The accepted handoff authorizes Milestone 2 implementation and the synthetic
+experiments needed to validate it. Native adapters cannot be used with real vaults
+until platform-specific evidence passes. UI integration follows its later milestone.
+A changed contract, new milestone or release requires its own review; preparing
+implementation does not authorize merges or milestone completion.
 
 ## Review inputs and implementation prerequisites
 
-- [Vault format proposal](vault-format-v1.md): exact bytes, AAD/HKDF context,
+- [Normative vault format](vault-format-v1.md): exact bytes, AAD/HKDF context,
   JSON schema/limits, Base32/checksum, randomness/error rules and component review.
 - [ADR-0003](adr/0003-committed-writes.md): approved logical protocol, unknown
   outcomes, writer exclusion, coherent slots and interruption matrix.
 - [ADR-0005](adr/0005-session-and-drafts.md): concrete lock/draft/display defaults
   and coordination with commits.
-- [Platform plan](platform-validation.md): proposed bounded matrix, native adapter
+- [Platform plan](platform-validation.md): accepted bounded matrix, native adapter
   candidates, unsupported storage and required evidence. An unproven adapter does
   not gain real-vault support from acceptance of this evidence plan.
-- [ADR-0004](adr/0004-offline-recovery.md): explicit replacement proposal and a
+- [ADR-0004](adr/0004-offline-recovery.md): accepted explicit replacement contract and a
   clear deferral of in-place data-key rotation without a compromise-repair claim.
 
 The design gate approves explicit policies, provisional bounded profiles and the
