@@ -10,6 +10,7 @@ use zeroize::Zeroizing;
 
 mod bounds;
 mod decoding;
+mod encoding;
 
 /// Maximum credentials in one version 1 snapshot.
 pub const MAX_CREDENTIALS: usize = 10_000;
