@@ -10,8 +10,8 @@ The planned application installs and opens in its own window. The exact vault
 format, save contract and initial validation matrix are specified; actual runtime
 support remains unverified. The initial audience is a small private friends/family
 prototype. Milestone 2 now has Rust file-format handling, tested cryptographic
-building blocks and paper-code transcription checks. Full vault creation/unlock,
-safe storage and the desktop interface are not implemented yet.
+building blocks, paper-code transcription checks and strict credential JSON handling.
+Full vault creation/unlock, safe storage and the desktop interface are not implemented yet.
 
 ## Project foundation
 
@@ -59,7 +59,8 @@ Browser integration, online recovery, sync, and automated backups remain future 
 Install the pinned Rust toolchain, then run the commands in the
 [core README](crates/codeward-core/README.md). The
 [dependency review](docs/dependency-review.md) records exact crypto pins and features;
-[progress evidence](docs/milestone-2-progress.md) records 41 passing tests plus a
+the [JSON review](docs/json-dependency-review.md) covers the credential codec.
+[Progress evidence](docs/milestone-2-progress.md) records 61 passing tests plus a
 compile-fail doctest and an initial single-host timing measurement. Parsing checks
 structure only; crypto primitives do not yet establish a validated unlocked vault.
 No storage/durability behavior is implemented. Use synthetic data.

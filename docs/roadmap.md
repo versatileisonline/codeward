@@ -32,22 +32,22 @@ Begin with a framework-independent Rust core, bounded envelope parsing and exact
 AAD bytes using synthetic fixtures. Review/pin dependencies before using them;
 add schema, cryptographic and persistence behavior in focused tested slices. Keep
 implementation on focused branches from the reviewed baseline. The gate accepts
-the contracts and evidence plan, not runtime results. Native adapters remain blocked from real-vault use until
-platform-specific evidence exists.
+the contracts and evidence plan, not runtime results. Native adapters remain
+blocked from real-vault use until platform-specific evidence exists.
 
 ## Current Milestone 2 slice
 
-The Rust library implements envelope parsing/encoding, exact public authentication
-metadata, fixed-profile cryptographic primitives and paper-code handling in modular
-commits. [Dependency review](dependency-review.md) covers the exact crypto graph.
-41 tests and one compile-fail doctest pass on macOS;
-[progress evidence](milestone-2-progress.md) records vectors, negative cases,
-secret-lifetime limits and an initial Argon2 timing/process-memory observation.
+The Rust library implements envelope parsing/encoding, public authentication
+metadata, fixed-profile cryptographic primitives, paper-code handling and strict
+credential snapshots. [Crypto](dependency-review.md) and
+[JSON](json-dependency-review.md) reviews record exact pins/features/advisories.
+The [progress evidence](milestone-2-progress.md) is the current source for test
+counts, vectors, negative cases, memory limits and single-host measurements.
 
-No integrated creation/unlock, credential schema, file I/O, session lifecycle or
-commit protocol exists. Next review JSON dependencies and implement strict bounded
-credential decoding, then integrate authenticated slots/payload with schema gating.
-Fault-injected persistence and separately validated native adapters follow.
+No integrated creation/unlock, file I/O, session lifecycle or commit protocol exists.
+Next integrate authenticated slots/payload with the credential schema gate and
+controlled in-memory mutations. Fault-injected persistence and separately validated
+native adapters follow. Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries
 
@@ -100,6 +100,6 @@ guarantee is inferred from that authorization.
 5. Try invalid credentials, tampered input, inaccessible storage and missing files;
    receive accurate errors without destroying a usable prior state.
 
-These are future integrated validation targets. Only the bounded core format
-and crypto/paper-code tests described above have been implemented; no end-to-end
-workflow exists yet.
+These are future integrated validation targets. The bounded core format,
+crypto/paper-code and credential components have the evidence described above;
+no end-to-end workflow exists yet.

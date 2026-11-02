@@ -36,8 +36,9 @@ and [ADR-0004](0004-offline-recovery.md) for the reusable paper-secret lifecycle
 The format and parameter profile below were approved during Milestone 1. Exact
 byte encodings are defined by the normative format document.
 [Dependency review](../dependency-review.md) now records exact crypto patches,
-features and advisories used by the tested primitives. JSON dependencies and
-integrated/native behavior remain future work; these decisions do not establish
+features and advisories used by the tested primitives. The separate
+[JSON review](../json-dependency-review.md) covers the strict credential codec.
+Integrated/native behavior remains future work; these decisions do not establish
 independent audit coverage or complete runtime guarantees for Codeward.
 
 ## Selected starting parameter profile
@@ -123,8 +124,8 @@ file and does not promise partial salvage.
 
 Limit the entire version 1 vault file to 16 MiB, checked before large allocations.
 Also bound JSON nesting, record counts and field lengths under the normative
-schema; strict credential decoding remains unimplemented. Reject unsupported
-versions/profiles, invalid lengths,
+schema; strict credential decoding now has standalone component evidence.
+Reject unsupported versions/profiles, invalid lengths,
 duplicate fields, truncation and authentication failures without modifying the input.
 
 An authenticated revision can assist conflict identification. It cannot detect

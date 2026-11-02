@@ -11,8 +11,8 @@ Milestone 2 implementation is authorized. Exact package/security review precedes
 use; full target measurements and native runtime evidence remain future work. Design approval
 does not establish implemented behavior or permission to merge.
 The current [core evidence](../milestone-2-progress.md) covers parsing/encoding,
-public authentication metadata, crypto primitives, paper-code validation and an
-initial single-host derivation measurement. Integrated workflows remain absent.
+public authentication metadata, crypto primitives, paper-code validation, strict
+credential JSON handling and an initial single-host derivation measurement. Integrated workflows remain absent.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |

@@ -1,8 +1,8 @@
 # Codeward core
 
 Milestone 2 library: structural parsing/encoding, public authentication metadata,
-bounded cryptographic primitives and paper-secret transcription checks for the
-[accepted format](../../docs/vault-format-v1.md). Rust 1.99.1 is pinned.
+bounded cryptographic primitives, paper-secret transcription checks and strict
+credential JSON handling for the [accepted format](../../docs/vault-format-v1.md). Rust 1.99.1 is pinned.
 [Exact crypto pins/features and advisory review](../../docs/dependency-review.md)
 are recorded; there are no runtime services.
 
@@ -31,7 +31,16 @@ operations as generic UI commands.
 `recovery` encodes/validates the canonical paper code and checks transcription
 confirmation. Application enrollment/display rules and complete recovery are absent.
 
-41 tests cover parsing/metadata (17), encoding (5), crypto (10) and paper codes (9).
+`credentials` validates record IDs, field byte limits, timestamp order, unique IDs
+and the exact version 1 JSON schema. Its decoder rejects duplicate/unknown/missing
+fields and malformed/oversized input before exposing a complete snapshot. The
+serializer emits compact fixed-order JSON with sorted IDs through a capped writer.
+Owned strings/output are zeroizing; bounded Serde escape scratch is not. These
+types establish schema validity, not authentication or access permission. See the
+[JSON package review](../../docs/json-dependency-review.md) for dependency/cleanup limits.
+
+61 tests cover parsing/metadata (17), envelope encoding (5), crypto (10), paper
+codes (9) and credentials (20).
 One compile-fail doctest verifies nonce ownership. Published primitive vectors and
 independent Python/C fixtures supplement negative and round-trip cases. See
 [evidence and measurements](../../docs/milestone-2-progress.md) for exact limits.
@@ -47,6 +56,6 @@ cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 The optional synthetic timing example runs with
 `cargo run --release --locked --offline --example measure_master`.
 
-No integrated vault creation/unlock, credential schema, file
+No integrated vault creation/unlock, file
 reader/writer, native durability adapter, session implementation or desktop UI
 exists yet. Never use these fixtures or this incomplete library for real credentials.

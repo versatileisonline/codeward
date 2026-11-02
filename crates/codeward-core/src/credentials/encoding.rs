@@ -23,7 +23,7 @@ impl CredentialSnapshot {
 }
 
 // Private wrappers keep general-purpose Serde serialization off the public
-// credential types. The application receives plaintext only through encode().
+// credential types. This serialization path always uses the bounded writer.
 struct Snapshot<'a>(&'a CredentialSnapshot);
 struct Records<'a>(&'a [Credential]);
 struct Record<'a>(&'a Credential);
