@@ -211,23 +211,12 @@ impl<'a> UnauthenticatedEnvelope<'a> {
 
     /// Exact AAD for one slot, excluding revision, protected key and other slot.
     pub fn slot_aad(&self, slot: Slot) -> Vec<u8> {
-        let metadata = match slot {
-            Slot::MasterPassword => &self.header[44..100],
-            Slot::Recovery => &self.header[148..208],
-        };
-        let mut aad = Vec::with_capacity(SLOT_DOMAIN.len() + 28 + metadata.len());
-        aad.extend_from_slice(SLOT_DOMAIN);
-        aad.extend_from_slice(&self.header[..28]);
-        aad.extend_from_slice(metadata);
-        aad
+        slot_aad(self.header, slot)
     }
 
     /// Exact payload AAD, binding the full header including both encrypted slots.
     pub fn payload_aad(&self) -> Vec<u8> {
-        let mut aad = Vec::with_capacity(PAYLOAD_DOMAIN.len() + HEADER_LENGTH);
-        aad.extend_from_slice(PAYLOAD_DOMAIN);
-        aad.extend_from_slice(self.header);
-        aad
+        payload_aad(self.header)
     }
 
     /// HKDF info binding the recovery purpose, format/suite and stable vault ID.
@@ -239,6 +228,28 @@ impl<'a> UnauthenticatedEnvelope<'a> {
         info.extend_from_slice(&self.header[8..28]);
         info
     }
+}
+
+// Shared with encryption preparation so exact authenticated byte ranges have one
+// implementation. Callers supply either original parsed bytes or a newly encoded
+// fixed-profile header; these helpers do not authenticate or validate a header.
+pub(crate) fn slot_aad(header: &[u8; HEADER_LENGTH], slot: Slot) -> Vec<u8> {
+    let metadata = match slot {
+        Slot::MasterPassword => &header[44..100],
+        Slot::Recovery => &header[148..208],
+    };
+    let mut aad = Vec::with_capacity(SLOT_DOMAIN.len() + 28 + metadata.len());
+    aad.extend_from_slice(SLOT_DOMAIN);
+    aad.extend_from_slice(&header[..28]);
+    aad.extend_from_slice(metadata);
+    aad
+}
+
+pub(crate) fn payload_aad(header: &[u8; HEADER_LENGTH]) -> Vec<u8> {
+    let mut aad = Vec::with_capacity(PAYLOAD_DOMAIN.len() + HEADER_LENGTH);
+    aad.extend_from_slice(PAYLOAD_DOMAIN);
+    aad.extend_from_slice(header);
+    aad
 }
 
 // Only fixed, internally selected offsets into a validated 280-byte header call
