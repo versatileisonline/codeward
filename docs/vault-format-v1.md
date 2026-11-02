@@ -130,10 +130,10 @@ secret inside Rust. Do not persist the plaintext code for later redisplay.
 ## Components and evidence
 
 The exact reviewed RustCrypto releases, randomness provider and cleanup features
-are recorded in [dependency-review.md](dependency-review.md). For credential JSON,
-`serde` 1 / `serde_json` 1 remain release-line recommendations requiring exact
-review and bounded duplicate-rejecting decoding before use. Package selection is
-not a compatibility/audit certificate.
+are recorded in [dependency-review.md](dependency-review.md). Exact Serde/serde_json
+pins, features, advisories and decoder resource/cleanup boundaries are recorded in
+[json-dependency-review.md](json-dependency-review.md). Package selection is not a
+compatibility/audit certificate.
 
 Before adding dependencies, review and pin exact stable patch releases/features,
 transitive dependencies, MSRV, licenses and current advisories. Disable crypto
@@ -161,6 +161,6 @@ header/slot/payload field, splice slots between vaults, truncate at boundaries,
 exercise malformed/oversized JSON and verify neither unlock route exposes data.
 The checksum needs fixed vectors for unused bits, grouping, transposition, wrong
 characters and normalization. The original handoff contained no runtime evidence;
-current primitive/paper-code vectors and limits are recorded in
+current primitive/paper-code vectors and credential codec evidence are recorded in
 [Milestone 2 progress](milestone-2-progress.md). Full encrypted-envelope fixtures,
-schema gating and integrated unlock tests remain outstanding.
+integrated schema gating and unlock tests remain outstanding.

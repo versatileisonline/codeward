@@ -18,6 +18,7 @@ Root:
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
 - [dependency-review.md](docs/dependency-review.md): Exact crypto package pins, features and advisory review.
+- [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 
@@ -41,6 +42,12 @@ Root:
 - [src/envelope.rs](crates/codeward-core/src/envelope.rs): Structural parsing and public authentication metadata.
 - [src/encoding.rs](crates/codeward-core/src/encoding.rs): In-memory envelope encoding from public metadata and encrypted bytes.
 - [src/crypto.rs](crates/codeward-core/src/crypto.rs): Bounded derivation/encryption primitives and secret ownership.
+- [src/credentials.rs](crates/codeward-core/src/credentials.rs): Validated credential records and snapshots.
+- [src/credentials/bounds.rs](crates/codeward-core/src/credentials/bounds.rs): Nonallocating JSON resource preflight and decoded byte counts.
+- [src/credentials/decoding.rs](crates/codeward-core/src/credentials/decoding.rs): Strict duplicate-rejecting snapshot decoding.
+- [src/credentials/encoding.rs](crates/codeward-core/src/credentials/encoding.rs): Compact fixed-order JSON with capped plaintext output.
+- [src/credentials/tests.rs](crates/codeward-core/src/credentials/tests.rs): Credential model tests; codec tests live beside their modules.
+- [tests/fixtures/generate_credentials.py](crates/codeward-core/tests/fixtures/generate_credentials.py): Independent synthetic credential JSON fixtures.
 - [src/recovery.rs](crates/codeward-core/src/recovery.rs): Paper-code formatting, validation and transcription confirmation.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
 - [tests/encoding.rs](crates/codeward-core/tests/encoding.rs): Exact encoding fixture, bounds and round-trip tests.

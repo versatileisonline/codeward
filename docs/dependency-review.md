@@ -3,7 +3,8 @@
 Reviewed 2026-10-29 for the Milestone 2 crypto foundation under ADR-0002.
 This is a release/feature/advisory integration review, not an independent audit
 of these libraries or Codeward. The accepted algorithms, costs and file bytes
-are unchanged. Credential JSON dependencies are not included in this review.
+are unchanged. Credential JSON dependencies and the extended advisory snapshot are recorded
+separately in [json-dependency-review.md](json-dependency-review.md).
 
 ## Direct pins and enabled features
 
