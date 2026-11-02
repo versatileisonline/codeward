@@ -50,19 +50,20 @@ No applicable advisory was found in this manual snapshot comparison. This was no
 
 ## Decoder and plaintext ownership
 
-The planned decoder uses borrowed `RawValue` string tokens, rather than a `Value`
+The decoder uses borrowed `RawValue` string tokens, rather than a `Value`
 map that loses duplicate keys or allocates strings before field-specific checks.
 Reviewed source: [raw values](https://docs.rs/serde_json/1.0.154/serde_json/value/struct.RawValue.html),
 [deserializer](https://docs.rs/crate/serde_json/1.0.154/source/src/de.rs) and
 [slice reader](https://docs.rs/crate/serde_json/1.0.154/source/src/read.rs).
 Borrowed raw strings are scanned without building their decoded contents. A
-nonallocating preflight must bound container depth and encoded field-name tokens
+nonallocating preflight bounds container depth and encoded field-name tokens
 before Serde runs; RawValue's ignored-container scanner itself does not enforce
-Codeward's depth limit. Count decoded UTF-8 bytes before decoding each field.
-Check collection counts before constructing an excess record. Reject duplicates
-using explicit schema visitors, not intermediate maps.
+Codeward's depth limit. Decoded UTF-8 bytes are counted before decoding each field.
+Collection seeds check counts before constructing an excess record and reject
+wrong container types through borrowed tokens, avoiding eager string decoding in
+type-error paths. Explicit schema visitors retain/reject duplicate fields.
 
-Own credential strings and serialized plaintext in zeroizing buffers. Serde's
+Credential strings and serialized plaintext use zeroizing buffers. Serde's
 escaped-string scratch storage is bounded by the checked field but is not zeroized;
 caller inputs, temporary copies, allocation movement, swap and dumps remain residual
 exposure. No complete-erasure or constant-time parser claim is made. Translate

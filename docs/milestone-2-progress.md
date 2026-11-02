@@ -1,14 +1,16 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-10-29. Format, crypto primitives and paper-code handling;
-the milestone is not complete.
+Status: in progress, 2026-11-01. Format, crypto primitives, paper-code handling
+and strict credential snapshots; the milestone is not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
 The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonline/codeward/pull/4),
 the encoder in [PR #5](https://github.com/versatileisonline/codeward/pull/5), and the
 cryptographic foundation in [PR #6](https://github.com/versatileisonline/codeward/pull/6).
 Separate subsequent commits add encoding, reviewed crypto dependencies,
-cryptographic primitives and paper-secret transcription checks. All three implementation PRs are merged into `main`. No integrated
+cryptographic primitives and paper-secret transcription checks. All three
+implementation PRs are merged into `main`. The current credential-schema slice
+adds validated records and strict JSON decoding/encoding. No integrated
 vault creation/unlock or storage behavior is claimed.
 
 ## Implemented first slice
@@ -61,8 +63,9 @@ Size checks precede plaintext copies; bounded working allocations use fallible
 reservation. Randomness failure returns no partial result and has no fallback.
 
 Primitive authentication returns no plaintext on failure. Successful decryption
-produces authenticated bytes only: credential schema validation, access checks
-and session creation are still absent. These library operations are not UI commands.
+produces authenticated bytes only: the separate credential decoder must validate
+the returned bytes before exposure; access checks and session creation are still
+absent. These library operations are not UI commands.
 They do not yet wire both protected slots into an unlock/create workflow.
 
 ## Paper-code component
@@ -79,6 +82,51 @@ not enforce enrollment state, limit display to enrollment, persist confirmation,
 unlock a vault or replace a master password. Those application controls remain
 future work; checksum success alone does not authorize access.
 
+## Credential schema component
+
+Implemented 2026-11-01 under the unchanged version 1 schema. The
+[`credentials` module](../crates/codeward-core/src/credentials.rs) owns validated
+records and sorts snapshots by ID, rejecting duplicates. Text is preserved exactly
+in zeroizing strings; fields are private and exposed as borrows for core operations.
+No Debug/Clone/Copy implementation or generic public Serde serialization is provided.
+Constructors validate IDs, UTF-8 byte bounds and timestamp range/order before copying.
+
+`CredentialSnapshot::decode` caps existing plaintext bytes before UTF-8 parsing.
+A nonallocating preflight enforces depth three and bounded field-name tokens.
+Explicit visitors reject unknown/duplicate/missing fields and excess record counts;
+borrowed raw values prevent eager string/container decoding. Field decoded-byte
+counts, including Unicode escapes/surrogate pairs, are checked before unescaping.
+Wrong collection types are rejected as borrowed tokens, avoiding large decoded
+strings in Serde's type-error path. Integer fields reject fractional/exponent forms.
+Failed decoding returns no partial snapshot and leaves input untouched. Library
+errors are translated into fixed diagnostics without source text.
+
+`encode` writes compact fixed-order JSON with ascending IDs through a capped
+zeroizing writer. It returns no partial output on failure and checks the full
+plaintext limit before extending the output buffer. This is serialization, not
+vault encryption or a file commit; individually valid records can exceed the total
+encoded snapshot cap and are then rejected by the writer.
+
+The [JSON dependency review](json-dependency-review.md) records exact pins, all
+new locked packages/features and a fresh full-graph advisory snapshot. Serde's
+bounded escaped-string scratch is not zeroized. Caller copies, allocator movement,
+compiler temporaries, swap and dumps remain residual exposure; no complete-erasure
+claim or allocation-failure injection is made.
+
+Twenty new tests cover field/model boundaries, unknown/duplicate/missing fields,
+IDs, timestamps, wrong types, malformed Unicode/escapes, every truncated prefix
+of a synthetic record snapshot, trailing bytes and input preservation. They cover
+exact/over-cap snapshots, 10,000 versus 10,001 records, escaped decoded-field
+limits, deep containers, oversized keys, fixed diagnostics and deterministic
+serialization. Unicode length tests exercise every valid BMP scalar plus selected
+surrogate pairs; these finite tests are not an exhaustive parser/security audit.
+Two Python-standard-library fixtures independently encode synthetic UTF-8 and
+ASCII-escaped snapshots; Rust output matches the compact UTF-8 fixture exactly.
+
+Schema validity does not authenticate input or grant access. No authenticated
+vault operation calls this decoder yet; creation/unlock, authorized mutations,
+file I/O, persistence and session/UI workflows remain unimplemented.
+
 ## Toolchain and component review
 
 Pin Rust 1.99.1, edition 2024, with rustfmt and Clippy. Verify against the official
@@ -88,21 +136,23 @@ The local installer was fetched from Rust's official HTTPS distribution and its
 SHA-256 checked against the published installer checksum. Local tooling/caches
 are excluded from Git; no shell startup files were changed.
 
-The first two slices were dependency-free. The crypto foundation now pins nine
-direct packages and 28 total registry packages. Reviewed host/Windows/Linux feature
-graphs do not enable PHC helpers, reduced rounds or browser randomness. Graph
-inspection is not cross-platform execution. JSON package review remains outstanding.
+The first two slices were dependency-free. The crypto foundation pinned nine
+direct packages and 28 registry packages; the JSON slice adds two direct pins and
+eleven locked packages, for eleven direct and 39 total registry packages.
+Reviewed host/Windows/Linux feature graphs do not enable PHC helpers, reduced
+rounds or browser randomness. Graph inspection is not cross-platform execution.
+The separate JSON review covers its graph.
 
 ## Verification performed
 
-Host: macOS 26.3.1 (25D2128), Apple silicon. The following pass with the pinned toolchain:
+Host: macOS 26.3.1 (25D2128), Apple silicon. Rechecked 2026-11-01 with the pinned toolchain:
 
 | Check | Observed result |
 | --- | --- |
-| `cargo test --workspace --locked --offline` | 41 tests pass: 17 parser/metadata, 5 encoding, 10 crypto, 9 paper-code; plus 1 compile-fail doctest |
+| `cargo test --workspace --locked --offline` | 61 tests pass: 17 parser/metadata, 5 envelope encoding, 10 crypto, 9 paper-code, 20 credentials; plus 1 compile-fail doctest |
 | `cargo fmt --all -- --check` | Pass |
 | `cargo clippy --workspace --all-targets --locked --offline -- -D warnings` | Pass |
-| Synthetic fixture regeneration | Structural generator uses Python standard library; crypto/paper generator additionally uses installed argon2-cffi 25.1.0 / bindings 25.1.0 for independent C Argon2 results; checked-in outputs reproduce |
+| Synthetic fixture regeneration | Credential fixtures regenerated with Python standard library on 2026-11-01; foundation structural/crypto/paper regeneration was recorded on 2026-10-29, including argon2-cffi 25.1.0 / bindings 25.1.0 |
 | Documentation/whitespace | Relative links, fences and `git diff --check` checked; existing Mermaid diagrams unchanged |
 
 Tests cover every truncated prefix of a structural fixture, trailing bytes, exact
@@ -114,8 +164,9 @@ They are deliberately not valid encrypted vaults and contain no real keys/secret
 
 Mutating ciphertext can still pass structural parsing; primitive AEAD tests now
 reject modified ciphertext/tags, every nonce/AAD byte, wrong keys, truncation and
-extra bytes. Both layers preserve their inputs. Whole-envelope authentication and
-malformed credential-JSON rejection are not implemented yet.
+extra bytes. Both layers preserve their inputs. Malformed credential-JSON rejection
+now has standalone component tests; whole-envelope authentication and its
+integration with schema gating remain absent.
 
 Known-answer tests use [RFC 9106 section 5.3](https://www.rfc-editor.org/rfc/rfc9106.html#section-5.3),
 [RFC 5869 appendix A.1](https://www.rfc-editor.org/rfc/rfc5869.html#appendix-A.1)
@@ -165,7 +216,8 @@ This does not introduce a new application password policy or alter KDF costs.
 
 The exact PR #4 and #5 snapshots were tested in isolated temporary source copies:
 17 and 22 tests respectively, plus rustfmt and Clippy with warnings denied.
-The corrected combined core passes 41 tests plus the nonce compile-fail doctest.
+At that pre-merge review, the corrected combined core passed 41 tests plus the
+nonce compile-fail doctest.
 These are local macOS checks; the PRs have no hosted check runs/statuses at review.
 This review does not replace an independent security audit or establish integrated
 vault, schema, storage or platform guarantees. PR #4–6 were retargeted to `main`
@@ -173,14 +225,13 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 
 ## Remaining work
 
-1. Review/pin JSON dependencies/features/advisories and implement the strict bounded
-   credential schema. Extend secret-lifetime review as integrated operations arrive.
-2. Implement independent slot unlock, payload authentication and schema gating,
+1. Implement independent slot unlock, payload authentication and schema gating,
    creation and authorized in-memory mutations. No plaintext may be released merely
-   because this first parser succeeds.
-3. Implement the fault-injected commit state machine, unknown-outcome reconciliation
+   because structural parsing or standalone schema validation succeeds. Extend
+   secret-lifetime review as integrated operations arrive.
+2. Implement the fault-injected commit state machine, unknown-outcome reconciliation
    and writer exclusion, then validate native storage adapters against ADR-0003.
-4. Demonstrate the full Milestone 2 acceptance scenarios using synthetic data.
+3. Demonstrate the full Milestone 2 acceptance scenarios using synthetic data.
 
 There is no credential store ready for use, vault creation/unlock, file reader or
 writer, save guarantee, native lock/session implementation, recovery workflow or
