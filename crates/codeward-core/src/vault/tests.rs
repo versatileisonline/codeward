@@ -128,3 +128,74 @@ fn unsupported_header_is_rejected_before_derivation_or_paper_decoding() {
         Some(VaultError::Format(FormatError::UnsupportedVersion))
     );
 }
+
+#[test]
+fn enrollment_confirms_then_prepares_an_empty_vault_without_redisplay() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let mut enrollment = Enrollment::begin().unwrap();
+    let code = enrollment.recovery_code().unwrap();
+    let password = " synthetic e\u{301} password ";
+    let candidate = enrollment.prepare(password, password, &code).unwrap();
+    assert_eq!(
+        enrollment.recovery_code().err(),
+        Some(VaultError::EnrollmentFinished)
+    );
+    assert_eq!(
+        enrollment.prepare(password, password, &code).err(),
+        Some(VaultError::EnrollmentFinished)
+    );
+    let vault = unlock_with_master(candidate.as_bytes(), password).unwrap();
+    assert_eq!(vault.revision(), 1);
+    assert!(vault.snapshot().credentials().is_empty());
+    assert_eq!(
+        begin_recovery(candidate.as_bytes(), &code)
+            .unwrap()
+            .revision(),
+        1
+    );
+    assert!(unlock_with_master(candidate.as_bytes(), password.trim()).is_err());
+}
+
+#[test]
+fn invalid_confirmation_preserves_enrollment_and_does_not_derive() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let mut enrollment = Enrollment::begin().unwrap();
+    let code = enrollment.recovery_code().unwrap();
+    // Holding the production guard proves invalid inputs are rejected before KDF
+    // admission. The existing primitive tests cover the no-allocation busy path.
+    let guard = crypto::occupy_master_derivation();
+    assert!(validate_password(&"é".repeat(2_048)).is_ok());
+    assert_eq!(
+        validate_password(&"é".repeat(2_049)),
+        Err(VaultError::InvalidPassword)
+    );
+    let other = include_str!("../../tests/fixtures/recovery-codes.txt")
+        .lines()
+        .next()
+        .unwrap();
+    assert_eq!(
+        enrollment.prepare("synthetic", "synthetic", other).err(),
+        Some(VaultError::Recovery(RecoveryError::ConfirmationMismatch))
+    );
+    assert_eq!(
+        enrollment.prepare("", "", &code).err(),
+        Some(VaultError::InvalidPassword)
+    );
+    assert_eq!(
+        enrollment.prepare("é", "e\u{301}", &code).err(),
+        Some(VaultError::PasswordConfirmationMismatch)
+    );
+    assert_eq!(
+        enrollment
+            .prepare("synthetic", "synthetic", "invalid")
+            .err(),
+        Some(VaultError::Recovery(RecoveryError::InvalidCode))
+    );
+    assert_eq!(
+        enrollment.prepare("synthetic", "synthetic", &code).err(),
+        Some(VaultError::Crypto(CryptoError::DerivationBusy))
+    );
+    assert_eq!(&*enrollment.recovery_code().unwrap(), &*code);
+    drop(guard);
+    assert!(enrollment.prepare("synthetic", "synthetic", &code).is_ok());
+}

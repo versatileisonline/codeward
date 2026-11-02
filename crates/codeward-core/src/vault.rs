@@ -10,11 +10,14 @@ use zeroize::Zeroizing;
 
 use crate::{
     credentials::{CredentialError, CredentialSnapshot},
-    crypto::{self, CryptoError, SecretKey},
-    encoding::HeaderParts,
-    envelope::{FormatError, Slot, UnauthenticatedEnvelope},
+    crypto::{self, CryptoError, EncryptionNonce, SecretKey},
+    encoding::{EnvelopeParts, HeaderParts},
+    envelope::{FormatError, Slot, UnauthenticatedEnvelope, payload_aad},
     recovery::{RecoveryError, RecoverySecret},
 };
+
+mod enrollment;
+pub use enrollment::Enrollment;
 
 /// Application master-password bound in exact UTF-8 bytes, per ADR-0005.
 pub const MAX_MASTER_PASSWORD_BYTES: usize = 4_096;
@@ -32,6 +35,10 @@ pub enum VaultError {
     Recovery(RecoveryError),
     /// Empty or excessive master-password input.
     InvalidPassword,
+    /// Entered replacement/new master-password copies differ exactly.
+    PasswordConfirmationMismatch,
+    /// This enrollment has already prepared its candidate and released the code.
+    EnrollmentFinished,
 }
 
 impl fmt::Display for VaultError {
@@ -42,6 +49,10 @@ impl fmt::Display for VaultError {
             Self::Credentials(error) => error.fmt(f),
             Self::Recovery(error) => error.fmt(f),
             Self::InvalidPassword => f.write_str("invalid master-password length"),
+            Self::PasswordConfirmationMismatch => {
+                f.write_str("master-password confirmation does not match")
+            }
+            Self::EnrollmentFinished => f.write_str("enrollment is no longer available"),
         }
     }
 }
@@ -66,6 +77,27 @@ impl From<CredentialError> for VaultError {
 impl From<RecoveryError> for VaultError {
     fn from(error: RecoveryError) -> Self {
         Self::Recovery(error)
+    }
+}
+
+/// Complete encrypted bytes prepared in memory, with no persistence guarantee.
+///
+/// Application readiness/success must wait for a future storage commit. This is
+/// core-owned transaction material, not a UI response or authenticated session.
+#[must_use = "preparing encrypted bytes does not save them"]
+pub struct VaultCandidate {
+    bytes: Vec<u8>,
+}
+
+impl VaultCandidate {
+    /// Borrow the complete encrypted candidate for core verification/storage work.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    /// Transfer ownership of encrypted bytes; this does not commit them anywhere.
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.bytes
     }
 }
 
@@ -206,6 +238,35 @@ fn validate_password(password: &str) -> Result<(), VaultError> {
         return Err(VaultError::InvalidPassword);
     }
     Ok(())
+}
+
+fn validate_new_password(password: &str, confirmation: &str) -> Result<(), VaultError> {
+    use ctutils::CtEq;
+    validate_password(password)?;
+    validate_password(confirmation)?;
+    if !password.as_bytes().ct_eq(confirmation.as_bytes()).to_bool() {
+        return Err(VaultError::PasswordConfirmationMismatch);
+    }
+    Ok(())
+}
+
+fn seal_snapshot(
+    mut header: HeaderParts,
+    data_key: &SecretKey,
+    snapshot: &CredentialSnapshot,
+) -> Result<VaultCandidate, VaultError> {
+    let plaintext = snapshot.encode()?;
+    let nonce = EncryptionNonce::generate()?;
+    header.payload_nonce = *nonce.as_bytes();
+    let bytes = header.encode(plaintext.len() + crate::envelope::TAG_LENGTH)?;
+    let payload = crypto::seal(data_key, nonce, &payload_aad(&bytes), &plaintext)?;
+    drop(plaintext);
+    let bytes = EnvelopeParts {
+        header,
+        encrypted_payload: &payload,
+    }
+    .encode()?;
+    Ok(VaultCandidate { bytes })
 }
 
 #[cfg(test)]

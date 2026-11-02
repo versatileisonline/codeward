@@ -29,6 +29,11 @@ static MASTER_DERIVATION: Mutex<()> = Mutex::new(());
 #[cfg(test)]
 pub(crate) static MASTER_TESTS: Mutex<()> = Mutex::new(());
 
+#[cfg(test)]
+pub(crate) fn occupy_master_derivation() -> std::sync::MutexGuard<'static, ()> {
+    MASTER_DERIVATION.lock().unwrap()
+}
+
 /// Controlled failures with no input or secret-bearing diagnostics.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CryptoError {
