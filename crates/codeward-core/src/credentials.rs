@@ -8,8 +8,8 @@ use std::{error::Error, fmt};
 
 use zeroize::Zeroizing;
 
-#[cfg(test)]
 mod bounds;
+mod decoding;
 
 /// Maximum credentials in one version 1 snapshot.
 pub const MAX_CREDENTIALS: usize = 10_000;
