@@ -102,3 +102,6 @@ fn stamp(meta: &Metadata) -> (u64, u64, u64, u32, u32, u64, i64, i64, i64, i64) 
         meta.ctime_nsec(),
     )
 }
+
+#[cfg(test)]
+mod tests;
