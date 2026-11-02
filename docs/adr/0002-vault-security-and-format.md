@@ -1,6 +1,6 @@
 # ADR-0002: Vault security and format
 
-Status: Accepted — normative format/profile and evidence plan; integrated vault behavior unverified.
+Status: Accepted — in-memory authenticated core tested; committed/application workflows pending.
 Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
@@ -38,7 +38,8 @@ byte encodings are defined by the normative format document.
 [Dependency review](../dependency-review.md) now records exact crypto patches,
 features and advisories used by the tested primitives. The separate
 [JSON review](../json-dependency-review.md) covers the strict credential codec.
-Integrated/native behavior remains future work; these decisions do not establish
+The authenticated in-memory core now has component evidence. Committed/native
+behavior remains future work; these decisions do not establish
 independent audit coverage or complete runtime guarantees for Codeward.
 
 ## Selected starting parameter profile
@@ -124,7 +125,8 @@ file and does not promise partial salvage.
 
 Limit the entire version 1 vault file to 16 MiB, checked before large allocations.
 Also bound JSON nesting, record counts and field lengths under the normative
-schema; strict credential decoding now has standalone component evidence.
+schema; authenticated core access now invokes strict credential decoding before
+returning contents.
 Reject unsupported versions/profiles, invalid lengths,
 duplicate fields, truncation and authentication failures without modifying the input.
 

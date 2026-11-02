@@ -56,6 +56,7 @@ fn rfc9106_argon2id_vector_uses_the_same_owned_memory_path() {
 
 #[test]
 fn accepted_master_profile_matches_independent_c_implementation_without_normalizing() {
+    let _test = MASTER_TESTS.lock().unwrap();
     let salt = std::array::from_fn(|i| i as u8);
     let passwords = [
         "synthetic password",

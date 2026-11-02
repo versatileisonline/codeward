@@ -38,16 +38,17 @@ blocked from real-vault use until platform-specific evidence exists.
 ## Current Milestone 2 slice
 
 The Rust library implements envelope parsing/encoding, public authentication
-metadata, fixed-profile cryptographic primitives, paper-code handling and strict
-credential snapshots. [Crypto](dependency-review.md) and
+metadata, fixed-profile cryptographic primitives, paper-code handling, strict
+credential snapshots and authenticated in-memory vault operations. [Crypto](dependency-review.md) and
 [JSON](json-dependency-review.md) reviews record exact pins/features/advisories.
 The [progress evidence](milestone-2-progress.md) is the current source for test
 counts, vectors, negative cases, memory limits and single-host measurements.
 
-No integrated creation/unlock, file I/O, session lifecycle or commit protocol exists.
-Next integrate authenticated slots/payload with the credential schema gate and
-controlled in-memory mutations. Fault-injected persistence and separately validated
-native adapters follow. Milestone 2 remains incomplete.
+The core prepares encrypted creation/content/recovery-password candidates and
+authenticates both access routes through the schema gate. No file I/O, application
+session lifecycle or commit protocol exists. Next implement transaction/session
+admission and fault-injected persistence, followed by separately validated native
+adapters. Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries
 
@@ -101,5 +102,5 @@ guarantee is inferred from that authorization.
    receive accurate errors without destroying a usable prior state.
 
 These are future integrated validation targets. The bounded core format,
-crypto/paper-code and credential components have the evidence described above;
-no end-to-end workflow exists yet.
+crypto/paper-code, credential and in-memory vault components have the evidence
+described above; no committed application workflow exists yet.

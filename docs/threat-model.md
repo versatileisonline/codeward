@@ -1,13 +1,14 @@
 # Threat model
 
-Status: initial design model; no implemented or audited security claims.
+Status: design model with bounded core evidence; no independent audit or
+validated application/storage/platform protection claim.
 Scope: one person per local vault; installed macOS/Windows/Linux desktop targets,
 Rust core, separate UI responsibility, handwritten recovery secret. Private beta
 audience size does not change the per-vault threat model.
 
-Bounded parser/crypto/paper-code evidence is recorded in
-[Milestone 2 progress](milestone-2-progress.md). It does not establish integrated
-unlock, persistence, UI or platform protection against these threats.
+Bounded parser/crypto/paper/credential and authenticated in-memory vault evidence
+is recorded in [Milestone 2 progress](milestone-2-progress.md). Application access,
+persistence, UI and platform protection against these threats remain unverified.
 
 ## Assets and boundaries
 
@@ -30,7 +31,7 @@ violate this assumption. There is no initial runtime network dependency.
 
 | ID | Scenario | Initial response / requirement | Residual limit and later evidence |
 | --- | --- | --- | --- |
-| T-01 | Locked computer or copied vault is stolen. | RustCrypto Argon2id derives the password wrapping key; HKDF-SHA256 derives the independent generated-secret recovery key; XChaCha20-Poly1305 protects slots and contents (FR-01/02, NFR-02/05). | Attackers can target either slot offline. The approved profile and recovery generation have component evidence; integrated unlock remains unverified; HKDF does not harden a weak secret. An unlocked stolen device can expose active secrets. |
+| T-01 | Locked computer or copied vault is stolen. | RustCrypto Argon2id derives the password wrapping key; HKDF-SHA256 derives the independent generated-secret recovery key; XChaCha20-Poly1305 protects slots and contents (FR-01/02, NFR-02/05). | Attackers can target either slot offline. The approved profile, recovery generation and in-memory authenticated access have component evidence; application access remains unverified; HKDF does not harden a weak secret. An unlocked stolen device can expose active secrets. |
 | T-02 | Attacker obtains notebook and vault. | Treat the reusable 256-bit paper secret as an independent recovery-slot credential; separate it physically and confirm transcription in Rust (FR-06/07). | Valid paper secret plus usable matching file grants access without the master password. Reuse is intentional; exact encoding, replacement and compromise handling remain in ADR-0004. No remote revocation. |
 | T-03 | User forgets master password. | Offline recovery and replacement password against intact vault (FR-07). | Loss of both valid unlock paths can make contents inaccessible. No operator override. |
 | T-04 | Vault deleted, only computer lost, or only file corrupted. | Explain file-recovery distinction; preserve input on error (FR-09/10). | Paper secret cannot restore data. Backup/restore features are deferred; this availability threat remains unresolved initially. |
@@ -44,7 +45,7 @@ violate this assumption. There is no initial runtime network dependency.
 | T-12 | Faulty or compromised UI invokes privileged actions or retains plaintext. | Scope custom Tauri commands to intended callers; Rust validates session, vault, payload and revision; minimize returned data; avoid UI file/key access (NFR-09). | Compromised unlocked UI can invoke permitted reveals and observe displayed/entered plaintext. IPC permissions are not proof of human intent, and clearing JavaScript references cannot prove erasure. |
 | T-13 | Late secret-bearing reply or notification restores data after locking or switching vaults. | Core-owned session generations, scoped references, stale-reply rejection and status-only notifications under NFR-09. | Previously exposed plaintext cannot be revoked; verify lock/in-flight-commit coordination and UI redaction before relying on it. |
 | T-14 | Attacker obtains a vault key using an old file and an exposed old unlock secret. | Distinguish replacing a protected slot from rotating the data key; design compromise handling in ADR-0002/0004 and coherent writes in ADR-0003. | Old files cannot be revoked. Updating only a slot does not protect later ciphertext under the already-exposed data key; complete rotation behavior is still open. |
-| T-15 | New encryption reuses a nonce under the same key, or metadata is accepted under the wrong vault/slot role. | Fresh random 24-byte nonces for every new encryption/retry; each slot authenticates its role/derivation metadata and the payload authenticates the complete header including both encrypted slots (ADR-0002). | Exact bytes and primitive randomness failures have component tests; integrated nonce/AAD behavior remains unverified. Slot changes require fresh payload encryption; AEAD alone does not detect replay of an authentic old vault. |
+| T-15 | New encryption reuses a nonce under the same key, or metadata is accepted under the wrong vault/slot role. | Fresh random 24-byte nonces for every new encryption/retry; each slot authenticates its role/derivation metadata and the payload authenticates the complete header including both encrypted slots (ADR-0002). | Core envelope binding and fresh-nonce paths have component tests; storage retry/admission behavior remains unverified. Slot changes require fresh payload encryption; AEAD alone does not detect replay of an authentic old vault. |
 
 ## Assumptions and follow-through
 

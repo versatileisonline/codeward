@@ -49,8 +49,14 @@ Root:
 - [src/credentials/tests.rs](crates/codeward-core/src/credentials/tests.rs): Credential model tests; codec tests live beside their modules.
 - [tests/fixtures/generate_credentials.py](crates/codeward-core/tests/fixtures/generate_credentials.py): Independent synthetic credential JSON fixtures.
 - [src/recovery.rs](crates/codeward-core/src/recovery.rs): Paper-code formatting, validation and transcription confirmation.
+- [src/vault.rs](crates/codeward-core/src/vault.rs): Authenticated master access, restricted recovery and encrypted candidate types.
+- [src/vault/enrollment.rs](crates/codeward-core/src/vault/enrollment.rs): Confirmed paper enrollment and empty encrypted-vault preparation.
+- [src/vault/updates.rs](crates/codeward-core/src/vault/updates.rs): Coherent content/password-change candidates and revision checks.
+- [src/vault/tests.rs](crates/codeward-core/src/vault/tests.rs): Independent fixture, authentication, schema and enrollment tests; update tests live beside their module.
+- [tests/fixtures/generate_vault.py](crates/codeward-core/tests/fixtures/generate_vault.py): Vector-checked independent synthetic encrypted envelopes.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
 - [tests/encoding.rs](crates/codeward-core/tests/encoding.rs): Exact encoding fixture, bounds and round-trip tests.
 - [src/crypto/tests.rs](crates/codeward-core/src/crypto/tests.rs): Primitive vectors and failure/bounds tests.
 - [src/recovery/tests.rs](crates/codeward-core/src/recovery/tests.rs): Paper-code fixtures and transcription-error tests.
 - [examples/measure_master.rs](crates/codeward-core/examples/measure_master.rs): Synthetic local derivation timing.
+- [examples/vault_round_trip.rs](crates/codeward-core/examples/vault_round_trip.rs): Synthetic in-memory creation/edit/lock/recovery demonstration.

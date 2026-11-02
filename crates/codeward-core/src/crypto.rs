@@ -24,6 +24,16 @@ pub const MAX_PLAINTEXT_LENGTH: usize = MAX_FILE_LENGTH - HEADER_LENGTH - TAG_LE
 // One process-wide derivation, including callers from different core instances.
 static MASTER_DERIVATION: Mutex<()> = Mutex::new(());
 
+// Coordinate successful master-derivation tests without weakening production's
+// nonblocking guard. Shared by primitive and integrated unit tests only.
+#[cfg(test)]
+pub(crate) static MASTER_TESTS: Mutex<()> = Mutex::new(());
+
+#[cfg(test)]
+pub(crate) fn occupy_master_derivation() -> std::sync::MutexGuard<'static, ()> {
+    MASTER_DERIVATION.lock().unwrap()
+}
+
 /// Controlled failures with no input or secret-bearing diagnostics.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CryptoError {
