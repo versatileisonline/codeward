@@ -14,6 +14,8 @@ use std::{error::Error, fmt};
 mod native;
 mod path;
 mod reading;
+#[cfg(test)]
+mod test_support;
 pub use path::{ReadLease, VaultPath};
 
 /// Fixed diagnostic categories; paths and OS error text never enter these values.
