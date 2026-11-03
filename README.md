@@ -61,6 +61,9 @@ Browser integration, online recovery, sync, and automated backups remain future 
 
 Install the pinned Rust toolchain, then run the commands in the
 [core README](crates/codeward-core/README.md). The
+[Rust CI workflow](docs/continuous-integration.md) runs formatting, tests and Clippy
+for PRs on hosted Linux, Windows and macOS. Use focused local checks during
+development and current hosted results for final full-suite validation. The
 [dependency review](docs/dependency-review.md) records exact crypto pins and features;
 the [JSON review](docs/json-dependency-review.md) covers the credential codec.
 [Progress evidence](docs/milestone-2-progress.md) records the current tests, limits

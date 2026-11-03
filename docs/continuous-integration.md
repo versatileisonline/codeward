@@ -47,13 +47,28 @@ The workflow uses `pull_request`, never privileged `pull_request_target`, with
 or upload vaults/test directories. Tests use synthetic data. Hosted execution is
 development infrastructure, not a hosted runtime requirement for Codeward.
 
-## Adoption and required checks
+## Verified adoption
 
-Bootstrap: verify real PR runs on all three platforms and locally exercise the gate
-across success/failure/canceled/skipped inputs before requiring `Rust CI` in the main ruleset. Keep existing protections
-and require the GitHub Actions check source. A manual-only run does not substitute
-for a PR check. This document describes the configuration; observed runs and rule
-activation are recorded after verification, without implying merge approval.
+The first successful [PR #12 run](https://github.com/versatileisonline/codeward/actions/runs/41582075095)
+completed on 2026-11-03 for head `8fc0ae570a07420e40dce536d02391569431fa31`
+and main `4bb71a01b97f2f2b7874af5054b476ef5cd568cb`. All three check jobs logged
+test merge `f20d41e779efeb0380b9c2f5b00145d890ecedaa` and Rust/Cargo 1.99.1.
+Linux and Windows each passed 90 core tests plus 3 compile-fail doctests; macOS
+also passed 14 native test functions. Formatting, all-target Clippy on every
+platform and the combined gate passed. Native tests compile out on other OSes.
+
+Bootstrap local tests, rustfmt and Clippy also passed on macOS. The gate's actual
+shell command was exercised with all 16 pairs of success/failure/canceled/skipped
+inputs; only two successful prerequisites passed. Initial GitHub validation caught
+an invalid job-level runner context before any jobs ran; the corrected workflow
+sets the isolated Cargo home in a runner step and passed the run above.
+
+Require `Rust CI` from GitHub Actions with up-to-date branch checks, preserving
+the existing main protections. A manual-only run does not substitute for a PR
+check. Follow the [contribution policy](../CONTRIBUTING.md) for focused local work
+and current hosted evidence. Later PR revisions need their own successful runs;
+record final run/revision and live rule verification in the PR. Passing CI is not
+merge approval or packaged platform/storage acceptance.
 
 Official references: [Rust workflow guide](https://docs.github.com/en/actions/tutorials/build-and-test-code/rust),
 [runner matrix](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),

@@ -24,9 +24,21 @@ required before merge/milestone advancement. Record accepting review before
 changing an ADR from undecided to accepted.
 
 For docs, verify relative links, Markdown tables/fences, Mermaid rendering, terms
-and scope. Code PRs require locked/offline workspace tests, rustfmt check and
-Clippy with warnings denied using the pinned toolchain; add checks appropriate
-to security, recovery and persistence requirements.
+and scope. Code PRs require the [Rust CI checks](docs/continuous-integration.md):
+locked/offline workspace tests including doctests, rustfmt and all-target Clippy
+with warnings denied using the pinned toolchain.
+
+Run focused local checks while developing a change. A successful hosted `Rust CI`
+run for the current PR head/base satisfies the full-suite requirement; do not
+repeat that entire suite locally without a change, failure or unresolved concern.
+Record the run URL and tested revision, and distinguish hosted results from local
+commands. Old, skipped, canceled or unavailable runs do not satisfy the requirement.
+If CI is unavailable, run the equivalent complete checks locally and report the
+limitation; a required GitHub check still must pass before merging.
+
+Security, recovery, native storage, fault injection and platform-specific changes
+still need meaningful focused tests/experiments appropriate to their risks. Hosted
+CI does not replace independent review or establish desktop/storage support.
 
 ## Secrets and test data
 
@@ -39,6 +51,7 @@ revoke/rotate affected credentials; deleting a line alone does not erase history
 ## Repository settings
 
 Recommended repository setup: protect `main` from direct/force pushes and require PRs.
-This is documented policy, not a claim of currently enforced settings. Verify
-repository settings when changing review automation. Choose required checks when
-automation exists; local passing checks do not establish hosted CI coverage.
+Verify live repository settings when changing review automation. Require the stable
+`Rust CI` gate from GitHub Actions once its real PR runs have been verified, with
+up-to-date branch checks so new base changes require fresh evidence. Preserve the
+other main protections. Settings and passing checks are not a backup or merge approval.
