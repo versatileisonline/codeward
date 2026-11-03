@@ -57,7 +57,9 @@ impl VaultPath {
             names.push(CString::new(part).map_err(|_| NativeError::InvalidPath)?);
         }
         let name = names.pop().ok_or(NativeError::InvalidPath)?;
-        if name.as_bytes().eq_ignore_ascii_case(COMPANION.to_bytes()) {
+        if name.as_bytes().eq_ignore_ascii_case(COMPANION.to_bytes())
+            || crate::staging::reserved_name(name.as_bytes())
+        {
             return Err(NativeError::InvalidPath);
         }
         let root = File::open("/").map_err(|_| NativeError::Io)?;
@@ -150,10 +152,10 @@ impl VaultPath {
     }
 }
 
-/// Native writer-exclusion ownership with bounded read access only.
+/// Native writer-exclusion ownership with bounded reads and synthetic staging.
 ///
 /// Does not implement the core's writable `Storage`/`WriterLease` interface. There
-/// is no raw handle, clone, unlock, cleanup, plaintext, stage or publication API.
+/// is no raw handle, clone, unlock, cleanup, plaintext or publication API.
 pub struct ReadLease {
     pub(super) path: VaultPath,
     identity: Identity,
