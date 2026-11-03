@@ -7,6 +7,10 @@ The [macOS foundation evidence](macos-storage-foundation.md) now covers bounded
 synthetic reads, descriptor-rooted path checks and native writer exclusion. It
 does not establish writable-adapter acceptance, persistence or packaged support.
 
+[Rust CI evidence](continuous-integration.md) covers core tests/doctests and Clippy
+on hosted Ubuntu 24.04, Windows Server 2025 and macOS 26, with native foundation
+tests on macOS only. These runners do not establish the desktop matrix below.
+
 ## Bounded starting matrix
 
 | Target | CPU / filesystem | Desktop runtime and planned package |

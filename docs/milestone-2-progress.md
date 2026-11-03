@@ -20,6 +20,11 @@ The transaction/session-admission slice was merged in
 macOS foundation adds bounded reads and writer exclusion; native storage commits
 and complete application sessions remain absent.
 
+[Hosted Rust CI](continuous-integration.md) now validates core tests/doctests and
+Clippy on Linux, Windows and macOS, plus the native foundation tests on macOS.
+This adds validation evidence without advancing the milestone or establishing
+packaged support, native writes or durability.
+
 ## Implemented first slice
 
 The [Rust core](../crates/codeward-core/README.md) began as a framework-independent

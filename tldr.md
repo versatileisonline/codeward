@@ -22,6 +22,7 @@ Root:
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
+- [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
 
@@ -36,6 +37,7 @@ Root:
 `.github/`:
 
 - [pull_request_template.md](.github/pull_request_template.md): PR checklist.
+- [workflows/rust.yml](.github/workflows/rust.yml): Formatting, three-platform Rust checks and required-check gate.
 
 `crates/codeward-core/`:
 
