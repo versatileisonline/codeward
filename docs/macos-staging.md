@@ -34,3 +34,55 @@ an error, including `EINTR`, never triggers a close retry or a second `File` dro
 Apple's [flush discussion](https://developer.apple.com/videos/play/wwdc2019/419/)
 does not establish directory/name persistence from file flushing. Publication,
 namespace barriers and OS-crash/power-loss evidence remain separate work.
+
+## Implemented boundary
+
+`ReadLease::prepare_stage` checks the 16 MiB cap before creating a file. It verifies
+the retained parent/companion, refuses parent ACLs, and exclusively creates a mode
+0600 sibling with an unpredictable 128-bit suffix. Eight collision attempts are
+allowed; existing entries are never followed, truncated or removed. Vault names
+in the `.codeward.stage-` namespace are reserved case-insensitively.
+
+Before the first payload byte, the created file must be regular, single-linked,
+effective-user-owned, mode 0600 and free of extended ACL entries. The write loop
+handles short progress and interrupted calls, rejects zero progress, and requires
+file synchronization and checked close. File length, permissions and observed
+parent/companion/stage substitutions are checked before returning an opaque
+`PreparedStage` borrowing the lease. No raw handle or stage name is exposed.
+
+The trusted caller supplies encrypted bytes; staging does not authenticate,
+encrypt or establish a valid envelope. Every error leaves the destination
+unmodified by this API; created residue remains. Dropping a successful stage also
+preserves it. There is no cleanup, automatic promotion, publication, committed
+revision, `Saved`, `Ready` or `RecoveryComplete` operation.
+
+## Focused evidence
+
+On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-03:
+
+- `cargo test -p codeward-storage-macos --locked --offline`: 25 native test
+  functions pass, including ten new staging assertion functions and one new
+  subprocess helper; the lease-borrow compile-fail doctest also passes.
+- `cargo clippy -p codeward-storage-macos --all-targets --locked --offline -- -D warnings`
+  and workspace formatting passed during development.
+- Real native cases cover exact-cap input, pre-creation over-cap/randomness
+  refusal, exclusive regular/symlink/hardlink/directory/FIFO collisions, bounded
+  collision exhaustion, restrictive child-process umasks, ACL grants/inheritance,
+  deny-only ACL refusal, and observed parent/companion/stage changes.
+- Injected write interruption/short progress succeeds; zero progress, partial
+  writes followed by a capacity error, synchronization failure, and close
+  `EIO`/`EINTR` return failure with residue and no destination change. These are
+  injected failures, not actual disk-full, media or close-error experiments.
+- A real child process is killed after exclusive creation, a partial write, or
+  completed file synchronization. The original complete synthetic vault remains
+  byte-identical; the empty/partial/complete stage remains unpromoted, and another
+  process can reacquire the companion. These are pre-publication process-kill
+  experiments, not commit interruption or power-loss evidence.
+
+The first test run correctly failed closed on macOS's absent-ACL `ENOENT` result;
+the reviewed descriptor/property semantics above resolved that interpretation.
+No file permissions were weakened to make progress. Read/exclusion APIs retain
+their documented POSIX-only privacy limits. Cloud-location policy, atomic
+no-replace creation/replacement, namespace barriers, authoritative residue
+handling and core transaction integration remain the next native work. Full
+macOS/Windows/Linux storage acceptance and packaged runtime evidence remain absent.
