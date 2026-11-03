@@ -47,12 +47,12 @@ jobs:
         os: [ubuntu-24.04, windows-2025, macos-26]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    env:
-      CARGO_HOME: ${{ runner.temp }}/codeward-cargo
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Isolate Cargo registry from checkout and credentials
+        run: echo "CARGO_HOME=$RUNNER_TEMP/codeward-cargo" >> "$GITHUB_ENV"
       - name: Install and report the repository-pinned toolchain
         run: |
           rustup show active-toolchain
