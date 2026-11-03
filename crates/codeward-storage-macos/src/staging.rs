@@ -10,11 +10,12 @@ use codeward_core::envelope::MAX_FILE_LENGTH;
 use crate::{NativeError, ReadLease, native, path::validate_regular};
 
 const PREFIX: &[u8] = b".codeward.stage-";
+const RESERVED: &[u8] = b".codeward.";
 const ATTEMPTS: usize = 8;
 
 pub(super) fn reserved_name(name: &[u8]) -> bool {
-    name.get(..PREFIX.len())
-        .is_some_and(|start| start.eq_ignore_ascii_case(PREFIX))
+    name.get(..RESERVED.len())
+        .is_some_and(|start| start.eq_ignore_ascii_case(RESERVED))
 }
 
 /// Opaque completed synthetic stage, borrowing its writer-exclusion lease.

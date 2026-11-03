@@ -148,6 +148,9 @@ fn collisions_never_follow_or_truncate_existing_objects_and_attempts_are_bounded
         ".codeward.stage-00",
         ".CODEWARD.STAGE-vault",
         ".Codeward.Stage-",
+        ".codeward.ſtage-00000000000000000000000000000000",
+        ".codeward.writer-locK",
+        ".Codeward.other-internal-name",
     ] {
         assert_eq!(
             VaultPath::resolve(&dir.0.join(name)).err(),

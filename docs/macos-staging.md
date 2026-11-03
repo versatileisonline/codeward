@@ -41,7 +41,8 @@ namespace barriers and OS-crash/power-loss evidence remain separate work.
 the retained parent/companion, refuses parent ACLs, and exclusively creates a mode
 0600 sibling with an unpredictable 128-bit suffix. Eight collision attempts are
 allowed; existing entries are never followed, truncated or removed. Vault names
-in the `.codeward.stage-` namespace are reserved case-insensitively.
+in the whole `.codeward.` namespace are reserved case-insensitively. Reserving the
+prefix also excludes APFS long-s/Kelvin-sign aliases in the stage/companion suffix.
 
 Before the first payload byte, the created file must be regular, single-linked,
 effective-user-owned, mode 0600 and free of extended ACL entries. The write loop
@@ -67,8 +68,9 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-03:
   and workspace formatting passed during development.
 - Real native cases cover exact-cap input, pre-creation over-cap/randomness
   refusal, exclusive regular/symlink/hardlink/directory/FIFO collisions, bounded
-  collision exhaustion, restrictive child-process umasks, ACL grants/inheritance,
-  deny-only ACL refusal, and observed parent/companion/stage changes.
+  collision exhaustion, reserved Unicode suffix aliases, restrictive child-process
+  umasks, ACL grants/inheritance, deny-only ACL refusal, and observed
+  parent/companion/stage changes.
 - Injected write interruption/short progress succeeds; zero progress, partial
   writes followed by a capacity error, synchronization failure, and close
   `EIO`/`EINTR` return failure with residue and no destination change. These are

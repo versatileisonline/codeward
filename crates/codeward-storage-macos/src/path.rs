@@ -57,9 +57,7 @@ impl VaultPath {
             names.push(CString::new(part).map_err(|_| NativeError::InvalidPath)?);
         }
         let name = names.pop().ok_or(NativeError::InvalidPath)?;
-        if name.as_bytes().eq_ignore_ascii_case(COMPANION.to_bytes())
-            || crate::staging::reserved_name(name.as_bytes())
-        {
+        if crate::staging::reserved_name(name.as_bytes()) {
             return Err(NativeError::InvalidPath);
         }
         let root = File::open("/").map_err(|_| NativeError::Io)?;
