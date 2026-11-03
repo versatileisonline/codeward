@@ -22,6 +22,7 @@ Root:
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
+- [macos-staging.md](docs/macos-staging.md): Synthetic encrypted staging, native API/ACL review, file synchronization and failure evidence.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -77,3 +78,6 @@ Root:
 - [src/path.rs](crates/codeward-storage-macos/src/path.rs): Retained directory identities and stable companion writer lease.
 - [src/reading.rs](crates/codeward-storage-macos/src/reading.rs): Bounded unauthenticated reads with change detection.
 - [src/reading/tests.rs](crates/codeward-storage-macos/src/reading/tests.rs): Synthetic native path/read and subprocess-lock tests.
+- [src/staging.rs](crates/codeward-storage-macos/src/staging.rs): Lease-bound encrypted sibling preparation; no publication or save acknowledgement.
+- [src/staging/tests.rs](crates/codeward-storage-macos/src/staging/tests.rs): Synthetic collisions, ACLs, staged I/O failures and subprocess interruption tests.
+- [src/test_support.rs](crates/codeward-storage-macos/src/test_support.rs): Shared synthetic native test directories and fixture loading.

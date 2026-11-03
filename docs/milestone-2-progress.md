@@ -1,6 +1,6 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-02. Authenticated vault operations now compose with
+Status: in progress, 2026-11-03. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
 Native committed storage and complete application workflows remain absent. The milestone
 is not complete.
@@ -276,8 +276,27 @@ helper. Actual process contention, normal exit and killed lock-holder release
 were exercised, alongside caps, changing files, links, POSIX modes and substitutions.
 These are native read/exclusion tests, not commit-interruption or storage-crash
 evidence. ACL grants and cloud-location policy remain unvalidated. The foundation
-does not implement writable Storage/WriterLease, staging, publication or barriers,
-and is restricted to synthetic data. There is no macOS storage support claim.
+does not implement writable Storage/WriterLease, publication or namespace barriers,
+and is restricted to synthetic data. The later staging experiment below adds
+encrypted sibling preparation. There is no macOS storage support claim.
+
+## Native macOS encrypted staging experiment
+
+Implemented 2026-11-03 under unchanged ADR-0003/format/dependencies. A lease-bound
+`prepare_stage` exclusively creates an unpredictable private sibling, checks the
+16 MiB input cap before creation, refuses parent/candidate extended ACLs, completes
+short/interrupted writes, requires fsync plus F_FULLFSYNC, and checks explicit
+close. Observed substitutions fail closed. Errors and dropped stage markers
+preserve residue; nothing publishes, cleans up, or acknowledges a save.
+
+The [staging review/evidence](macos-staging.md) records the native API review,
+conservative ACL policy, and 25 passing native functions plus one compile-fail
+doctest. New cases include collision exhaustion, ACL/inherited grants, child
+umasks, injected write/sync/close failures and actual process kills after creation,
+partial write and file sync. The original synthetic vault remains unchanged and
+residue remains unpromoted. These are pre-publication cases, not native committed
+write, namespace durability, real disk-full or power-loss evidence. Publication,
+location gates and transaction integration remain outstanding.
 
 ## Toolchain and component review
 
@@ -381,8 +400,8 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 
 ## Remaining work
 
-1. Extend the synthetic macOS foundation with staged writes, atomic publication,
-   persistence barriers and residue handling under ADR-0003. Validate ACL and
+1. Extend synthetic macOS staging with atomic publication, namespace
+   persistence barriers and authoritative residue handling under ADR-0003. Validate complete ACL and
    location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous
    authentication cancellation, draft ownership and automatic snapshot refresh.

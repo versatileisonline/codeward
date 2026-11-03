@@ -1,7 +1,7 @@
 # macOS storage foundation
 
-Experimental native path resolution, bounded unauthenticated reads and stable
-directory-level writer exclusion for synthetic data. Rust 1.99.1 is pinned.
+Experimental native path resolution, bounded unauthenticated reads, stable
+directory-level exclusion and encrypted staging for synthetic data. Rust 1.99.1 is pinned.
 
 `VaultPath::resolve` retains directory handles and rejects ambiguous paths/symlink
 traversal. `acquire` owns the stable `.codeward.writer-lock` OS lock; all vaults in
@@ -9,14 +9,20 @@ one directory share it. `ReadLease::read_current` caps input allocation at 16 Mi
 rejects linked/nonregular or POSIX-exposed files and detects observed changes.
 It returns encrypted bytes, never authenticated access or a committed revision.
 
+`ReadLease::prepare_stage` prepares a fresh private sibling with bounded complete
+writes, file synchronization and checked close. It refuses parent/stage extended
+ACLs, preserves residue and returns a marker borrowing the lease. Preparation
+does not publish the vault or acknowledge a save.
+
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or
 resolved feature is introduced. This crate exports no implementation on non-macOS
 targets and does not establish Windows/Linux compatibility.
 
-It does not implement the writable core adapter. Native staging, publication,
-persistence barriers, ACL and cloud-location policy validation remain outstanding.
-Use synthetic inputs only. See the [native evidence and limitations](../../docs/macos-storage-foundation.md).
+It does not implement the writable core adapter. Publication, namespace barriers,
+cloud-location policy and complete storage acceptance remain outstanding. Use
+synthetic inputs only. See the [foundation](../../docs/macos-storage-foundation.md)
+and [staging evidence and limitations](../../docs/macos-staging.md).
 
 From the workspace root, using the configured toolchain homes:
 

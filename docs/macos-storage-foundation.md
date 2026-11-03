@@ -55,8 +55,10 @@ empty/malformed bytes, I/O failure or an observed conflict. Input is never modif
 
 The returned bytes remain unauthenticated. The existing core still owns structural
 parsing, key-slot/payload authentication, strict schema validation and session access.
-This crate does **not** implement the core's writable `Storage`/`WriterLease` traits,
-and cannot stage, publish, acknowledge a save or complete recovery.
+The later [staging experiment](macos-staging.md) adds synthetic encrypted sibling
+preparation with ACL refusal and file synchronization. This crate does **not**
+implement the core's writable `Storage`/`WriterLease` traits and cannot publish,
+acknowledge a save or complete recovery.
 
 ## Evidence and limits
 
@@ -77,14 +79,16 @@ an independently traced result. This is bounded regression evidence, not proof o
 all scheduling behavior. Full workspace checks are recorded in
 [Milestone 2 progress](milestone-2-progress.md).
 
-POSIX ownership/mode checks do not validate macOS ACL grants. Mount flags do not
+The read/exclusion POSIX checks do not validate macOS ACL grants; staging now
+conservatively refuses parent/candidate ACLs. Mount flags do not
 establish cloud-synchronization/location policy or prove every physical device's
 characteristics. These remain gates before a writable adapter can support real
 vaults. Last-moment changes by nonparticipants remain outside advisory exclusion;
 no compromised-OS or authentic rollback protection is claimed.
 
-No staging, atomic creation/replacement, close-error write handling, F_FULLFSYNC,
-namespace barrier, commit interruption, OS-crash/power-loss or Windows/Linux
-evidence exists here. No real credentials or private vaults were used. The next
-native slice must implement and validate those write/persistence stages against
-the existing transaction protocol, preserving uncertain outcomes and artifacts.
+The [staging evidence](macos-staging.md) now covers complete writes, checked close,
+file synchronization and pre-publication process kills. Atomic publication,
+namespace barriers, commit interruption, OS-crash/power-loss and Windows/Linux
+storage evidence remain absent. No real credentials or private vaults were used.
+Further native work must integrate publication/persistence with the transaction
+protocol, preserving uncertain outcomes and artifacts.

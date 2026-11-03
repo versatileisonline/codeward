@@ -48,8 +48,9 @@ The core prepares encrypted creation/content/recovery-password candidates and
 authenticates both access routes through the schema gate. Session-bound admission,
 lock/publication coordination and the committed-write protocol now have model
 tests with injected faults. A separate [macOS foundation](macos-storage-foundation.md)
-adds synthetic native reads and exclusion. Next implement/validate staging,
-publication and barriers, then complete application session/lifecycle orchestration.
+adds synthetic native reads and exclusion. A bounded [staging experiment](macos-staging.md)
+now adds encrypted sibling preparation and file synchronization. Next implement/
+validate publication and namespace barriers, then complete application session/lifecycle orchestration.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries
