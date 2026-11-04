@@ -2,7 +2,7 @@ use std::{
     fs::{self, Permissions},
     io::{BufRead, BufReader},
     os::unix::fs::{PermissionsExt, symlink},
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Stdio},
     sync::mpsc,
     time::Duration,
@@ -11,33 +11,8 @@ use std::{
 use super::*;
 use crate::{
     VaultPath,
-    test_support::{TestDir, fixture},
+    test_support::{TestDir, chmod_acl, fixture, stages},
 };
-
-fn stages(dir: &Path) -> Vec<PathBuf> {
-    fs::read_dir(dir)
-        .unwrap()
-        .map(|entry| entry.unwrap().path())
-        .filter(|path| {
-            path.file_name()
-                .unwrap()
-                .as_encoded_bytes()
-                .starts_with(PREFIX)
-        })
-        .collect()
-}
-
-fn chmod_acl(path: &Path, text: &str) {
-    assert!(
-        Command::new("/bin/chmod")
-            .arg("+a")
-            .arg(text)
-            .arg(path)
-            .status()
-            .unwrap()
-            .success()
-    );
-}
 
 #[test]
 fn prepares_distinct_private_exact_stages_without_publishing_or_cleanup() {
