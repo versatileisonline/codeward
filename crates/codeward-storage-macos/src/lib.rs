@@ -1,8 +1,9 @@
-//! Experimental macOS path, reads, exclusion and staging for synthetic data.
+//! Experimental macOS reads, exclusion, staging and publication for synthetic data.
 //!
 //! This is not a writable storage adapter or a supported credential store. Native
-//! publication, namespace barriers and cloud-location validation remain separate
-//! work. Staging refuses extended ACLs; nothing here reports a committed save.
+//! namespace barriers and cloud-location validation remain separate work.
+//! Staging/publication refuse extended ACLs on the parent and candidate; nothing
+//! here reports a committed save. Replacement also refuses destination ACLs.
 
 #![cfg(target_os = "macos")]
 #![deny(missing_docs, unsafe_op_in_unsafe_fn)]
@@ -18,7 +19,7 @@ mod staging;
 #[cfg(test)]
 mod test_support;
 pub use path::{ReadLease, VaultPath};
-pub use staging::PreparedStage;
+pub use staging::{PreparedStage, PublicationError};
 
 /// Fixed diagnostic categories; paths and OS error text never enter these values.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

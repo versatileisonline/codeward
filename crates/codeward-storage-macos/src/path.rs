@@ -153,7 +153,7 @@ impl VaultPath {
 /// Native writer-exclusion ownership with bounded reads and synthetic staging.
 ///
 /// Does not implement the core's writable `Storage`/`WriterLease` interface. There
-/// is no raw handle, clone, unlock, cleanup, plaintext or publication API.
+/// is no raw handle, clone, unlock, cleanup, plaintext or save-acknowledgement API.
 pub struct ReadLease {
     pub(super) path: VaultPath,
     identity: Identity,
