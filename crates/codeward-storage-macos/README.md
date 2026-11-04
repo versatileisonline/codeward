@@ -1,7 +1,8 @@
 # macOS storage foundation
 
 Experimental native path resolution, bounded unauthenticated reads, stable
-directory-level exclusion and encrypted staging for synthetic data. Rust 1.99.1 is pinned.
+directory-level exclusion, encrypted staging and atomic publication for synthetic
+data. Rust 1.99.1 is pinned.
 
 `VaultPath::resolve` retains directory handles and rejects ambiguous paths/symlink
 traversal. `acquire` owns the stable `.codeward.writer-lock` OS lock; all vaults in
@@ -14,15 +15,21 @@ writes, file synchronization and checked close. It refuses parent/stage extended
 ACLs, preserves residue and returns a marker borrowing the lease. Preparation
 does not publish the vault or acknowledge a save.
 
+Consuming `PreparedStage::publish_create` atomically refuses existing destinations;
+`publish_replace` requires the complete expected encrypted base to match. Both
+revalidate identities/permissions and preserve uncertainty after native errors.
+Success means visibility only. Residue is never cleaned up or promoted on restart.
+
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or
 resolved feature is introduced. This crate exports no implementation on non-macOS
 targets and does not establish Windows/Linux compatibility.
 
-It does not implement the writable core adapter. Publication, namespace barriers,
+It does not implement the writable core adapter. Namespace barriers,
 cloud-location policy and complete storage acceptance remain outstanding. Use
 synthetic inputs only. See the [foundation](../../docs/macos-storage-foundation.md)
-and [staging evidence and limitations](../../docs/macos-staging.md).
+and [staging](../../docs/macos-staging.md) and
+[publication evidence and limitations](../../docs/macos-publication.md).
 
 From the workspace root, using the configured toolchain homes:
 

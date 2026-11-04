@@ -3,7 +3,8 @@ use std::{
     fs::{self, OpenOptions, Permissions},
     io::Write,
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
-    path::PathBuf,
+    path::{Path, PathBuf},
+    process::Command,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -65,4 +66,29 @@ pub(crate) fn fixture() -> Vec<u8> {
                 .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
         })
         .collect()
+}
+
+pub(crate) fn stages(dir: &Path) -> Vec<PathBuf> {
+    fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| {
+            path.file_name()
+                .unwrap()
+                .as_encoded_bytes()
+                .starts_with(b".codeward.stage-")
+        })
+        .collect()
+}
+
+pub(crate) fn chmod_acl(path: &Path, text: &str) {
+    assert!(
+        Command::new("/bin/chmod")
+            .arg("+a")
+            .arg(text)
+            .arg(path)
+            .status()
+            .unwrap()
+            .success()
+    );
 }

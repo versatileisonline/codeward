@@ -23,6 +23,7 @@ Root:
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
 - [macos-staging.md](docs/macos-staging.md): Synthetic encrypted staging, native API/ACL review, file synchronization and failure evidence.
+- [macos-publication.md](docs/macos-publication.md): Synthetic atomic creation/replacement, stale-base checks, uncertainty and process-kill evidence.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -80,4 +81,6 @@ Root:
 - [src/reading/tests.rs](crates/codeward-storage-macos/src/reading/tests.rs): Synthetic native path/read and subprocess-lock tests.
 - [src/staging.rs](crates/codeward-storage-macos/src/staging.rs): Lease-bound encrypted sibling preparation; no publication or save acknowledgement.
 - [src/staging/tests.rs](crates/codeward-storage-macos/src/staging/tests.rs): Synthetic collisions, ACLs, staged I/O failures and subprocess interruption tests.
+- [src/staging/publication.rs](crates/codeward-storage-macos/src/staging/publication.rs): Consuming synthetic publication with no-replace creation and expected-base replacement.
+- [src/staging/publication/tests.rs](crates/codeward-storage-macos/src/staging/publication/tests.rs): Native publication races, uncertainty, coherent access and process-kill tests.
 - [src/test_support.rs](crates/codeward-storage-macos/src/test_support.rs): Shared synthetic native test directories and fixture loading.

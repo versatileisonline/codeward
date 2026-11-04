@@ -1,6 +1,6 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-03. Authenticated vault operations now compose with
+Status: in progress, 2026-11-04. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
 Native committed storage and complete application workflows remain absent. The milestone
 is not complete.
@@ -400,7 +400,14 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 
 ## Remaining work
 
-1. Extend synthetic macOS staging with atomic publication, namespace
+The [synthetic macOS publication experiment](macos-publication.md) now extends
+staging with atomic no-replace creation and expected-base replacement under the
+retained lease. Publication errors remain uncertain; visibility is never a saved
+state. Focused local evidence includes 36 native test functions, two compile-fail
+doctests, native Clippy/formatting, concurrent readers and 14 child kills around
+publication. It does not implement namespace persistence or the writable adapter.
+
+1. Extend synthetic macOS publication with namespace
    persistence barriers and authoritative residue handling under ADR-0003. Validate complete ACL and
    location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous

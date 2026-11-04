@@ -149,6 +149,32 @@ pub(super) fn close_checked(file: File) -> io::Result<()> {
     Ok(())
 }
 
+pub(super) fn publish_at(
+    parent: &File,
+    stage: &CStr,
+    destination: &CStr,
+    create: bool,
+) -> io::Result<()> {
+    let flags = if create { libc::RENAME_EXCL } else { 0 };
+    // SAFETY: parent owns a live directory descriptor for both operands; both
+    // names are NUL-terminated single components. No descriptor ownership moves.
+    // RENAME_EXCL atomically refuses existing destinations. Never retry a rename
+    // (even EINTR), delete first, or fall back to copy-and-delete.
+    if unsafe {
+        libc::renameatx_np(
+            parent.as_raw_fd(),
+            stage.as_ptr(),
+            parent.as_raw_fd(),
+            destination.as_ptr(),
+            flags,
+        )
+    } != 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

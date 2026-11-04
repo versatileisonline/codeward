@@ -88,7 +88,7 @@ fn read_capped(file: &mut File, expected_length: usize) -> Result<Vec<u8>, Nativ
     }
 }
 
-fn stamp(meta: &Metadata) -> (u64, u64, u64, u32, u32, u64, i64, i64, i64, i64) {
+pub(super) fn stamp(meta: &Metadata) -> (u64, u64, u64, u32, u32, u64, i64, i64, i64, i64) {
     (
         meta.dev(),
         meta.ino(),

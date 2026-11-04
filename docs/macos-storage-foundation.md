@@ -57,8 +57,9 @@ The returned bytes remain unauthenticated. The existing core still owns structur
 parsing, key-slot/payload authentication, strict schema validation and session access.
 The later [staging experiment](macos-staging.md) adds synthetic encrypted sibling
 preparation with ACL refusal and file synchronization. This crate does **not**
-implement the core's writable `Storage`/`WriterLease` traits and cannot publish,
-acknowledge a save or complete recovery.
+implement the core's writable `Storage`/`WriterLease` traits and cannot acknowledge
+a save or complete recovery. A subsequent [publication experiment](macos-publication.md)
+adds synthetic atomic creation/replacement without namespace persistence.
 
 ## Evidence and limits
 
@@ -87,8 +88,10 @@ vaults. Last-moment changes by nonparticipants remain outside advisory exclusion
 no compromised-OS or authentic rollback protection is claimed.
 
 The [staging evidence](macos-staging.md) now covers complete writes, checked close,
-file synchronization and pre-publication process kills. Atomic publication,
-namespace barriers, commit interruption, OS-crash/power-loss and Windows/Linux
-storage evidence remain absent. No real credentials or private vaults were used.
+file synchronization and pre-publication process kills. The
+[publication evidence](macos-publication.md) adds synthetic atomic operations and
+surrounding process kills; namespace barriers, full commit interruption,
+OS-crash/power-loss and Windows/Linux storage evidence remain absent. No real
+credentials or private vaults were used.
 Further native work must integrate publication/persistence with the transaction
 protocol, preserving uncertain outcomes and artifacts.

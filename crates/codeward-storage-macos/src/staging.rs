@@ -1,6 +1,6 @@
 use std::{
     ffi::CString,
-    fs::File,
+    fs::{File, Metadata},
     io::{self, Write},
     os::unix::fs::MetadataExt,
 };
@@ -20,9 +20,10 @@ pub(super) fn reserved_name(name: &[u8]) -> bool {
 
 /// Opaque completed synthetic stage, borrowing its writer-exclusion lease.
 ///
-/// Dropping this marker preserves the file. There is no publication, cleanup,
-/// committed-revision or save-success operation. Stage names and handles are not
-/// exposed. Preparation alone never establishes namespace persistence.
+/// Dropping this marker preserves the file. Consuming publication methods change
+/// visibility only; there is no cleanup, committed-revision or save-success
+/// operation. Stage names and handles are not exposed. Preparation and
+/// publication alone never establish namespace persistence.
 ///
 /// ```compile_fail
 /// use codeward_storage_macos::ReadLease;
@@ -35,6 +36,7 @@ pub(super) fn reserved_name(name: &[u8]) -> bool {
 pub struct PreparedStage<'lease> {
     _lease: &'lease ReadLease,
     _name: CString,
+    metadata: Metadata,
 }
 
 impl ReadLease {
@@ -104,6 +106,7 @@ impl ReadLease {
         Ok(PreparedStage {
             _lease: self,
             _name: name,
+            metadata,
         })
     }
 
@@ -164,6 +167,9 @@ trait StageIo {
 }
 struct SystemIo;
 impl StageIo for SystemIo {}
+
+mod publication;
+pub use publication::PublicationError;
 
 #[cfg(test)]
 mod tests;
