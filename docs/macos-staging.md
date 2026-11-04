@@ -2,7 +2,9 @@
 
 Scope: synthetic-only preparation of a complete encrypted candidate beside the
 destination, under the existing retained directory lease. This is ADR-0003 step 3,
-not a writable core adapter, publication, committed save or support claim.
+not a writable core adapter, committed save or support claim. A subsequent
+[publication experiment](macos-publication.md) consumes prepared stages; preparation
+itself never publishes.
 
 ## Dependency and native API review
 
@@ -54,8 +56,8 @@ parent/companion/stage substitutions are checked before returning an opaque
 The trusted caller supplies encrypted bytes; staging does not authenticate,
 encrypt or establish a valid envelope. Every error leaves the destination
 unmodified by this API; created residue remains. Dropping a successful stage also
-preserves it. There is no cleanup, automatic promotion, publication, committed
-revision, `Saved`, `Ready` or `RecoveryComplete` operation.
+preserves it. Preparation has no cleanup, automatic promotion, publication,
+committed revision, `Saved`, `Ready` or `RecoveryComplete` operation.
 
 ## Focused evidence
 
@@ -84,7 +86,8 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-03:
 The first test run correctly failed closed on macOS's absent-ACL `ENOENT` result;
 the reviewed descriptor/property semantics above resolved that interpretation.
 No file permissions were weakened to make progress. Read/exclusion APIs retain
-their documented POSIX-only privacy limits. Cloud-location policy, atomic
-no-replace creation/replacement, namespace barriers, authoritative residue
-handling and core transaction integration remain the next native work. Full
+their documented POSIX-only privacy limits. The subsequent
+[publication experiment](macos-publication.md) adds synthetic atomic creation and
+replacement. Cloud-location policy, namespace barriers, authoritative residue
+handling and core transaction integration remain native work. Full
 macOS/Windows/Linux storage acceptance and packaged runtime evidence remain absent.

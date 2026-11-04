@@ -49,8 +49,10 @@ authenticates both access routes through the schema gate. Session-bound admissio
 lock/publication coordination and the committed-write protocol now have model
 tests with injected faults. A separate [macOS foundation](macos-storage-foundation.md)
 adds synthetic native reads and exclusion. A bounded [staging experiment](macos-staging.md)
-now adds encrypted sibling preparation and file synchronization. Next implement/
-validate publication and namespace barriers, then complete application session/lifecycle orchestration.
+now adds encrypted sibling preparation and file synchronization. A subsequent
+[publication experiment](macos-publication.md) adds synthetic atomic creation and
+replacement. Next validate namespace barriers, residue/location policies and core
+integration, then complete application session/lifecycle orchestration.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries
