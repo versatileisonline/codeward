@@ -30,7 +30,7 @@ pub enum NativeError {
     Unsupported,
     /// Effective user ownership or restrictive POSIX mode check failed.
     Permissions,
-    /// Companion writer lease is already held by another descriptor/process.
+    /// Companion ownership or same-lease publication exclusion is unavailable.
     WriterUnavailable,
     /// A directory, companion or vault identity changed during the operation.
     Conflict,

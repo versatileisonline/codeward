@@ -144,6 +144,7 @@ impl VaultPath {
             path: self,
             identity: Identity::of(&metadata),
             companion,
+            publication: std::sync::Mutex::new(()),
         };
         lease.verify()?;
         Ok(lease)
@@ -158,6 +159,7 @@ pub struct ReadLease {
     pub(super) path: VaultPath,
     identity: Identity,
     companion: File,
+    pub(super) publication: std::sync::Mutex<()>,
 }
 
 impl Drop for ReadLease {

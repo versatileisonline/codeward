@@ -270,6 +270,50 @@ fn changes_observed_after_success_are_unknown_and_never_restore_the_original() {
 }
 
 #[test]
+fn shared_lease_serializes_base_check_through_publication_and_refuses_stale_followup() {
+    let dir = TestDir::new();
+    dir.write(b"original");
+    let lease = dir.lease();
+    let first = lease.prepare_stage(b"first candidate").unwrap();
+    let second = lease.prepare_stage(b"second candidate").unwrap();
+    let second_path = stage_path(&dir, &second);
+    let (entered, preflight_done) = mpsc::channel();
+    let (release, proceed) = mpsc::channel();
+    std::thread::scope(|scope| {
+        let publisher = scope.spawn(move || {
+            first.publish_with(Some(b"original"), |parent, from, to, create| {
+                entered.send(()).unwrap();
+                proceed.recv_timeout(Duration::from_secs(15)).unwrap();
+                native::publish_at(parent, from, to, create)
+            })
+        });
+        preflight_done
+            .recv_timeout(Duration::from_secs(15))
+            .unwrap();
+        let contending = second.publish_replace(b"original");
+        let while_paused = fs::read(dir.vault()).unwrap();
+        release.send(()).unwrap();
+        assert_eq!(publisher.join().unwrap(), Ok(()));
+        assert_eq!(
+            contending,
+            Err(PublicationError::NotPublished(
+                NativeError::WriterUnavailable
+            ))
+        );
+        assert_eq!(while_paused, b"original");
+    });
+    assert_eq!(fs::read(dir.vault()).unwrap(), b"first candidate");
+    assert_eq!(fs::read(second_path).unwrap(), b"second candidate");
+    assert_eq!(
+        lease
+            .prepare_stage(b"stale candidate")
+            .unwrap()
+            .publish_replace(b"original"),
+        Err(PublicationError::NotPublished(NativeError::Conflict))
+    );
+}
+
+#[test]
 fn concurrent_reader_sees_only_whole_old_or_new_snapshots_during_replacements() {
     let dir = TestDir::new();
     let old = vec![0x31; 64 * 1024];
@@ -279,7 +323,15 @@ fn concurrent_reader_sees_only_whole_old_or_new_snapshots_during_replacements() 
     let stop = AtomicBool::new(false);
     let reads = AtomicUsize::new(0);
     let (sender, receiver) = mpsc::channel();
+    struct StopReader<'a>(&'a AtomicBool);
+    impl Drop for StopReader<'_> {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::Relaxed);
+        }
+    }
     std::thread::scope(|scope| {
+        // Drop during writer/receiver unwind before scope waits for the reader.
+        let _stop_on_unwind = StopReader(&stop);
         let reader = scope.spawn(|| {
             let first = fs::read(dir.vault()).unwrap();
             assert_eq!(first, old);

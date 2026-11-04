@@ -50,6 +50,13 @@ impl PreparedStage<'_> {
         publish: impl FnOnce(&File, &CStr, &CStr, bool) -> io::Result<()>,
     ) -> Result<(), PublicationError> {
         let lease = self._lease;
+        // The OS companion excludes other leases, not threads sharing this one.
+        // Serialize the full base-check/rename/postcheck interval. Contention or
+        // poisoning fails before publication rather than trusting a stale base.
+        let _publication = lease
+            .publication
+            .try_lock()
+            .map_err(|_| PublicationError::NotPublished(NativeError::WriterUnavailable))?;
         let before = || -> Result<File, NativeError> {
             if expected.is_some_and(|bytes| bytes.len() > MAX_FILE_LENGTH) {
                 return Err(NativeError::TooLarge);

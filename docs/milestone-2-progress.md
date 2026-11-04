@@ -403,7 +403,7 @@ in dependency order and merged with merge commits; no hosted CI evidence is clai
 The [synthetic macOS publication experiment](macos-publication.md) now extends
 staging with atomic no-replace creation and expected-base replacement under the
 retained lease. Publication errors remain uncertain; visibility is never a saved
-state. Focused local evidence includes 35 native test functions, two compile-fail
+state. Focused local evidence includes 36 native test functions, two compile-fail
 doctests, native Clippy/formatting, concurrent readers and 14 child kills around
 publication. It does not implement namespace persistence or the writable adapter.
 

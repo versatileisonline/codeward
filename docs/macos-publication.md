@@ -28,6 +28,9 @@ the same marker cannot be published twice. Preparation retains the completed
 stage metadata. Publication reopens it without following links and checks its
 identity, timestamps, length, restrictive mode, single link and absence of ACLs.
 The retained directory chain/companion and parent ACL policy are rechecked.
+An additional nonblocking lease-local mutex covers validation through postchecks;
+threads sharing one lease cannot publish concurrently against the same base.
+Contention or poisoned ownership refuses before publication.
 
 Replacement requires bounded byte-for-byte agreement with the complete original
 encrypted base supplied by the trusted core caller, plus destination metadata and
@@ -52,8 +55,8 @@ Read/exclusion privacy remains POSIX-only; complete ACL/cloud policy is pending.
 
 On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
 
-- `cargo test -p codeward-storage-macos --locked --offline`: 35 native test
-  functions pass (32 assertion functions and three child helpers), plus two
+- `cargo test -p codeward-storage-macos --locked --offline`: 36 native test
+  functions pass (33 assertion functions and three child helpers), plus two
   compile-fail doctests covering lease lifetime and consumed-stage reuse.
 - Native all-target Clippy with warnings denied, workspace formatting and
   whitespace checks pass. No dependency or cryptographic profile changed.
@@ -61,6 +64,8 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
   changed stage content/identity, links, modes, ACLs, parent/companion changes and
   unrelated residue preservation. A recovery-password replacement authenticates
   through the new master and unchanged paper routes; the old master fails.
+  A deterministic same-lease thread race pauses one publisher after preflight;
+  its competitor is refused, and a subsequent stale-base replacement conflicts.
 - Creation races against a regular file, symlink, directory and APFS case alias
   produce native `EEXIST` without overwriting the introduced object or target.
   Injected native errors/lost replies before or after an actual rename remain
