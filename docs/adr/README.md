@@ -20,6 +20,8 @@ Native macOS read/exclusion, [staging](../macos-staging.md),
 Native committed persistence and complete application workflows remain absent.
 A [test-only core/native bridge](../macos-transaction-experiment.md) now adds
 synthetic integration evidence without a runtime adapter or accepted save guarantee.
+The [ACL admission experiment](../macos-acl-admission.md) adds shared conservative
+parent/companion/read checks; location and runtime acceptance remain incomplete.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |

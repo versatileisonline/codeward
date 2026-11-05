@@ -80,8 +80,10 @@ an independently traced result. This is bounded regression evidence, not proof o
 all scheduling behavior. Full workspace checks are recorded in
 [Milestone 2 progress](milestone-2-progress.md).
 
-The read/exclusion POSIX checks do not validate macOS ACL grants; staging now
-conservatively refuses parent/candidate ACLs. Mount flags do not
+The initial read/exclusion checks were POSIX-only. The subsequent
+[ACL admission experiment](macos-acl-admission.md) conservatively refuses all
+direct-parent/companion/vault extended ACLs and rechecks them around reads;
+staging already refuses candidate ACLs. Mount flags do not
 establish cloud-synchronization/location policy or prove every physical device's
 characteristics. These remain gates before a writable adapter can support real
 vaults. Last-moment changes by nonparticipants remain outside advisory exclusion;
