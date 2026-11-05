@@ -89,6 +89,10 @@ characteristics. These remain gates before a writable adapter can support real
 vaults. Last-moment changes by nonparticipants remain outside advisory exclusion;
 no compromised-OS or authentic rollback protection is claimed.
 
+The later [mount-policy revalidation](macos-location-admission.md) repeats the
+destination-parent filesystem query at every shared verification checkpoint.
+This does not establish non-cloud admission or an ancestor access policy.
+
 The [staging evidence](macos-staging.md) now covers complete writes, checked close,
 file synchronization and pre-publication process kills. The
 [publication evidence](macos-publication.md) adds synthetic atomic operations and

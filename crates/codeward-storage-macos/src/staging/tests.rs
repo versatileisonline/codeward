@@ -11,8 +11,77 @@ use std::{
 use super::*;
 use crate::{
     VaultPath,
-    test_support::{TestDir, chmod_acl, fixture, stages},
+    test_support::{MountFault, MountProbe, TestDir, chmod_acl, fixture, stages},
 };
+
+#[test]
+fn mount_policy_changes_during_preparation_preserve_destination_and_stage() {
+    struct MountIo<'a> {
+        probe: &'a MountProbe,
+        fault: MountFault,
+        point: usize,
+    }
+    impl StageIo for MountIo<'_> {
+        fn sync(&mut self, file: &File) -> io::Result<()> {
+            native::sync_stage(file)?;
+            if self.point == 0 {
+                self.probe.set(Some(self.fault));
+            }
+            Ok(())
+        }
+        fn close(&mut self, file: File) -> io::Result<()> {
+            native::close_checked(file)?;
+            if self.point == 1 {
+                self.probe.set(Some(self.fault));
+            }
+            Ok(())
+        }
+    }
+    for (fault, error) in [
+        (MountFault::Refused, NativeError::Unsupported),
+        (MountFault::QueryFailed, NativeError::Io),
+    ] {
+        for point in 0..3 {
+            let probe = MountProbe::new();
+            let dir = TestDir::new();
+            dir.write(b"synthetic original");
+            let lease = dir.lease();
+            let mut operations = MountIo {
+                probe: &probe,
+                fault,
+                point,
+            };
+            let mut random = || {
+                if point == 2 {
+                    probe.set(Some(fault));
+                }
+                Ok([0x53; 16])
+            };
+            assert_eq!(
+                lease
+                    .prepare_with(b"synthetic candidate", &mut operations, &mut random)
+                    .err(),
+                Some(error)
+            );
+            assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic original");
+            let residue = stages(&dir.0);
+            assert_eq!(residue.len(), 1);
+            assert_eq!(
+                fs::read(&residue[0]).unwrap(),
+                if point == 2 {
+                    b"".as_slice()
+                } else {
+                    b"synthetic candidate"
+                }
+            );
+            probe.set(None);
+            assert_eq!(
+                lease.read_current().unwrap().unwrap(),
+                b"synthetic original"
+            );
+        }
+    }
+}
 
 #[test]
 fn prepares_distinct_private_exact_stages_without_publishing_or_cleanup() {

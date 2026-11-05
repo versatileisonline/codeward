@@ -1,7 +1,8 @@
 use crate::{ReadLease, VaultPath};
 use std::{
+    cell::Cell,
     fs::{self, OpenOptions, Permissions},
-    io::Write,
+    io::{self, Write},
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     process::Command,
@@ -9,6 +10,46 @@ use std::{
 };
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Clone, Copy)]
+pub(crate) enum MountFault {
+    Refused,
+    QueryFailed,
+}
+
+thread_local! {
+    static MOUNT_FAULT: Cell<Option<MountFault>> = const { Cell::new(None) };
+}
+
+// A scoped current-thread query result, never a real remount. Other test threads
+// and spawned child processes continue to query their actual native filesystem.
+pub(crate) struct MountProbe {
+    previous: Option<MountFault>,
+    _thread: std::marker::PhantomData<std::rc::Rc<()>>,
+}
+impl MountProbe {
+    pub(crate) fn new() -> Self {
+        Self {
+            previous: MOUNT_FAULT.replace(None),
+            _thread: std::marker::PhantomData,
+        }
+    }
+    pub(crate) fn set(&self, fault: Option<MountFault>) {
+        MOUNT_FAULT.set(fault);
+    }
+}
+impl Drop for MountProbe {
+    fn drop(&mut self) {
+        MOUNT_FAULT.set(self.previous);
+    }
+}
+
+pub(crate) fn mount_result() -> Option<io::Result<bool>> {
+    MOUNT_FAULT.get().map(|fault| match fault {
+        MountFault::Refused => Ok(false),
+        MountFault::QueryFailed => Err(io::Error::from_raw_os_error(libc::EIO)),
+    })
+}
 
 // The core deliberately refuses concurrent master derivations. Native test
 // modules share this guard only around their synthetic derivation calls.

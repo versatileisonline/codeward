@@ -61,6 +61,8 @@ It does not enable a runtime writer or advance the milestone.
 A [shared ACL admission check](macos-acl-admission.md) now covers the direct parent,
 companion and vault reads, with refusal revalidated throughout native operations.
 Remaining location policy and runtime storage acceptance are still required.
+A [mount-policy recheck](macos-location-admission.md) now spans shared native
+verification checkpoints; it does not prove that an APFS directory is outside sync.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries

@@ -11,7 +11,9 @@ use std::{
 use super::*;
 use crate::{
     PublicationError, VaultPath,
-    test_support::{TestDir, chmod_acl, fixture, maximum_revision_fixture, stages},
+    test_support::{
+        MountFault, MountProbe, TestDir, chmod_acl, fixture, maximum_revision_fixture, stages,
+    },
 };
 
 // (directory descriptor, full flush rather than fsync).
@@ -47,6 +49,38 @@ impl NamespaceIo for Probe<'_> {
     }
     fn full_sync(&mut self, file: &File) -> io::Result<()> {
         self.run(file, true)
+    }
+}
+
+#[test]
+fn mount_policy_changes_at_final_barrier_refuse_present_and_absent_results() {
+    for (fault, error) in [
+        (MountFault::Refused, NativeError::Unsupported),
+        (MountFault::QueryFailed, NativeError::Io),
+    ] {
+        for present in [false, true] {
+            let mount = MountProbe::new();
+            let dir = TestDir::new();
+            if present {
+                dir.write(b"synthetic original");
+            }
+            let lease = dir.lease();
+            let count = if present { 4 } else { 2 };
+            let mut probe = Probe {
+                hook: Some(Box::new(|index| {
+                    if index == count {
+                        mount.set(Some(fault));
+                    }
+                })),
+                ..Probe::default()
+            };
+            let expected = present.then_some(b"synthetic original".as_slice());
+            assert_eq!(lease.namespace_with(expected, &mut probe), Err(error));
+            assert_eq!(probe.calls.len(), count);
+            assert_eq!(fs::read(dir.vault()).ok().as_deref(), expected);
+            mount.set(None);
+            lease.synchronize_namespace(expected).unwrap();
+        }
     }
 }
 
