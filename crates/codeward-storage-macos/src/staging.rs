@@ -137,7 +137,7 @@ impl ReadLease {
     }
 }
 
-fn private_acl(file: &File) -> Result<(), NativeError> {
+pub(super) fn private_acl(file: &File) -> Result<(), NativeError> {
     match native::no_extended_acl(file) {
         Ok(true) => Ok(()),
         Ok(false) => Err(NativeError::Permissions),
@@ -145,7 +145,7 @@ fn private_acl(file: &File) -> Result<(), NativeError> {
     }
 }
 
-fn stage_permissions(file: &File) -> Result<(), NativeError> {
+pub(super) fn stage_permissions(file: &File) -> Result<(), NativeError> {
     let metadata = file.metadata().map_err(|_| NativeError::Io)?;
     validate_regular(&metadata)?;
     if metadata.mode() & 0o777 != 0o600 {

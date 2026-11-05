@@ -6,7 +6,9 @@ This does not implement the writable core adapter or establish a save guarantee.
 ## Native API review
 
 No new dependency, version, feature, vault byte or cryptographic-profile change.
-The existing `File::sync_all`/`libc::F_FULLFSYNC` operations are reused. Installed
+The existing `libc` bindings supply `fsync`/`F_FULLFSYNC`. A small checked fsync
+wrapper makes one call and returns interruption without retry. The existing
+checked full-flush wrapper is shared with staging. Installed
 macOS 26.3.1 `fsync(2)`/`fcntl(2)` manuals and SDK declarations were inspected on
 2026-11-04. Apple's pinned [fsync manual](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/man/man2/fsync.2)
 describes flushing modified data/attributes and drive-cache limitations. Its
