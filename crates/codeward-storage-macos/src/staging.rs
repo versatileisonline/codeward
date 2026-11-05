@@ -65,12 +65,10 @@ impl ReadLease {
             return Err(NativeError::TooLarge);
         }
         self.verify()?;
-        private_acl(self.path.parent())?;
         let (mut file, name) = self.create_stage(random)?;
         // All exits retain any created stage. No speculative cleanup or promotion.
         let prepared = (|| {
             self.verify()?;
-            private_acl(self.path.parent())?;
             let before = file.metadata().map_err(|_| NativeError::Io)?;
             stage_permissions(&file)?;
             self.match_named(&name, &before)?;
@@ -94,7 +92,6 @@ impl ReadLease {
                 return Err(NativeError::Conflict);
             }
             self.verify()?;
-            private_acl(self.path.parent())?;
             self.match_named(&name, &after)?;
             Ok(after)
         })();
@@ -104,7 +101,6 @@ impl ReadLease {
         let metadata = prepared?;
         closed?;
         self.verify()?;
-        private_acl(self.path.parent())?;
         self.match_named(&name, &metadata)?;
         Ok(PreparedStage {
             _lease: self,

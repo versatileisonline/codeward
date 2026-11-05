@@ -66,7 +66,6 @@ impl PreparedStage<'_> {
                 return Err(NativeError::TooLarge);
             }
             lease.verify()?;
-            private_acl(lease.path.parent())?;
             let stage = native::open_at(lease.path.parent(), &self._name, libc::O_RDONLY, 0)
                 .map_err(open_error)?;
             self.verify_stage(&stage)?;
@@ -93,7 +92,6 @@ impl PreparedStage<'_> {
             }
             self.verify_stage(&stage)?;
             lease.verify()?;
-            private_acl(lease.path.parent())?;
             Ok(stage)
         };
         let stage = before().map_err(PublicationError::NotPublished)?;
@@ -122,8 +120,7 @@ impl PreparedStage<'_> {
                 return Err(NativeError::Conflict);
             }
             lease.match_named(&lease.path.name, &metadata)?;
-            lease.verify()?;
-            private_acl(lease.path.parent())
+            lease.verify()
         };
         after().map_err(|_| PublicationError::OutcomeUnknown)
     }

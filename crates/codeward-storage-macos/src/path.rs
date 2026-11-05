@@ -41,9 +41,9 @@ pub struct VaultPath {
 }
 
 impl VaultPath {
-    /// Resolve an existing user-owned POSIX-non-writable-by-others parent on local,
-    /// writable nonremovable APFS. Does not authenticate a vault or authorize UI.
-    /// ACL grants and cloud-synchronization/location policy are not established.
+    /// Resolve an existing user-owned POSIX-non-writable-by-others parent without
+    /// extended ACLs on local writable nonremovable APFS. Does not authenticate a
+    /// vault or authorize UI. Cloud-synchronization/location policy is unfinished.
     pub fn resolve(path: &Path) -> Result<Self, NativeError> {
         let bytes = path.as_os_str().as_bytes();
         if bytes.len() > libc::PATH_MAX as usize || !bytes.starts_with(b"/") {
@@ -110,7 +110,7 @@ impl VaultPath {
         if metadata.uid() != native::effective_uid() || metadata.mode() & 0o022 != 0 {
             return Err(NativeError::Permissions);
         }
-        Ok(())
+        private_acl(self.parent())
     }
 
     /// Acquire the stable directory companion without truncating or unlinking it.
@@ -135,6 +135,7 @@ impl VaultPath {
         if metadata.mode() & 0o777 != 0o600 || metadata.len() != 0 {
             return Err(NativeError::Permissions);
         }
+        private_acl(&companion)?;
         match companion.try_lock() {
             Ok(()) => {}
             Err(TryLockError::WouldBlock) => return Err(NativeError::WriterUnavailable),
@@ -180,6 +181,7 @@ impl ReadLease {
         if Identity::of(&meta) != self.identity || meta.mode() & 0o777 != 0o600 || meta.len() != 0 {
             return Err(NativeError::Conflict);
         }
+        private_acl(&self.companion)?;
         self.match_named(COMPANION, &meta)?;
         Ok(())
     }

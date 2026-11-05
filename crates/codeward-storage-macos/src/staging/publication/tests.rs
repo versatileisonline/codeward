@@ -272,6 +272,35 @@ fn changes_observed_after_success_are_unknown_and_never_restore_the_original() {
 }
 
 #[test]
+fn companion_acl_added_after_publication_preserves_candidate_and_unknown_outcome() {
+    for create in [false, true] {
+        let dir = TestDir::new();
+        if !create {
+            dir.write(b"original");
+        }
+        let lease = dir.lease();
+        let stage = lease.prepare_stage(b"candidate").unwrap();
+        let result = stage.publish_with(
+            (!create).then_some(b"original".as_slice()),
+            |parent, from, to, create| {
+                native::publish_at(parent, from, to, create)?;
+                chmod_acl(&dir.companion(), "everyone allow read");
+                Ok(())
+            },
+        );
+        assert_eq!(result, Err(PublicationError::OutcomeUnknown));
+        assert_eq!(fs::read(dir.vault()).unwrap(), b"candidate");
+        assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+        assert!(!native::no_extended_acl(&File::open(dir.companion()).unwrap()).unwrap());
+        drop(lease);
+        assert_eq!(
+            VaultPath::resolve(&dir.vault()).unwrap().acquire().err(),
+            Some(NativeError::Permissions)
+        );
+    }
+}
+
+#[test]
 fn shared_lease_serializes_base_check_through_publication_and_refuses_stale_followup() {
     let dir = TestDir::new();
     dir.write(b"original");
