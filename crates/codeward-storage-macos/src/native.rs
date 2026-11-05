@@ -131,6 +131,10 @@ pub(super) fn stage_random() -> io::Result<[u8; 16]> {
 
 pub(super) fn sync_stage(file: &File) -> io::Result<()> {
     file.sync_all()?;
+    full_sync(file)
+}
+
+pub(super) fn full_sync(file: &File) -> io::Result<()> {
     // SAFETY: live owned descriptor; F_FULLFSYNC takes no pointer argument.
     if unsafe { libc::fcntl(file.as_raw_fd(), libc::F_FULLFSYNC) } != 0 {
         return Err(io::Error::last_os_error());
