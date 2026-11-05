@@ -10,6 +10,10 @@ use std::{
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
+// The core deliberately refuses concurrent master derivations. Native test
+// modules share this guard only around their synthetic derivation calls.
+pub(crate) static MASTER_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 pub(crate) struct TestDir(pub(crate) PathBuf);
 impl TestDir {
     pub(crate) fn new() -> Self {

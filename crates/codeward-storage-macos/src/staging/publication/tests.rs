@@ -15,7 +15,7 @@ use std::{
 use super::*;
 use crate::{
     VaultPath,
-    test_support::{TestDir, chmod_acl, fixture, stages},
+    test_support::{MASTER_TESTS, TestDir, chmod_acl, fixture, stages},
 };
 use codeward_core::vault::{begin_recovery, unlock_with_master};
 
@@ -26,6 +26,7 @@ const NEW_PASSWORD: &str = "replacement synthetic publication password";
 fn candidate() -> &'static [u8] {
     static BYTES: OnceLock<Vec<u8>> = OnceLock::new();
     BYTES.get_or_init(|| {
+        let _master = MASTER_TESTS.lock().unwrap();
         let access = begin_recovery(&fixture(), PAPER.trim()).unwrap();
         access
             .prepare_master_password(access.revision(), NEW_PASSWORD, NEW_PASSWORD)
@@ -60,6 +61,7 @@ fn publishes_complete_creation_and_coherent_recovery_replacement_without_cleanup
     assert_ne!(fs::metadata(dir.vault()).unwrap().ino(), old_inode);
     assert_eq!(fs::metadata(dir.vault()).unwrap().mode() & 0o777, 0o600);
     assert_eq!(fs::metadata(dir.vault()).unwrap().nlink(), 1);
+    let _master = MASTER_TESTS.lock().unwrap();
     assert_eq!(
         unlock_with_master(&actual, NEW_PASSWORD)
             .unwrap()
