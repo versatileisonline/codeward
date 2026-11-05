@@ -53,6 +53,8 @@ now adds encrypted sibling preparation and file synchronization. A subsequent
 [publication experiment](macos-publication.md) adds synthetic atomic creation and
 replacement. Next validate namespace barriers, residue/location policies and core
 integration, then complete application session/lifecycle orchestration.
+The [namespace experiment](macos-namespace.md) now provides synthetic candidate
+file/parent barriers; full persistence acceptance remains pending.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries

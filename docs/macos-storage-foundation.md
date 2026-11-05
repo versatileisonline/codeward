@@ -95,3 +95,7 @@ OS-crash/power-loss and Windows/Linux storage evidence remain absent. No real
 credentials or private vaults were used.
 Further native work must integrate publication/persistence with the transaction
 protocol, preserving uncertain outcomes and artifacts.
+
+A subsequent [namespace experiment](macos-namespace.md) now exercises candidate
+file/parent barriers for a checked present or absent state. It does not complete
+native transaction, location/privacy or storage acceptance.

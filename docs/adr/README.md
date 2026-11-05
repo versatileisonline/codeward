@@ -14,8 +14,10 @@ The current [core evidence](../milestone-2-progress.md) covers parsing/encoding,
 public authentication metadata, crypto primitives, paper-code validation, strict
 credential JSON handling, authenticated in-memory vault operations, fault-injected
 commit/session-admission tests and an initial single-host derivation measurement.
-Native macOS read/exclusion and [encrypted staging](../macos-staging.md) evidence
-is also recorded. Native committed persistence and complete application workflows remain absent.
+Native macOS read/exclusion, [staging](../macos-staging.md),
+[publication](../macos-publication.md) and candidate
+[namespace barriers](../macos-namespace.md) have synthetic evidence.
+Native committed persistence and complete application workflows remain absent.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |
