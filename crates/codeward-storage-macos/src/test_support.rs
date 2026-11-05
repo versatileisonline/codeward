@@ -10,6 +10,10 @@ use std::{
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
+// The core deliberately refuses concurrent master derivations. Native test
+// modules share this guard only around their synthetic derivation calls.
+pub(crate) static MASTER_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 pub(crate) struct TestDir(pub(crate) PathBuf);
 impl TestDir {
     pub(crate) fn new() -> Self {
@@ -58,8 +62,19 @@ impl Drop for TestDir {
 }
 
 pub(crate) fn fixture() -> Vec<u8> {
-    include_str!("../../codeward-core/tests/fixtures/authenticated-v1.hex")
-        .split_ascii_whitespace()
+    decode_hex(include_str!(
+        "../../codeward-core/tests/fixtures/authenticated-v1.hex"
+    ))
+}
+
+pub(crate) fn maximum_revision_fixture() -> Vec<u8> {
+    decode_hex(include_str!(
+        "../../codeward-core/tests/fixtures/authenticated-max-revision.hex"
+    ))
+}
+
+fn decode_hex(text: &str) -> Vec<u8> {
+    text.split_ascii_whitespace()
         .flat_map(|s| {
             (0..s.len())
                 .step_by(2)

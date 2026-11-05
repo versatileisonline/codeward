@@ -11,19 +11,8 @@ use std::{
 use super::*;
 use crate::{
     PublicationError, VaultPath,
-    test_support::{TestDir, chmod_acl, fixture, stages},
+    test_support::{TestDir, chmod_acl, fixture, maximum_revision_fixture, stages},
 };
-
-fn candidate() -> Vec<u8> {
-    include_str!("../../../codeward-core/tests/fixtures/authenticated-max-revision.hex")
-        .split_ascii_whitespace()
-        .flat_map(|s| {
-            (0..s.len())
-                .step_by(2)
-                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
-        })
-        .collect()
-}
 
 // (directory descriptor, full flush rather than fsync).
 type Step = (bool, bool);
@@ -65,7 +54,7 @@ impl NamespaceIo for Probe<'_> {
 fn synchronizes_actual_published_file_then_parent_and_repeats_on_reconciliation() {
     let dir = TestDir::new();
     let old = fixture();
-    let new = candidate();
+    let new = maximum_revision_fixture();
     let lease = dir.lease();
     drop(lease.prepare_stage(b"unrelated synthetic residue").unwrap());
     lease.prepare_stage(&old).unwrap().publish_create().unwrap();
@@ -337,7 +326,7 @@ fn namespace_subprocess_helper() {
         .unwrap()
         .parse()
         .unwrap();
-    let bytes = candidate();
+    let bytes = maximum_revision_fixture();
     let expected = if mode == "absent" {
         None
     } else {
@@ -411,7 +400,7 @@ fn process_kills_around_each_barrier_preserve_state_residue_and_allow_reconcilia
             reader.join().unwrap();
             assert!(ready.is_ok(), "child did not reach {mode}/{phase}");
             let lease = dir.lease();
-            let bytes = candidate();
+            let bytes = maximum_revision_fixture();
             let expected = (mode != "absent").then_some(bytes.as_slice());
             assert_eq!(lease.read_current().unwrap().as_deref(), expected);
             lease.synchronize_namespace(expected).unwrap();

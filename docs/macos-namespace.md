@@ -81,3 +81,7 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
 Next complete authoritative residue and location/privacy gates, integrate the core
 transaction protocol, and validate the full acknowledgement/reconciliation path.
 Windows/Linux native storage, OS-crash/power-loss and packaged support remain pending.
+
+The subsequent [test-only transaction experiment](macos-transaction-experiment.md)
+now composes these operations with the core worker. Its synthetic integration
+evidence does not export or accept a runtime writable adapter.

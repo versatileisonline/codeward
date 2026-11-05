@@ -25,6 +25,7 @@ Root:
 - [macos-staging.md](docs/macos-staging.md): Synthetic encrypted staging, native API/ACL review, file synchronization and failure evidence.
 - [macos-publication.md](docs/macos-publication.md): Synthetic atomic creation/replacement, stale-base checks, uncertainty and process-kill evidence.
 - [macos-namespace.md](docs/macos-namespace.md): Candidate file/parent barriers, expected-state checks, failure and process-kill evidence.
+- [macos-transaction-experiment.md](docs/macos-transaction-experiment.md): Test-only core/native transaction composition, residue authority and interruption evidence.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -86,4 +87,6 @@ Root:
 - [src/staging/tests.rs](crates/codeward-storage-macos/src/staging/tests.rs): Synthetic collisions, ACLs, staged I/O failures and subprocess interruption tests.
 - [src/staging/publication.rs](crates/codeward-storage-macos/src/staging/publication.rs): Consuming synthetic publication with no-replace creation and expected-base replacement.
 - [src/staging/publication/tests.rs](crates/codeward-storage-macos/src/staging/publication/tests.rs): Native publication races, uncertainty, coherent access and process-kill tests.
+- [src/staging/transactions.rs](crates/codeward-storage-macos/src/staging/transactions.rs): Test-only native Storage/WriterLease bridge, absent from the runtime library.
+- [src/staging/transactions/tests.rs](crates/codeward-storage-macos/src/staging/transactions/tests.rs): Synthetic native lifecycle, uncertainty, residue and process-kill checks through the core worker.
 - [src/test_support.rs](crates/codeward-storage-macos/src/test_support.rs): Shared synthetic native test directories and fixture loading.
