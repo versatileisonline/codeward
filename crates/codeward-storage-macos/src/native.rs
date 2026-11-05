@@ -55,6 +55,10 @@ pub(super) fn named_stat(parent: &File, name: &CStr) -> io::Result<libc::stat> {
 }
 
 pub(super) fn local_writable_apfs(file: &File) -> io::Result<bool> {
+    #[cfg(test)]
+    if let Some(result) = crate::test_support::mount_result() {
+        return result;
+    }
     let mut output = MaybeUninit::uninit();
     // SAFETY: valid owned fd and writable correctly aligned statfs storage.
     if unsafe { libc::fstatfs(file.as_raw_fd(), output.as_mut_ptr()) } != 0 {
@@ -191,6 +195,38 @@ pub(super) fn publish_at(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::{MountFault, MountProbe, TestDir};
+
+    #[test]
+    fn mount_probe_is_scoped_and_isolated_to_the_current_test_thread() {
+        let dir = TestDir::new();
+        let parent = File::open(&dir.0).unwrap();
+        assert!(local_writable_apfs(&parent).unwrap());
+        {
+            let probe = MountProbe::new();
+            probe.set(Some(MountFault::Refused));
+            assert!(!local_writable_apfs(&parent).unwrap());
+            std::thread::scope(|scope| {
+                assert!(
+                    scope
+                        .spawn(|| local_writable_apfs(&parent).unwrap())
+                        .join()
+                        .unwrap()
+                );
+            });
+            {
+                let nested = MountProbe::new();
+                assert!(local_writable_apfs(&parent).unwrap());
+                nested.set(Some(MountFault::QueryFailed));
+                assert_eq!(
+                    local_writable_apfs(&parent).unwrap_err().raw_os_error(),
+                    Some(libc::EIO)
+                );
+            }
+            assert!(!local_writable_apfs(&parent).unwrap());
+        }
+        assert!(local_writable_apfs(&parent).unwrap());
+    }
 
     #[test]
     fn filesystem_filter_refuses_network_readonly_removable_and_other_formats() {
