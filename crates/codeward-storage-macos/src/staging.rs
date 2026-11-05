@@ -173,3 +173,5 @@ pub use publication::PublicationError;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod transactions;
