@@ -15,13 +15,44 @@ use std::{
 use super::*;
 use crate::{
     VaultPath,
-    test_support::{MASTER_TESTS, TestDir, chmod_acl, fixture, stages},
+    test_support::{MASTER_TESTS, MountFault, MountProbe, TestDir, chmod_acl, fixture, stages},
 };
 use codeward_core::vault::{begin_recovery, unlock_with_master};
 
 const PAPER: &str =
     include_str!("../../../../codeward-core/tests/fixtures/authenticated-recovery.txt");
 const NEW_PASSWORD: &str = "replacement synthetic publication password";
+
+#[test]
+fn mount_policy_changes_after_native_publication_preserve_candidate_and_unknown_outcome() {
+    for fault in [MountFault::Refused, MountFault::QueryFailed] {
+        for create in [false, true] {
+            let probe = MountProbe::new();
+            let dir = TestDir::new();
+            if !create {
+                dir.write(b"synthetic original");
+            }
+            let lease = dir.lease();
+            let stage = lease.prepare_stage(b"synthetic candidate").unwrap();
+            let result = stage.publish_with(
+                (!create).then_some(b"synthetic original".as_slice()),
+                |parent, from, to, create| {
+                    native::publish_at(parent, from, to, create)?;
+                    probe.set(Some(fault));
+                    Ok(())
+                },
+            );
+            assert_eq!(result, Err(PublicationError::OutcomeUnknown));
+            assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic candidate");
+            assert!(stages(&dir.0).is_empty());
+            probe.set(None);
+            assert_eq!(
+                lease.read_current().unwrap().unwrap(),
+                b"synthetic candidate"
+            );
+        }
+    }
+}
 
 fn candidate() -> &'static [u8] {
     static BYTES: OnceLock<Vec<u8>> = OnceLock::new();

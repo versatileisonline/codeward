@@ -9,7 +9,99 @@ use std::{
 use super::*;
 use crate::VaultPath;
 
-use crate::test_support::{TestDir, chmod_acl, fixture, stages};
+use crate::test_support::{MountFault, MountProbe, TestDir, chmod_acl, fixture, stages};
+
+#[test]
+fn mount_policy_is_rechecked_before_acquisition_and_present_or_absent_reads() {
+    for (fault, error) in [
+        (MountFault::Refused, NativeError::Unsupported),
+        (MountFault::QueryFailed, NativeError::Io),
+    ] {
+        for present in [false, true] {
+            let probe = MountProbe::new();
+            let dir = TestDir::new();
+            if present {
+                dir.write(b"synthetic original");
+            }
+            let path = VaultPath::resolve(&dir.vault()).unwrap();
+            probe.set(Some(fault));
+            assert_eq!(path.acquire().err(), Some(error));
+            assert!(!dir.companion().exists());
+            probe.set(None);
+            let lease = dir.lease();
+            let inode = fs::metadata(dir.companion()).unwrap().ino();
+            probe.set(Some(fault));
+            assert_eq!(lease.read_current(), Err(error));
+            assert_eq!(fs::metadata(dir.companion()).unwrap().ino(), inode);
+            assert_eq!(
+                fs::read(dir.vault()).ok().as_deref(),
+                present.then_some(b"synthetic original".as_slice())
+            );
+            probe.set(None);
+            assert_eq!(lease.read_current().unwrap().is_some(), present);
+        }
+    }
+}
+
+#[test]
+fn mount_policy_changes_during_reads_return_no_bytes_and_preserve_the_file() {
+    for (fault, error) in [
+        (MountFault::Refused, NativeError::Unsupported),
+        (MountFault::QueryFailed, NativeError::Io),
+    ] {
+        let probe = MountProbe::new();
+        let dir = TestDir::new();
+        dir.write(b"synthetic original");
+        let lease = dir.lease();
+        assert_eq!(lease.read_with_hook(|| probe.set(Some(fault))), Err(error));
+        assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic original");
+        probe.set(None);
+        assert_eq!(
+            lease.read_current().unwrap().unwrap(),
+            b"synthetic original"
+        );
+    }
+}
+
+#[test]
+fn mount_policy_refusal_blocks_new_stages_and_prepared_publication() {
+    for (fault, error) in [
+        (MountFault::Refused, NativeError::Unsupported),
+        (MountFault::QueryFailed, NativeError::Io),
+    ] {
+        for present in [false, true] {
+            let probe = MountProbe::new();
+            let dir = TestDir::new();
+            if present {
+                dir.write(b"synthetic original");
+            }
+            let lease = dir.lease();
+            let stage = lease.prepare_stage(b"synthetic candidate").unwrap();
+            let residue = stages(&dir.0);
+            probe.set(Some(fault));
+            assert_eq!(lease.prepare_stage(b"another candidate").err(), Some(error));
+            let result = if present {
+                stage.publish_replace(b"synthetic original")
+            } else {
+                stage.publish_create()
+            };
+            assert_eq!(result, Err(crate::PublicationError::NotPublished(error)));
+            assert_eq!(stages(&dir.0), residue);
+            assert_eq!(fs::read(&residue[0]).unwrap(), b"synthetic candidate");
+            assert_eq!(
+                fs::read(dir.vault()).ok().as_deref(),
+                present.then_some(b"synthetic original".as_slice())
+            );
+            probe.set(None);
+            assert_eq!(
+                VaultPath::resolve(&dir.vault()).unwrap().acquire().err(),
+                Some(NativeError::WriterUnavailable)
+            );
+            drop(lease);
+            dir.lease();
+        }
+    }
+}
 
 const ACLS: [&str; 2] = ["everyone allow read", "everyone deny delete"];
 

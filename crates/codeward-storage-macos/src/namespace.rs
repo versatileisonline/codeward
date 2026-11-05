@@ -75,9 +75,6 @@ impl ReadLease {
 
     fn verify_observation(&self, current: &Option<(File, Metadata)>) -> Result<(), NativeError> {
         self.verify()?;
-        if !native::local_writable_apfs(self.path.parent()).map_err(|_| NativeError::Io)? {
-            return Err(NativeError::Unsupported);
-        }
         if let Some((file, before)) = current {
             stage_permissions(file)?;
             if stamp(&file.metadata().map_err(|_| NativeError::Io)?) != stamp(before) {

@@ -82,9 +82,6 @@ impl VaultPath {
             });
         }
         result.verify()?;
-        if !native::local_writable_apfs(result.parent()).map_err(|_| NativeError::Io)? {
-            return Err(NativeError::Unsupported);
-        }
         Ok(result)
     }
 
@@ -110,7 +107,14 @@ impl VaultPath {
         if metadata.uid() != native::effective_uid() || metadata.mode() & 0o022 != 0 {
             return Err(NativeError::Permissions);
         }
-        private_acl(self.parent())
+        private_acl(self.parent())?;
+        // Revalidate the retained destination's mount at every shared checkpoint,
+        // not only at initial resolution. Ancestor mounts may legitimately differ.
+        // These flags do not prove that a local APFS directory is outside sync.
+        if !native::local_writable_apfs(self.parent()).map_err(|_| NativeError::Io)? {
+            return Err(NativeError::Unsupported);
+        }
+        Ok(())
     }
 
     /// Acquire the stable directory companion without truncating or unlinking it.
