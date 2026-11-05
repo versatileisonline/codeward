@@ -1,7 +1,8 @@
 //! Experimental macOS reads, exclusion, staging and publication for synthetic data.
 //!
 //! This is not a writable storage adapter or a supported credential store. Native
-//! namespace barriers and cloud-location validation remain separate work.
+//! namespace synchronization remains experimental; cloud-location validation,
+//! transaction integration and storage acceptance remain separate work.
 //! Staging/publication refuse extended ACLs on the parent and candidate; nothing
 //! here reports a committed save. Replacement also refuses destination ACLs.
 
@@ -12,6 +13,7 @@
 
 use std::{error::Error, fmt};
 
+mod namespace;
 mod native;
 mod path;
 mod reading;
@@ -48,6 +50,8 @@ pub enum NativeError {
     Write,
     /// Staging-file synchronization failed; no publication was attempted.
     SyncStage,
+    /// Candidate file/parent namespace synchronization failed; no rollback proof.
+    SyncNamespace,
     /// Explicit staging close reported an error; no publication was attempted.
     Close,
 }

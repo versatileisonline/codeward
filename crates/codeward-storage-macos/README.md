@@ -20,16 +20,22 @@ Consuming `PreparedStage::publish_create` atomically refuses existing destinatio
 revalidate identities/permissions and preserve uncertainty after native errors.
 Success means visibility only. Residue is never cleaned up or promoted on restart.
 
+`synchronize_namespace` checks expected complete encrypted bytes or absence and
+exercises strict file/parent fsync and F_FULLFSYNC barriers under the publication
+guard. It preserves errors/observed conflicts without fallback, rollback or cleanup.
+This candidate sequence does not establish storage acceptance or acknowledge saves.
+
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or
 resolved feature is introduced. This crate exports no implementation on non-macOS
 targets and does not establish Windows/Linux compatibility.
 
-It does not implement the writable core adapter. Namespace barriers,
+It does not implement the writable core adapter. Namespace acceptance,
 cloud-location policy and complete storage acceptance remain outstanding. Use
 synthetic inputs only. See the [foundation](../../docs/macos-storage-foundation.md)
 and [staging](../../docs/macos-staging.md) and
-[publication evidence and limitations](../../docs/macos-publication.md).
+[publication](../../docs/macos-publication.md) and
+[namespace evidence and limitations](../../docs/macos-namespace.md).
 
 From the workspace root, using the configured toolchain homes:
 

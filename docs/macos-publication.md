@@ -82,3 +82,7 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
 Next implement and validate namespace persistence, authoritative residue handling,
 location/privacy gates and core transaction integration. Milestone 2 remains in
 progress; no usable credential store or native save/durability guarantee exists.
+
+The subsequent [namespace experiment](macos-namespace.md) adds candidate file/parent
+barriers with expected-state checks. Native transaction and persistence acceptance
+remain outstanding; publication alone still does not acknowledge a save.

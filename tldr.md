@@ -24,6 +24,7 @@ Root:
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
 - [macos-staging.md](docs/macos-staging.md): Synthetic encrypted staging, native API/ACL review, file synchronization and failure evidence.
 - [macos-publication.md](docs/macos-publication.md): Synthetic atomic creation/replacement, stale-base checks, uncertainty and process-kill evidence.
+- [macos-namespace.md](docs/macos-namespace.md): Candidate file/parent barriers, expected-state checks, failure and process-kill evidence.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -76,6 +77,8 @@ Root:
 - [README.md](crates/codeward-storage-macos/README.md): Native experiment scope and checks.
 - [src/lib.rs](crates/codeward-storage-macos/src/lib.rs): macOS-only boundary and controlled error types.
 - [src/native.rs](crates/codeward-storage-macos/src/native.rs): Small documented descriptor-relative native-call wrappers and filesystem filters.
+- [src/namespace.rs](crates/codeward-storage-macos/src/namespace.rs): Expected-state synthetic file/parent synchronization under publication exclusion.
+- [src/namespace/tests.rs](crates/codeward-storage-macos/src/namespace/tests.rs): Native barrier order, errors, observation changes, contention and child-kill tests.
 - [src/path.rs](crates/codeward-storage-macos/src/path.rs): Retained directory identities and stable companion writer lease.
 - [src/reading.rs](crates/codeward-storage-macos/src/reading.rs): Bounded unauthenticated reads with change detection.
 - [src/reading/tests.rs](crates/codeward-storage-macos/src/reading/tests.rs): Synthetic native path/read and subprocess-lock tests.

@@ -398,6 +398,22 @@ This review does not replace an independent security audit or establish integrat
 vault, schema, storage or platform guarantees. PR #4–6 were retargeted to `main`
 in dependency order and merged with merge commits; no hosted CI evidence is claimed.
 
+## Native macOS namespace synchronization experiment
+
+The [namespace experiment](macos-namespace.md) adds checked expected-state file/parent
+fsync and F_FULLFSYNC operations under the same lease-local guard as publication.
+Present files require all four calls; expected absence still requires both parent
+calls. Changed observations or failed/unsupported/interrupted calls preserve
+uncertainty without retry, fallback, rollback, cleanup or promotion. No dependency,
+format or cryptographic profile changes, writable core adapter or save acknowledgement.
+
+Focused local native evidence on 2026-11-04: 46 runtime functions, two compile-fail
+doctests, native all-target Clippy, formatting and whitespace pass. Sixteen child
+kills around the barrier checkpoints preserve whole observations/residue and permit
+reacquisition/repetition. Exact/over-cap, per-step injected sync errors, ACLs,
+substitutions and same-lease contention are covered. This does not establish
+inside-syscall interruption, OS-crash/power-loss or native transaction acceptance.
+
 ## Remaining work
 
 The [synthetic macOS publication experiment](macos-publication.md) now extends
@@ -405,10 +421,11 @@ staging with atomic no-replace creation and expected-base replacement under the
 retained lease. Publication errors remain uncertain; visibility is never a saved
 state. Focused local evidence includes 36 native test functions, two compile-fail
 doctests, native Clippy/formatting, concurrent readers and 14 child kills around
-publication. It does not implement namespace persistence or the writable adapter.
+publication. The namespace experiment above adds candidate barriers; neither
+experiment establishes complete persistence acceptance or the writable adapter.
 
-1. Extend synthetic macOS publication with namespace
-   persistence barriers and authoritative residue handling under ADR-0003. Validate complete ACL and
+1. Complete macOS namespace acceptance and authoritative residue handling under
+   ADR-0003, then integrate/validate the writable transaction path. Validate complete ACL and
    location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous
    authentication cancellation, draft ownership and automatic snapshot refresh.
