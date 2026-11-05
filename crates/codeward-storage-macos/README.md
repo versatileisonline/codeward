@@ -8,6 +8,8 @@ data. Rust 1.99.1 is pinned.
 traversal. `acquire` owns the stable `.codeward.writer-lock` OS lock; all vaults in
 one directory share it. `ReadLease::read_current` caps input allocation at 16 MiB,
 rejects linked/nonregular or POSIX-exposed files and detects observed changes.
+Parent, companion and vault extended ACLs, including deny-only entries, are refused
+at admission and revalidation without changing permissions.
 It returns encrypted bytes, never authenticated access or a committed revision.
 
 `ReadLease::prepare_stage` prepares a fresh private sibling with bounded complete
@@ -42,6 +44,8 @@ and [staging](../../docs/macos-staging.md) and
 [namespace evidence and limitations](../../docs/macos-namespace.md).
 The [core/native experiment](../../docs/macos-transaction-experiment.md) records
 the additional integration evidence and remaining acceptance boundaries.
+The [ACL admission evidence](../../docs/macos-acl-admission.md) records the shared
+read/exclusion checks and remaining location-policy limits.
 
 From the workspace root, using the configured toolchain homes:
 

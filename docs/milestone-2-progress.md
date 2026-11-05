@@ -416,6 +416,13 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+A [macOS ACL admission experiment](macos-acl-admission.md) now refuses extended
+ACLs on the direct parent, stable companion and vault reads before returning
+bytes. Existing lease checks extend this refusal through staging, publication and
+namespace barriers. Eight new tests cover initial admission, observed changes,
+preserved artifacts and uncertain outcomes; cloud-location policy and runtime
+storage acceptance remain incomplete.
+
 A [test-only macOS transaction experiment](macos-transaction-experiment.md) now
 composes the real native operations with the core worker under `cfg(test)`. Eight
 new test functions cover confirmed creation, content save/delete, repeat recovery,
@@ -434,7 +441,7 @@ experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Complete macOS namespace acceptance and authoritative residue handling under
    ADR-0003, then promote the tested composition into a separately validated runtime
-   writable path after its admission gates are complete. Validate complete ACL and
+   writable path after its admission gates are complete. Validate remaining ancestor/
    location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous
    authentication cancellation, draft ownership and automatic snapshot refresh.

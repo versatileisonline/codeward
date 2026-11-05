@@ -1,7 +1,11 @@
 use std::{ffi::CStr, fs::File, io, os::unix::fs::MetadataExt};
 
-use super::{PreparedStage, private_acl, stage_permissions};
-use crate::{NativeError, native, path::open_error, reading::stamp};
+use super::{PreparedStage, stage_permissions};
+use crate::{
+    NativeError, native,
+    path::{open_error, private_acl},
+    reading::stamp,
+};
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
 /// Visibility failure only; even successful publication is not a committed save.
@@ -62,7 +66,6 @@ impl PreparedStage<'_> {
                 return Err(NativeError::TooLarge);
             }
             lease.verify()?;
-            private_acl(lease.path.parent())?;
             let stage = native::open_at(lease.path.parent(), &self._name, libc::O_RDONLY, 0)
                 .map_err(open_error)?;
             self.verify_stage(&stage)?;
@@ -89,7 +92,6 @@ impl PreparedStage<'_> {
             }
             self.verify_stage(&stage)?;
             lease.verify()?;
-            private_acl(lease.path.parent())?;
             Ok(stage)
         };
         let stage = before().map_err(PublicationError::NotPublished)?;
@@ -118,8 +120,7 @@ impl PreparedStage<'_> {
                 return Err(NativeError::Conflict);
             }
             lease.match_named(&lease.path.name, &metadata)?;
-            lease.verify()?;
-            private_acl(lease.path.parent())
+            lease.verify()
         };
         after().map_err(|_| PublicationError::OutcomeUnknown)
     }

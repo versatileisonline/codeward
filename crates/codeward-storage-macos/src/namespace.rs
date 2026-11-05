@@ -6,10 +6,7 @@ use std::{
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
 use crate::{
-    NativeError, ReadLease, native,
-    path::open_error,
-    reading::stamp,
-    staging::{private_acl, stage_permissions},
+    NativeError, ReadLease, native, path::open_error, reading::stamp, staging::stage_permissions,
 };
 
 impl ReadLease {
@@ -46,7 +43,6 @@ impl ReadLease {
             .try_lock()
             .map_err(|_| NativeError::WriterUnavailable)?;
         self.verify()?;
-        private_acl(self.path.parent())?;
         let current = if expected.is_some() {
             let file = native::open_at(self.path.parent(), &self.path.name, libc::O_RDONLY, 0)
                 .map_err(open_error)?;
@@ -79,7 +75,6 @@ impl ReadLease {
 
     fn verify_observation(&self, current: &Option<(File, Metadata)>) -> Result<(), NativeError> {
         self.verify()?;
-        private_acl(self.path.parent())?;
         if !native::local_writable_apfs(self.path.parent()).map_err(|_| NativeError::Io)? {
             return Err(NativeError::Unsupported);
         }

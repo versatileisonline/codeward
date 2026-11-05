@@ -85,8 +85,9 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-03:
 
 The first test run correctly failed closed on macOS's absent-ACL `ENOENT` result;
 the reviewed descriptor/property semantics above resolved that interpretation.
-No file permissions were weakened to make progress. Read/exclusion APIs retain
-their documented POSIX-only privacy limits. The subsequent
+No file permissions were weakened to make progress. The later
+[ACL admission experiment](macos-acl-admission.md) extends conservative refusal to
+read/exclusion admission and lease revalidation. The subsequent
 [publication experiment](macos-publication.md) adds synthetic atomic creation and
 replacement. Cloud-location policy, namespace barriers, authoritative residue
 handling and core transaction integration remain native work. Full

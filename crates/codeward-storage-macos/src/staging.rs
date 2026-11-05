@@ -7,7 +7,10 @@ use std::{
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
-use crate::{NativeError, ReadLease, native, path::validate_regular};
+use crate::{
+    NativeError, ReadLease, native,
+    path::{private_acl, validate_regular},
+};
 
 const PREFIX: &[u8] = b".codeward.stage-";
 const RESERVED: &[u8] = b".codeward.";
@@ -62,12 +65,10 @@ impl ReadLease {
             return Err(NativeError::TooLarge);
         }
         self.verify()?;
-        private_acl(self.path.parent())?;
         let (mut file, name) = self.create_stage(random)?;
         // All exits retain any created stage. No speculative cleanup or promotion.
         let prepared = (|| {
             self.verify()?;
-            private_acl(self.path.parent())?;
             let before = file.metadata().map_err(|_| NativeError::Io)?;
             stage_permissions(&file)?;
             self.match_named(&name, &before)?;
@@ -91,7 +92,6 @@ impl ReadLease {
                 return Err(NativeError::Conflict);
             }
             self.verify()?;
-            private_acl(self.path.parent())?;
             self.match_named(&name, &after)?;
             Ok(after)
         })();
@@ -101,7 +101,6 @@ impl ReadLease {
         let metadata = prepared?;
         closed?;
         self.verify()?;
-        private_acl(self.path.parent())?;
         self.match_named(&name, &metadata)?;
         Ok(PreparedStage {
             _lease: self,
@@ -134,14 +133,6 @@ impl ReadLease {
             }
         }
         Err(NativeError::StageUnavailable)
-    }
-}
-
-pub(super) fn private_acl(file: &File) -> Result<(), NativeError> {
-    match native::no_extended_acl(file) {
-        Ok(true) => Ok(()),
-        Ok(false) => Err(NativeError::Permissions),
-        Err(_) => Err(NativeError::Unsupported),
     }
 }
 

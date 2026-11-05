@@ -8,7 +8,7 @@ use codeward_core::envelope::MAX_FILE_LENGTH;
 
 use crate::{
     NativeError, ReadLease, native,
-    path::{open_error, validate_regular},
+    path::{open_error, private_acl, validate_regular},
 };
 
 impl ReadLease {
@@ -17,7 +17,9 @@ impl ReadLease {
     /// Absence is distinct from failure. Descriptor metadata is checked before
     /// buffer allocation, every growth is capped, and a one-byte stack probe
     /// rejects growth beyond 16 MiB. Changed file/directory/companion identity or
-    /// observed metadata change fails closed. Returned bytes still need the core's
+    /// observed metadata change fails closed. Parent, companion and vault extended
+    /// ACLs are refused; the vault is checked before buffering and after reading.
+    /// Returned bytes still need the core's
     /// structural, authentication and schema gates; a read never grants access.
     pub fn read_current(&self) -> Result<Option<Vec<u8>>, NativeError> {
         self.read_with_hook(|| {})
@@ -41,6 +43,7 @@ impl ReadLease {
         };
         let before = file.metadata().map_err(|_| NativeError::Io)?;
         validate_regular(&before)?;
+        private_acl(&file)?;
         if self.is_companion(&before) {
             return Err(NativeError::Unsupported);
         }
@@ -51,6 +54,7 @@ impl ReadLease {
         let bytes = read_capped(&mut file, before.len() as usize)?;
         let after = file.metadata().map_err(|_| NativeError::Io)?;
         validate_regular(&after)?;
+        private_acl(&file)?;
         if stamp(&before) != stamp(&after) || after.len() != bytes.len() as u64 {
             return Err(NativeError::Conflict);
         }

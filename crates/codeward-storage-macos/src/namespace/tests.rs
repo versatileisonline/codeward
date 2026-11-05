@@ -220,6 +220,36 @@ fn permissions_acl_links_and_parent_companion_substitution_refuse_before_barrier
 }
 
 #[test]
+fn companion_acl_added_by_last_barrier_refuses_present_or_absent_result() {
+    for present in [false, true] {
+        let dir = TestDir::new();
+        if present {
+            dir.write(b"original");
+        }
+        let lease = dir.lease();
+        let count = if present { 4 } else { 2 };
+        let mut probe = Probe {
+            hook: Some(Box::new(|index| {
+                if index == count {
+                    chmod_acl(&dir.companion(), "everyone allow read");
+                }
+            })),
+            ..Probe::default()
+        };
+        assert_eq!(
+            lease.namespace_with(present.then_some(b"original".as_slice()), &mut probe),
+            Err(NativeError::Permissions)
+        );
+        assert_eq!(probe.calls.len(), count);
+        assert_eq!(
+            fs::read(dir.vault()).ok().as_deref(),
+            present.then_some(b"original".as_slice())
+        );
+        assert!(!native::no_extended_acl(&File::open(dir.companion()).unwrap()).unwrap());
+    }
+}
+
+#[test]
 fn changes_during_barriers_do_not_establish_the_requested_observation() {
     for case in 0..6 {
         let dir = TestDir::new();

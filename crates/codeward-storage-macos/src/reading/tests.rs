@@ -9,7 +9,199 @@ use std::{
 use super::*;
 use crate::VaultPath;
 
-use crate::test_support::{TestDir, fixture};
+use crate::test_support::{TestDir, chmod_acl, fixture, stages};
+
+const ACLS: [&str; 2] = ["everyone allow read", "everyone deny delete"];
+
+fn remove_test_acl(path: &Path) {
+    assert!(
+        Command::new("/bin/chmod")
+            .arg("-N")
+            .arg(path)
+            .status()
+            .unwrap()
+            .success()
+    );
+}
+
+#[test]
+fn acl_admission_refuses_parent_before_resolution_or_companion_creation() {
+    for acl in ACLS {
+        for after_resolve in [false, true] {
+            let dir = TestDir::new();
+            let resolved = after_resolve.then(|| VaultPath::resolve(&dir.vault()).unwrap());
+            chmod_acl(&dir.0, acl);
+            assert_eq!(fs::metadata(&dir.0).unwrap().mode() & 0o777, 0o700);
+            let result = match resolved {
+                Some(path) => path.acquire().err(),
+                None => VaultPath::resolve(&dir.vault()).err(),
+            };
+            assert_eq!(result, Some(NativeError::Permissions));
+            assert!(!dir.companion().exists());
+            assert!(fs::read_dir(&dir.0).unwrap().next().is_none());
+            assert!(!native::no_extended_acl(&File::open(&dir.0).unwrap()).unwrap());
+            remove_test_acl(&dir.0);
+            dir.lease();
+        }
+    }
+}
+
+#[test]
+fn acl_admission_refuses_existing_companion_before_lock_without_changing_it() {
+    for acl in ACLS {
+        let dir = TestDir::new();
+        drop(dir.lease());
+        let inode = fs::metadata(dir.companion()).unwrap().ino();
+        chmod_acl(&dir.companion(), acl);
+        assert_eq!(fs::metadata(dir.companion()).unwrap().mode() & 0o777, 0o600);
+        assert_eq!(
+            VaultPath::resolve(&dir.vault()).unwrap().acquire().err(),
+            Some(NativeError::Permissions)
+        );
+        assert_eq!(fs::metadata(dir.companion()).unwrap().ino(), inode);
+        assert!(fs::read(dir.companion()).unwrap().is_empty());
+        let companion = File::open(dir.companion()).unwrap();
+        assert!(!native::no_extended_acl(&companion).unwrap());
+        // A refused attempt must not leave exclusion owned by the process.
+        companion.try_lock().unwrap();
+        companion.unlock().unwrap();
+        remove_test_acl(&dir.companion());
+        dir.lease();
+    }
+}
+
+#[test]
+fn acl_admission_refuses_vault_before_reading_even_with_private_mode() {
+    for acl in ACLS {
+        let dir = TestDir::new();
+        dir.write(b"synthetic unchanged vault");
+        let lease = dir.lease();
+        chmod_acl(&dir.vault(), acl);
+        assert_eq!(fs::metadata(dir.vault()).unwrap().mode() & 0o777, 0o600);
+        let mut reached_read = false;
+        assert_eq!(
+            lease.read_with_hook(|| reached_read = true),
+            Err(NativeError::Permissions)
+        );
+        assert!(!reached_read);
+        assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic unchanged vault");
+        assert!(!native::no_extended_acl(&File::open(dir.vault()).unwrap()).unwrap());
+        remove_test_acl(&dir.vault());
+        assert_eq!(
+            lease.read_current().unwrap().unwrap(),
+            b"synthetic unchanged vault"
+        );
+    }
+}
+
+#[test]
+fn acl_admission_rechecks_parent_and_companion_for_present_and_absent_reads() {
+    for acl in ACLS {
+        for parent in [false, true] {
+            for present in [false, true] {
+                let dir = TestDir::new();
+                if present {
+                    dir.write(b"synthetic unchanged vault");
+                }
+                let lease = dir.lease();
+                let target = if parent {
+                    dir.0.clone()
+                } else {
+                    dir.companion()
+                };
+                chmod_acl(&target, acl);
+                assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+                assert!(!native::no_extended_acl(&File::open(&target).unwrap()).unwrap());
+                assert_eq!(dir.vault().exists(), present);
+                if present {
+                    assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic unchanged vault");
+                }
+                remove_test_acl(&target);
+                assert_eq!(lease.read_current().unwrap().is_some(), present);
+            }
+        }
+    }
+}
+
+#[test]
+fn acl_admission_rechecks_vault_parent_and_companion_after_reading() {
+    for acl in ACLS {
+        for target in 0..3 {
+            let dir = TestDir::new();
+            dir.write(b"synthetic unchanged vault");
+            let lease = dir.lease();
+            let path = match target {
+                0 => dir.vault(),
+                1 => dir.0.clone(),
+                _ => dir.companion(),
+            };
+            assert_eq!(
+                lease.read_with_hook(|| chmod_acl(&path, acl)),
+                Err(NativeError::Permissions)
+            );
+            assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic unchanged vault");
+            assert!(!native::no_extended_acl(&File::open(&path).unwrap()).unwrap());
+            remove_test_acl(&path);
+            assert_eq!(
+                lease.read_current().unwrap().unwrap(),
+                b"synthetic unchanged vault"
+            );
+        }
+    }
+}
+
+#[test]
+fn acl_admission_blocks_staging_publication_and_barriers_on_companion_change() {
+    for acl in ACLS {
+        for present in [false, true] {
+            let dir = TestDir::new();
+            if present {
+                dir.write(b"synthetic base");
+            }
+            let lease = dir.lease();
+            let stage = lease.prepare_stage(b"synthetic candidate").unwrap();
+            let residue = stages(&dir.0);
+            assert_eq!(residue.len(), 1);
+            chmod_acl(&dir.companion(), acl);
+            assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+            assert_eq!(
+                lease.prepare_stage(b"another candidate").err(),
+                Some(NativeError::Permissions)
+            );
+            let base = present.then_some(b"synthetic base".as_slice());
+            let publication = if present {
+                stage.publish_replace(base.unwrap())
+            } else {
+                stage.publish_create()
+            };
+            assert_eq!(
+                publication,
+                Err(crate::PublicationError::NotPublished(
+                    NativeError::Permissions
+                ))
+            );
+            assert_eq!(
+                lease.synchronize_namespace(base),
+                Err(NativeError::Permissions)
+            );
+            assert_eq!(stages(&dir.0), residue);
+            assert_eq!(fs::read(&residue[0]).unwrap(), b"synthetic candidate");
+            assert_eq!(dir.vault().exists(), present);
+            if present {
+                assert_eq!(fs::read(dir.vault()).unwrap(), b"synthetic base");
+            }
+            assert!(!native::no_extended_acl(&File::open(dir.companion()).unwrap()).unwrap());
+            remove_test_acl(&dir.companion());
+            assert_eq!(lease.read_current().unwrap().as_deref(), base);
+            assert_eq!(
+                VaultPath::resolve(&dir.vault()).unwrap().acquire().err(),
+                Some(NativeError::WriterUnavailable)
+            );
+            drop(lease);
+            dir.lease();
+        }
+    }
+}
 
 #[test]
 fn read_preserves_file_and_returns_bytes_requiring_authentication() {

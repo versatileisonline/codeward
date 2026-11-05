@@ -58,6 +58,9 @@ file/parent barriers; full persistence acceptance remains pending.
 A [test-only native transaction experiment](macos-transaction-experiment.md) now
 connects those operations to the core worker for synthetic lifecycle/failure tests.
 It does not enable a runtime writer or advance the milestone.
+A [shared ACL admission check](macos-acl-admission.md) now covers the direct parent,
+companion and vault reads, with refusal revalidated throughout native operations.
+Remaining location policy and runtime storage acceptance are still required.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries
