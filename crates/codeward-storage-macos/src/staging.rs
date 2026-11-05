@@ -7,7 +7,10 @@ use std::{
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
-use crate::{NativeError, ReadLease, native, path::validate_regular};
+use crate::{
+    NativeError, ReadLease, native,
+    path::{private_acl, validate_regular},
+};
 
 const PREFIX: &[u8] = b".codeward.stage-";
 const RESERVED: &[u8] = b".codeward.";
@@ -134,14 +137,6 @@ impl ReadLease {
             }
         }
         Err(NativeError::StageUnavailable)
-    }
-}
-
-pub(super) fn private_acl(file: &File) -> Result<(), NativeError> {
-    match native::no_extended_acl(file) {
-        Ok(true) => Ok(()),
-        Ok(false) => Err(NativeError::Permissions),
-        Err(_) => Err(NativeError::Unsupported),
     }
 }
 

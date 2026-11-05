@@ -7,9 +7,9 @@ use codeward_core::envelope::MAX_FILE_LENGTH;
 
 use crate::{
     NativeError, ReadLease, native,
-    path::open_error,
+    path::{open_error, private_acl},
     reading::stamp,
-    staging::{private_acl, stage_permissions},
+    staging::stage_permissions,
 };
 
 impl ReadLease {

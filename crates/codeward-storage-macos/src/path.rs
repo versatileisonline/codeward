@@ -218,6 +218,14 @@ pub(super) fn validate_regular(meta: &Metadata) -> Result<(), NativeError> {
     Ok(())
 }
 
+pub(super) fn private_acl(file: &File) -> Result<(), NativeError> {
+    match native::no_extended_acl(file) {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(NativeError::Permissions),
+        Err(_) => Err(NativeError::Unsupported),
+    }
+}
+
 pub(super) fn open_error(error: io::Error) -> NativeError {
     match error.raw_os_error() {
         Some(libc::ELOOP | libc::ENOTDIR) => NativeError::Unsupported,

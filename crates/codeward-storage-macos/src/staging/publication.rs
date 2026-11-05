@@ -1,7 +1,11 @@
 use std::{ffi::CStr, fs::File, io, os::unix::fs::MetadataExt};
 
-use super::{PreparedStage, private_acl, stage_permissions};
-use crate::{NativeError, native, path::open_error, reading::stamp};
+use super::{PreparedStage, stage_permissions};
+use crate::{
+    NativeError, native,
+    path::{open_error, private_acl},
+    reading::stamp,
+};
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
 /// Visibility failure only; even successful publication is not a committed save.
