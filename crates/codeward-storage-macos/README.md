@@ -10,6 +10,8 @@ one directory share it. `ReadLease::read_current` caps input allocation at 16 Mi
 rejects linked/nonregular or POSIX-exposed files and detects observed changes.
 Parent, companion and vault extended ACLs, including deny-only entries, are refused
 at admission and revalidation without changing permissions.
+Shared verification also repeats the destination's local/writable/nonremovable
+APFS check; an earlier permitted mount observation does not authorize later work.
 It returns encrypted bytes, never authenticated access or a committed revision.
 
 `ReadLease::prepare_stage` prepares a fresh private sibling with bounded complete
@@ -46,6 +48,8 @@ The [core/native experiment](../../docs/macos-transaction-experiment.md) records
 the additional integration evidence and remaining acceptance boundaries.
 The [ACL admission evidence](../../docs/macos-acl-admission.md) records the shared
 read/exclusion checks and remaining location-policy limits.
+The [mount-policy evidence](../../docs/macos-location-admission.md) records repeated
+filesystem checks; cloud-location admission remains incomplete.
 
 From the workspace root, using the configured toolchain homes:
 

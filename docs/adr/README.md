@@ -22,6 +22,8 @@ A [test-only core/native bridge](../macos-transaction-experiment.md) now adds
 synthetic integration evidence without a runtime adapter or accepted save guarantee.
 The [ACL admission experiment](../macos-acl-admission.md) adds shared conservative
 parent/companion/read checks; location and runtime acceptance remain incomplete.
+The [mount-policy experiment](../macos-location-admission.md) repeats destination
+filesystem checks without accepting cloud locations or changing the save contract.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |

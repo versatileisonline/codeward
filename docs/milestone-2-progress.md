@@ -416,6 +416,12 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+A [destination mount-policy check](macos-location-admission.md) now repeats the
+local/writable/nonremovable APFS query through path verification, including reads,
+staging, publication and barriers. Injected refusals/query errors preserve definite
+failure before publication and uncertainty afterward. Cloud/ancestor admission and
+runtime storage acceptance remain incomplete.
+
 A [macOS ACL admission experiment](macos-acl-admission.md) now refuses extended
 ACLs on the direct parent, stable companion and vault reads before returning
 bytes. Existing lease checks extend this refusal through staging, publication and

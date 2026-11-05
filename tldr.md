@@ -27,6 +27,7 @@ Root:
 - [macos-namespace.md](docs/macos-namespace.md): Candidate file/parent barriers, expected-state checks, failure and process-kill evidence.
 - [macos-transaction-experiment.md](docs/macos-transaction-experiment.md): Test-only core/native transaction composition, residue authority and interruption evidence.
 - [macos-acl-admission.md](docs/macos-acl-admission.md): Synthetic parent/companion/read ACL refusal, revalidation and failure evidence.
+- [macos-location-admission.md](docs/macos-location-admission.md): Destination mount-policy revalidation, injected transitions and remaining cloud/ancestor gates.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
