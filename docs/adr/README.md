@@ -18,6 +18,8 @@ Native macOS read/exclusion, [staging](../macos-staging.md),
 [publication](../macos-publication.md) and candidate
 [namespace barriers](../macos-namespace.md) have synthetic evidence.
 Native committed persistence and complete application workflows remain absent.
+A [test-only core/native bridge](../macos-transaction-experiment.md) now adds
+synthetic integration evidence without a runtime adapter or accepted save guarantee.
 
 | ADR | Topic | Status | Needed by |
 | --- | --- | --- | --- |

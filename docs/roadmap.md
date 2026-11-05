@@ -55,6 +55,9 @@ replacement. Next validate namespace barriers, residue/location policies and cor
 integration, then complete application session/lifecycle orchestration.
 The [namespace experiment](macos-namespace.md) now provides synthetic candidate
 file/parent barriers; full persistence acceptance remains pending.
+A [test-only native transaction experiment](macos-transaction-experiment.md) now
+connects those operations to the core worker for synthetic lifecycle/failure tests.
+It does not enable a runtime writer or advance the milestone.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 
 ## Implementation and evidence boundaries

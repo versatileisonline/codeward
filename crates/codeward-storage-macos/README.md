@@ -25,6 +25,10 @@ exercises strict file/parent fsync and F_FULLFSYNC barriers under the publicatio
 guard. It preserves errors/observed conflicts without fallback, rollback or cleanup.
 This candidate sequence does not establish storage acceptance or acknowledge saves.
 
+A private `cfg(test)` bridge now exercises the core transaction worker against
+these native operations. It verifies creation, changes, recovery, uncertainty and
+residue authority with synthetic files; it is absent from the runtime library.
+
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or
 resolved feature is introduced. This crate exports no implementation on non-macOS
@@ -36,6 +40,8 @@ synthetic inputs only. See the [foundation](../../docs/macos-storage-foundation.
 and [staging](../../docs/macos-staging.md) and
 [publication](../../docs/macos-publication.md) and
 [namespace evidence and limitations](../../docs/macos-namespace.md).
+The [core/native experiment](../../docs/macos-transaction-experiment.md) records
+the additional integration evidence and remaining acceptance boundaries.
 
 From the workspace root, using the configured toolchain homes:
 

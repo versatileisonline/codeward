@@ -416,6 +416,14 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+A [test-only macOS transaction experiment](macos-transaction-experiment.md) now
+composes the real native operations with the core worker under `cfg(test)`. Eight
+new test functions cover confirmed creation, content save/delete, repeat recovery,
+uncertain outcomes/reconciliation, explicit retries, conflict/lock boundaries,
+preserve-all residue authority and 15 actual child kills at protocol checkpoints.
+The bridge is absent from runtime builds. This is synthetic integration evidence,
+not native adapter acceptance, complete application sessions or a usable vault.
+
 The [synthetic macOS publication experiment](macos-publication.md) now extends
 staging with atomic no-replace creation and expected-base replacement under the
 retained lease. Publication errors remain uncertain; visibility is never a saved
@@ -425,7 +433,8 @@ publication. The namespace experiment above adds candidate barriers; neither
 experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Complete macOS namespace acceptance and authoritative residue handling under
-   ADR-0003, then integrate/validate the writable transaction path. Validate complete ACL and
+   ADR-0003, then promote the tested composition into a separately validated runtime
+   writable path after its admission gates are complete. Validate complete ACL and
    location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous
    authentication cancellation, draft ownership and automatic snapshot refresh.
