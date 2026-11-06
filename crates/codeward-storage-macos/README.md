@@ -41,20 +41,25 @@ exercises strict file/parent fsync and F_FULLFSYNC barriers under the publicatio
 guard. It preserves errors/observed conflicts without fallback, rollback or cleanup.
 This candidate sequence does not establish storage acceptance or acknowledge saves.
 
-A private `cfg(test)` bridge now exercises the core transaction worker against
-these native operations. It verifies creation, changes, recovery, uncertainty and
-residue authority with synthetic files; it is absent from the runtime library.
-It stores the actual owned stage without extracting/rebuilding private marker fields.
+A [default-off experimental adapter](../../docs/macos-experimental-writer.md)
+implements the core storage traits behind `experimental-writer`. Its only public
+constructor is `ExperimentalStorage::managed()`. It retains the actual native lease
+and stage, uses bounded fallible encrypted copies and invalidates failed observations.
+The feature is for synthetic development; real-vault/storage acceptance is pending.
+A private `cfg(test)` fault/event wrapper delegates to that same implementation for
+creation, changes, recovery, uncertainty and residue tests. Arbitrary test paths and
+fault controls are absent from runtime builds.
 Its [kernel write-failure cases](../../docs/macos-write-failures.md) now exercise
 zero/partial native writes in isolated children on managed synthetic homes, with
 no false commit or replay when the process file-size limit is restored.
 
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or
-resolved feature is introduced. This crate exports no implementation on non-macOS
+dependency feature is introduced; the writer uses an explicit local opt-in feature.
+This crate exports no implementation on non-macOS
 targets and does not establish Windows/Linux compatibility.
 
-It does not implement the writable core adapter. Namespace acceptance,
+Default builds omit the writable core adapter. Namespace acceptance,
 cloud-location policy and complete storage acceptance remain outstanding. Use
 synthetic inputs only. See the [foundation](../../docs/macos-storage-foundation.md)
 and [staging](../../docs/macos-staging.md) and
@@ -73,7 +78,8 @@ native preparation from backup, portability workflows and runtime acceptance.
 From the workspace root, using the configured toolchain homes:
 
 ```sh
-cargo test --workspace --locked --offline
+cargo check --workspace --no-default-features --locked --offline
+cargo test --workspace --all-features --locked --offline
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked --offline -- -D warnings
+cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings
 ```

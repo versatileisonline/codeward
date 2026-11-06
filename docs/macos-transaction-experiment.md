@@ -3,12 +3,14 @@
 Scope: synthetic integration evidence for ADR-0003 and Milestone 2. The private
 `staging::transactions` module is compiled only for native crate tests. It connects
 the core's existing transaction worker to real native reads, staging, publication
-and [candidate namespace barriers](macos-namespace.md). No runtime adapter is
-exported, and real-vault admission/location policy remains unfinished.
+and [candidate namespace barriers](macos-namespace.md). It now delegates to the
+[shared experimental adapter](macos-experimental-writer.md), exported only with
+explicit feature opt-in. Its faults/events and arbitrary paths remain test-only;
+default runtime builds omit the writer and real-vault acceptance remains unfinished.
 
 ## Ownership and authority
 
-The test bridge owns one native lease, the last successful encrypted observation
+The shared adapter owns one native lease, the last successful encrypted observation
 and at most one [owned prepared stage](macos-stage-ownership.md). It stores and
 consumes the actual native marker without a self-referential borrow, copied private
 metadata or reconstruction. The worker retains its separate lease through barriers
@@ -71,6 +73,9 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
   These checkpoints do not prove an in-syscall interruption or physical power loss.
 
 The bridge is test infrastructure, not the writable adapter intended for shipping.
+Its thin fault/event wrapper now exercises the shared opt-in implementation rather
+than maintaining duplicate native operations and state. Historical results above
+remain bounded experiment evidence, not default runtime support.
 Complete privacy/location gates, native persistence acceptance, application session
 orchestration and Windows/Linux storage remain outstanding. UI remains deferred.
 

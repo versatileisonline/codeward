@@ -31,6 +31,7 @@ Root:
 - [macos-managed-location.md](docs/macos-managed-location.md): Reviewed managed-directory APIs, ancestor policy, synthetic preparation evidence and limits.
 - [macos-write-failures.md](docs/macos-write-failures.md): Child-isolated kernel write refusals, managed transaction retries and evidence limits.
 - [macos-stage-ownership.md](docs/macos-stage-ownership.md): Owned staging markers, shared writer lifetime and transaction ownership boundaries.
+- [macos-experimental-writer.md](docs/macos-experimental-writer.md): Default-off managed storage adapter, bounded observations, shared tests and acceptance limits.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -69,7 +70,7 @@ Root:
 - [src/transaction.rs](crates/codeward-core/src/transaction.rs): Scoped request/status types, complete-file fingerprints and atomic publication admission.
 - [src/transaction/session.rs](crates/codeward-core/src/transaction/session.rs): Secret-owning admission, generation revocation and explicit reload.
 - [src/transaction/worker.rs](crates/codeward-core/src/transaction/worker.rs): Encrypted commit stages, bounded request history and unknown-outcome reconciliation.
-- [src/transaction/storage.rs](crates/codeward-core/src/transaction/storage.rs): Trusted exclusive storage-adapter contract; no native implementation.
+- [src/transaction/storage.rs](crates/codeward-core/src/transaction/storage.rs): Trusted exclusive storage-adapter contract; native acceptance stays separate.
 - [src/transaction/tests.rs](crates/codeward-core/src/transaction/tests.rs): Commit fault, scope, lock and recovery tests using the in-memory model in tests/model.rs.
 - [tests/fixtures/generate_vault.py](crates/codeward-core/tests/fixtures/generate_vault.py): Vector-checked independent synthetic encrypted envelopes.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
@@ -96,7 +97,9 @@ Root:
 - [src/staging/publication.rs](crates/codeward-storage-macos/src/staging/publication.rs): Consuming synthetic publication with no-replace creation and expected-base replacement.
 - [src/staging/publication/tests.rs](crates/codeward-storage-macos/src/staging/publication/tests.rs): Native publication races, uncertainty, coherent access and process-kill tests.
 - [src/staging/publication/ownership_tests.rs](crates/codeward-storage-macos/src/staging/publication/ownership_tests.rs): Owned-stage lifetime, cross-thread/process exclusion, failure and unwind cases.
-- [src/staging/transactions.rs](crates/codeward-storage-macos/src/staging/transactions.rs): Test-only native Storage/WriterLease bridge, absent from the runtime library.
+- [src/staging/transactions.rs](crates/codeward-storage-macos/src/staging/transactions.rs): Test-only event/fault wrapper around the shared experimental writer.
+- [src/writer.rs](crates/codeward-storage-macos/src/writer.rs): Shared default-off experimental managed Storage/WriterLease implementation.
+- [src/writer/tests.rs](crates/codeward-storage-macos/src/writer/tests.rs): Observation invalidation, bounded stage failure and writer-ownership cases.
 - [src/staging/transactions/tests.rs](crates/codeward-storage-macos/src/staging/transactions/tests.rs): Synthetic native lifecycle, uncertainty, residue and process-kill checks through the core worker.
 - [src/staging/transactions/tests/write_failures.rs](crates/codeward-storage-macos/src/staging/transactions/tests/write_failures.rs): Actual child-local EFBIG/partial-write and managed explicit-retry checks.
 - [src/test_support.rs](crates/codeward-storage-macos/src/test_support.rs): Shared synthetic native test directories and fixture loading.

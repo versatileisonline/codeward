@@ -73,6 +73,9 @@ This is bounded EFBIG evidence, not native storage acceptance or milestone compl
 [Owned native stages](macos-stage-ownership.md) now remove the transaction bridge's
 marker reconstruction while retaining one shared writer state through pending work.
 Runtime integration and native acceptance remain separate gates.
+The [shared experimental writer](macos-experimental-writer.md) now supplies the
+storage-trait implementation for explicit opt-in and reuses it in synthetic tests.
+Default builds omit it; real-vault use and milestone acceptance remain gated.
 
 ## Implementation and evidence boundaries
 
