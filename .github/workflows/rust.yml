@@ -69,10 +69,12 @@ jobs:
           key: registry-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
       - name: Fetch locked dependencies
         run: cargo fetch --locked
-      - name: Test workspace including doctests
-        run: cargo test --workspace --locked --offline
+      - name: Check default builds without experimental features
+        run: cargo check --workspace --no-default-features --locked --offline
+      - name: Test workspace including experimental features and doctests
+        run: cargo test --workspace --all-features --locked --offline
       - name: Check all targets with Clippy
-        run: cargo clippy --workspace --all-targets --locked --offline -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings
 
   gate:
     name: Rust CI
