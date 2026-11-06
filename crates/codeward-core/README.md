@@ -73,6 +73,14 @@ worker can finish while the session stays locked. After commit, a new mutation
 requires explicit reload/authentication of the worker's current base. This slice
 has no credential-reply API, draft manager, inactivity timer or OS event adapter.
 
+[`open_locked` and split-phase authentication](../../docs/session-authentication.md)
+let the control side revoke a session while a separate Rust worker authenticates.
+Only a current caller/vault/generation/attempt against the same committed base may
+install the opaque completion. Master/recovery reload convenience calls use that
+same path synchronously. A running KDF is not preempted; hosts must promptly drop
+stale results and clear their own input/display copies. Recovery remains restricted,
+and an uncertain write still requires the existing reconciliation protocol.
+
 Tests cover format, primitives, paper codes, credentials and composed vault
 operations using published vectors and independent synthetic Python/C fixtures.
 Compile-fail examples cover nonce ownership, consumed access and restricted
