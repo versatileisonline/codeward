@@ -18,6 +18,8 @@ use codeward_core::{
 use super::*;
 use crate::test_support::{MASTER_TESTS, fixture, maximum_revision_fixture, stages};
 
+mod write_failures;
+
 const OWNER: CallerId = CallerId(7);
 const PASSWORD: &str = "synthetic password";
 const REPLACEMENT: &str = "synthetic native replacement password";

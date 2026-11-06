@@ -6,6 +6,9 @@ Scope: ADR-0001/0003/0005 and NFR-03/04/06/08/09.
 The [macOS foundation evidence](macos-storage-foundation.md) now covers bounded
 synthetic reads, descriptor-rooted path checks and native writer exclusion. It
 does not establish writable-adapter acceptance, persistence or packaged support.
+The [kernel write-failure experiment](macos-write-failures.md) adds actual
+child-local EFBIG/partial-progress cases on managed synthetic destinations; it
+does not substitute for capacity/quota, media-error or namespace acceptance.
 
 [Rust CI evidence](continuous-integration.md) covers core tests/doctests and Clippy
 on hosted Ubuntu 24.04, Windows Server 2025 and macOS 26, with native foundation

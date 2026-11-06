@@ -40,10 +40,14 @@ struct SyntheticStorage {
 impl SyntheticStorage {
     // Only the exclusively created synthetic test directory supplies a path.
     fn new(dir: &TestDir) -> (Self, Controls) {
+        Self::from_path(VaultPath::resolve(&dir.vault()).unwrap())
+    }
+
+    fn from_path(path: VaultPath) -> (Self, Controls) {
         let control = Arc::new(Mutex::new(Control::default()));
         (
             Self {
-                path: VaultPath::resolve(&dir.vault()).unwrap(),
+                path,
                 control: control.clone(),
             },
             control,

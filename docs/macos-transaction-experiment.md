@@ -70,3 +70,8 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
 The bridge is test infrastructure, not the writable adapter intended for shipping.
 Complete privacy/location gates, native persistence acceptance, application session
 orchestration and Windows/Linux storage remain outstanding. UI remains deferred.
+
+The subsequent [kernel write-failure cases](macos-write-failures.md) reuse this
+bridge with managed synthetic homes. Actual child-local EFBIG failures now verify
+no false commit, preserved bases/residue, request deduplication and explicit retry.
+They do not establish disk-full, quota, media-error or persistence acceptance.

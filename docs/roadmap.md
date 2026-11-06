@@ -67,6 +67,9 @@ No native commit/durability guarantee exists; Milestone 2 remains incomplete.
 The selected [managed working-location contract](adr/0006-managed-working-location.md)
 now has [macOS directory-preparation evidence](macos-managed-location.md), including
 ancestor revalidation. Backup/copy/restore workflows remain explicitly deferred.
+Actual child-local [kernel write failures](macos-write-failures.md) now exercise
+the managed transaction path without false acknowledgement or automatic replay.
+This is bounded EFBIG evidence, not native storage acceptance or milestone completion.
 
 ## Implementation and evidence boundaries
 
