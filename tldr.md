@@ -14,6 +14,7 @@ Root:
 - [threat-model.md](docs/threat-model.md): Security threats and limits.
 - [system-design.md](docs/system-design.md): System design and Mermaid diagrams.
 - [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
+- [session-authentication.md](docs/session-authentication.md): Split-phase core authentication, revocation, ownership and limits.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
@@ -69,9 +70,11 @@ Root:
 - [src/vault/tests.rs](crates/codeward-core/src/vault/tests.rs): Independent fixture, authentication, schema and enrollment tests; update tests live beside their module.
 - [src/transaction.rs](crates/codeward-core/src/transaction.rs): Scoped request/status types, complete-file fingerprints and atomic publication admission.
 - [src/transaction/session.rs](crates/codeward-core/src/transaction/session.rs): Secret-owning admission, generation revocation and explicit reload.
+- [src/transaction/session/authentication.rs](crates/codeward-core/src/transaction/session/authentication.rs): Scoped authentication jobs/completions that cannot restore revoked access.
 - [src/transaction/worker.rs](crates/codeward-core/src/transaction/worker.rs): Encrypted commit stages, bounded request history and unknown-outcome reconciliation.
 - [src/transaction/storage.rs](crates/codeward-core/src/transaction/storage.rs): Trusted exclusive storage-adapter contract; native acceptance stays separate.
 - [src/transaction/tests.rs](crates/codeward-core/src/transaction/tests.rs): Commit fault, scope, lock and recovery tests using the in-memory model in tests/model.rs.
+- [src/transaction/tests/authentication.rs](crates/codeward-core/src/transaction/tests/authentication.rs): Blocked/late authentication, caller/generation isolation and transaction-policy tests.
 - [tests/fixtures/generate_vault.py](crates/codeward-core/tests/fixtures/generate_vault.py): Vector-checked independent synthetic encrypted envelopes.
 - [tests/envelope.rs](crates/codeward-core/tests/envelope.rs): Synthetic format and metadata tests.
 - [tests/encoding.rs](crates/codeward-core/tests/encoding.rs): Exact encoding fixture, bounds and round-trip tests.

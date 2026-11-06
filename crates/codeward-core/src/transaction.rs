@@ -20,7 +20,7 @@ use crate::{envelope::UnauthenticatedEnvelope, vault::VaultError};
 mod session;
 mod storage;
 mod worker;
-pub use session::Session;
+pub use session::{AuthenticationJob, AuthenticationResult, Session};
 pub use storage::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 pub use worker::Committer;
 
@@ -110,7 +110,9 @@ pub enum TransactionError {
     HistoryFull,
     /// Session generation is exhausted; it cannot be reused.
     GenerationExhausted,
-    /// Allocation failed before admitting a mutation.
+    /// Authentication belongs to a canceled, replaced or otherwise stale attempt.
+    AuthenticationCanceled,
+    /// Allocation failed before admitting a mutation or authentication job.
     AllocationFailed,
     /// Actual bytes cannot be established as the known base/candidate.
     OutcomeUnknown,

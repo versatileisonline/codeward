@@ -76,6 +76,9 @@ Runtime integration and native acceptance remain separate gates.
 The [shared experimental writer](macos-experimental-writer.md) now supplies the
 storage-trait implementation for explicit opt-in and reuses it in synthetic tests.
 Default builds omit it; real-vault use and milestone acceptance remain gated.
+The [split-phase authentication slice](session-authentication.md) now lets a core
+session revoke a queued/running verification and reject stale completion. Full
+session dispatch, timers, drafts, snapshot refresh and platform events remain pending.
 
 ## Implementation and evidence boundaries
 

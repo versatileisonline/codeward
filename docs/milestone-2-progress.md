@@ -1,6 +1,6 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-04. Authenticated vault operations now compose with
+Status: in progress, 2026-11-05. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
 Accepted native storage and complete application workflows remain absent. The milestone
 is not complete.
@@ -251,6 +251,31 @@ prerequisites; no native vault write or durability guarantee is established.
 No dependency, feature, vault bytes, schema, primitive or KDF-cost change was made.
 Existing pinned SHA-256/HMAC now also provide internal fingerprint/intent matching;
 the [dependency review](dependency-review.md) records this use and snapshot limits.
+
+## Cancellable core authentication
+
+The [split-phase authentication API](session-authentication.md) adds locked open,
+single-use master/recovery jobs and opaque completions. The control-side session
+can revoke without waiting for authentication/storage. Installation rechecks trusted
+caller, opened-worker scope, generation, current attempt and exact committed-base
+fingerprint. Stale success/failure cannot replace or revoke newer access. Recovery
+stays restricted; unknown/conflicted writes remain subject to the existing worker.
+Synchronous reload convenience calls delegate to the same path.
+
+The focused synthetic tests cover blocked authentication/lock, late completions,
+replacement, drop/reopen, caller/worker isolation, malformed/tampered input, exact
+fingerprints and transaction-policy preservation. Jobs/results are core-only secret
+owners; an executing KDF is not preempted and hosts must promptly drain stale
+completions. Timers, drafts, automatic refresh, OS events and full dispatch remain
+pending. This changes no format, crypto profile, dependency or native acceptance.
+
+Local synthetic evidence on 2026-11-05: all 26 transaction test functions passed
+(100.48s), including ten new authentication cases. All five core compile-fail
+doctests passed, including consumed-job and result-formatting boundaries. Core
+all-target Clippy with warnings denied, workspace formatting and whitespace passed.
+Six affected Markdown files/172 local links and anchors plus fences passed;
+Mermaid diagrams are unchanged. This is focused local evidence; the full workspace
+and three-platform run remain subject to current-head/base hosted Rust CI.
 
 ## Native macOS read and exclusion foundation
 
