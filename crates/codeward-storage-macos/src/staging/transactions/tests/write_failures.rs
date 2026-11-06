@@ -1,6 +1,8 @@
 //! Actual kernel write refusal, confined to a dedicated synthetic child process.
 
 use super::*;
+use codeward_core::transaction::{OperationRef, Session};
+use std::os::unix::fs::OpenOptionsExt;
 use std::time::Instant;
 
 fn limits() -> libc::rlimit {
@@ -103,7 +105,7 @@ fn run_case(case: &str, limit: u64) {
 struct ObservedIo {
     writes: Vec<Result<usize, Option<i32>>>,
     syncs: usize,
-    closes: usize,
+    closes: Vec<Result<(), Option<i32>>>,
 }
 impl StageIo for ObservedIo {
     fn write(&mut self, file: &mut File, bytes: &[u8]) -> io::Result<usize> {
@@ -120,8 +122,12 @@ impl StageIo for ObservedIo {
         native::sync_stage(file)
     }
     fn close(&mut self, file: File) -> io::Result<()> {
-        self.closes += 1;
-        native::close_checked(file)
+        let result = native::close_checked(file);
+        self.closes.push(match &result {
+            Ok(()) => Ok(()),
+            Err(error) => Err(error.raw_os_error()),
+        });
+        result
     }
 }
 
@@ -145,7 +151,7 @@ fn stage_refusal(home: &Path, limit: u64) {
     expected.push(Err(Some(libc::EFBIG)));
     assert_eq!(observed.writes, expected);
     assert_eq!(observed.syncs, 0);
-    assert_eq!(observed.closes, 1);
+    assert_eq!(observed.closes, [Ok(())]);
     assert!(!vault.exists());
     let residue = stages(vault.parent().unwrap());
     assert_eq!(residue.len(), 1);
@@ -156,6 +162,143 @@ fn stage_refusal(home: &Path, limit: u64) {
     assert_eq!(stages(vault.parent().unwrap()).len(), 2);
     assert_eq!(fs::read(&residue[0]).unwrap(), bytes[..limit as usize]);
     assert!(!vault.exists());
+}
+
+fn prepare(
+    case: &str,
+    session: &mut Session,
+    worker: &mut Committer<SyntheticLease>,
+    id: u8,
+    code: &str,
+) -> Result<OperationRef, TransactionError> {
+    match case {
+        "create" => {
+            session.prepare_creation(worker, OWNER, request(id, 0), PASSWORD, PASSWORD, code)
+        }
+        "recover" => {
+            session.prepare_recovery(worker, OWNER, request(id, 1), REPLACEMENT, REPLACEMENT)
+        }
+        "update" => session.prepare_contents(worker, OWNER, request(id, 1), &empty()),
+        _ => panic!("unknown synthetic transaction case"),
+    }
+}
+
+fn transaction_refusal(home: &Path, case: &str, limit: u64) {
+    let path = VaultPath::managed_for_test(home).unwrap();
+    let vault = home.join("Library/Application Support/Codeward/Vaults/vault.cw");
+    let creating = case == "create";
+    if !creating {
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&vault)
+            .unwrap()
+            .write_all(&fixture())
+            .unwrap();
+    }
+    let (storage, control) = SyntheticStorage::from_path(path);
+    let (mut session, mut worker) = match case {
+        "create" => Committer::begin_create(storage, OWNER).unwrap(),
+        "recover" => Committer::open_recovery(storage, OWNER, paper()).unwrap(),
+        "update" => Committer::open_master(storage, OWNER, PASSWORD).unwrap(),
+        _ => unreachable!(),
+    };
+    let mut enrolled = creating.then(|| session.recovery_code(OWNER).unwrap());
+    let code = enrolled.as_ref().map_or(paper(), |code| code.as_str());
+    let operation = prepare(case, &mut session, &mut worker, 1, code).unwrap();
+    let mut limit_guard = Some(FileLimit::install(limit));
+    let failed = OperationStatus::Failed(StorageError::Write);
+    assert_eq!(worker.advance(), Some(failed));
+    assert_eq!(
+        worker.committed_revision(),
+        if creating { None } else { Some(1) }
+    );
+    assert_eq!(control.lock().unwrap().events, [Event::Read, Event::Stage]);
+    let residue = stages(vault.parent().unwrap());
+    assert_eq!(residue.len(), 1);
+    let partial = fs::read(&residue[0]).unwrap();
+    assert_eq!(partial.len(), limit as usize);
+    assert_eq!(fs::metadata(&residue[0]).unwrap().mode() & 0o777, 0o600);
+    if creating {
+        assert!(!vault.exists());
+    } else {
+        let actual = fs::read(&vault).unwrap();
+        assert_eq!(actual, fixture());
+        assert_eq!(unlock_with_master(&actual, PASSWORD).unwrap().revision(), 1);
+        assert_eq!(begin_recovery(&actual, paper()).unwrap().revision(), 1);
+        assert!(unlock_with_master(&actual, REPLACEMENT).is_err());
+    }
+
+    // Neither the still-active kernel refusal nor its removal authorizes replay.
+    // Known IDs retain the definite failed result without any further native work.
+    for restore in [false, true] {
+        if restore {
+            limit_guard.take().unwrap().restore();
+        }
+        let same = prepare(case, &mut session, &mut worker, 1, code).unwrap();
+        assert_eq!(worker.status(OWNER, &operation).unwrap(), failed);
+        assert_eq!(worker.status(OWNER, &same).unwrap(), failed);
+        assert!(worker.advance().is_none());
+        assert_eq!(control.lock().unwrap().events, [Event::Read, Event::Stage]);
+        assert_eq!(stages(vault.parent().unwrap()), residue);
+        assert_eq!(fs::read(&residue[0]).unwrap(), partial);
+    }
+    if creating {
+        // Creation consumed its original enrollment during encryption. A new
+        // explicit enrollment/code is required, rather than replaying that state.
+        assert_eq!(
+            prepare(case, &mut session, &mut worker, 2, code).err(),
+            Some(TransactionError::Vault(
+                codeward_core::vault::VaultError::EnrollmentFinished
+            ))
+        );
+        session.restart_enrollment(&worker, OWNER).unwrap();
+        enrolled = Some(session.recovery_code(OWNER).unwrap());
+    }
+    let code = enrolled.as_ref().map_or(paper(), |code| code.as_str());
+    prepare(case, &mut session, &mut worker, 2, code).unwrap();
+    let revision = if creating { 1 } else { 2 };
+    assert_eq!(
+        complete(&mut worker),
+        OperationStatus::Committed { revision }
+    );
+    assert_eq!(worker.committed_revision(), Some(revision));
+    let actual = fs::read(&vault).unwrap();
+    let password = if case == "recover" {
+        REPLACEMENT
+    } else {
+        PASSWORD
+    };
+    assert_eq!(
+        unlock_with_master(&actual, password).unwrap().revision(),
+        revision
+    );
+    assert_eq!(begin_recovery(&actual, code).unwrap().revision(), revision);
+    if case == "recover" {
+        assert!(unlock_with_master(&actual, PASSWORD).is_err());
+    }
+    assert_eq!(stages(vault.parent().unwrap()), residue);
+    assert_eq!(fs::read(&residue[0]).unwrap(), partial);
+    assert_eq!(
+        control.lock().unwrap().events,
+        [
+            Event::Read,
+            Event::Stage,
+            Event::Stage,
+            Event::Read,
+            Event::Publish(if creating {
+                PublishMode::Create
+            } else {
+                PublishMode::Replace
+            }),
+            Event::Barrier
+        ]
+    );
+    drop((session, worker));
+    let (storage, _) = SyntheticStorage::from_path(VaultPath::managed_for_test(home).unwrap());
+    let (_, reopened) = Committer::open_recovery(storage, OWNER, code).unwrap();
+    assert_eq!(reopened.committed_revision(), Some(revision));
 }
 
 #[test]
@@ -170,6 +313,7 @@ fn kernel_write_limit_subprocess_helper() {
         .unwrap();
     match case.as_str() {
         "stage" => stage_refusal(Path::new(&home), limit),
+        "create" | "update" | "recover" => transaction_refusal(Path::new(&home), &case, limit),
         _ => panic!("unknown synthetic kernel write case"),
     }
 }
@@ -178,5 +322,14 @@ fn kernel_write_limit_subprocess_helper() {
 fn kernel_write_refusal_closes_partial_stages_without_sync_or_publication() {
     for limit in [0, 17] {
         run_case("stage", limit);
+    }
+}
+
+#[test]
+fn managed_kernel_write_failures_preserve_creation_contents_and_recovery_until_explicit_retry() {
+    for case in ["create", "update", "recover"] {
+        for limit in [0, 17] {
+            run_case(case, limit);
+        }
     }
 }
