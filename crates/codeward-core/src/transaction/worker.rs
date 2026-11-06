@@ -28,6 +28,18 @@ pub struct Committer<L: WriterLease> {
 }
 
 impl<L: WriterLease> Committer<L> {
+    /// Acquire/read an existing vault without deriving or granting access.
+    /// Retain the session on the control side and move its authentication job to
+    /// a worker thread. Reading storage may also block and belongs off the UI thread.
+    pub fn open_locked<S: Storage<Lease = L>>(
+        storage: S,
+        caller: CallerId,
+    ) -> Result<(Session, Self), TransactionError> {
+        let worker = Self::open(storage, caller)?;
+        worker.base_bytes()?;
+        Ok((Session::locked(&worker)?, worker))
+    }
+
     /// Acquire exclusive storage and authenticate ordinary access to exact bytes.
     pub fn open_master<S: Storage<Lease = L>>(
         storage: S,

@@ -1,6 +1,7 @@
 use super::*;
 use crate::{credentials::CredentialSnapshot, crypto, vault};
 
+mod authentication;
 mod model;
 use model::{Event, Fault, Lease, Model};
 

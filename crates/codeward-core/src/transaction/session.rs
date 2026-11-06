@@ -1,4 +1,5 @@
 use hmac::{Hmac, KeyInit, Mac};
+use std::sync::Weak;
 use zeroize::Zeroizing;
 
 use super::*;
@@ -13,6 +14,10 @@ enum Access {
     Recovery(RecoveryAccess),
     Enrollment(Enrollment),
 }
+
+mod authentication;
+use authentication::Attempt;
+pub use authentication::{AuthenticationJob, AuthenticationResult};
 
 /// Secret-owning admission context, separate from potentially blocked storage.
 ///
@@ -29,12 +34,14 @@ pub struct Session {
     access: Option<Access>,
     intent_key: Option<SecretKey>,
     permit: Option<Arc<Permit>>,
+    authentication: Option<Arc<Attempt>>,
+    authentication_job: Weak<()>,
 }
 
 impl Session {
     fn new<L: WriterLease>(
         worker: &Committer<L>,
-        access: Access,
+        access: Option<Access>,
     ) -> Result<Self, TransactionError> {
         Ok(Self {
             scope: worker.scope.clone(),
@@ -42,9 +49,15 @@ impl Session {
             generation: 1,
             exhausted: false,
             source: worker.fingerprint,
-            access: Some(access),
-            intent_key: Some(SecretKey::generate().map_err(VaultError::from)?),
+            intent_key: if access.is_some() {
+                Some(SecretKey::generate().map_err(VaultError::from)?)
+            } else {
+                None
+            },
+            access,
             permit: None,
+            authentication: None,
+            authentication_job: Weak::new(),
         })
     }
 
@@ -54,7 +67,10 @@ impl Session {
     ) -> Result<Self, TransactionError> {
         Self::new(
             worker,
-            Access::Master(vault::unlock_with_master(worker.base_bytes()?, password)?),
+            Some(Access::Master(vault::unlock_with_master(
+                worker.base_bytes()?,
+                password,
+            )?)),
         )
     }
 
@@ -64,14 +80,21 @@ impl Session {
     ) -> Result<Self, TransactionError> {
         Self::new(
             worker,
-            Access::Recovery(vault::begin_recovery(worker.base_bytes()?, paper)?),
+            Some(Access::Recovery(vault::begin_recovery(
+                worker.base_bytes()?,
+                paper,
+            )?)),
         )
     }
 
     pub(super) fn enrollment<L: WriterLease>(
         worker: &Committer<L>,
     ) -> Result<Self, TransactionError> {
-        Self::new(worker, Access::Enrollment(Enrollment::begin()?))
+        Self::new(worker, Some(Access::Enrollment(Enrollment::begin()?)))
+    }
+
+    pub(super) fn locked<L: WriterLease>(worker: &Committer<L>) -> Result<Self, TransactionError> {
+        Self::new(worker, None)
     }
 
     /// Current generation for targeted core/host response scoping.
@@ -83,6 +106,9 @@ impl Session {
     /// owned keys/records/enrollment. Already admitted publication still resolves.
     /// This needs no storage-thread mutex and never waits for a storage operation.
     pub fn lock(&mut self) {
+        if let Some(attempt) = self.authentication.take() {
+            attempt.cancel();
+        }
         if let Some(permit) = self.permit.take() {
             permit.cancel();
         }
@@ -102,20 +128,16 @@ impl Session {
 
     /// Explicitly authenticate the worker's known committed base in a fresh
     /// generation. Does not reconcile an unknown outcome or restore canceled work.
+    /// This convenience call blocks; hosts needing prompt lock use the split-phase
+    /// authentication job instead of holding the session while deriving.
     pub fn reload_master<L: WriterLease>(
         &mut self,
         worker: &Committer<L>,
         caller: CallerId,
         password: &str,
     ) -> Result<(), TransactionError> {
-        self.check_scope(worker, caller)?;
-        worker.check_idle()?;
-        self.lock();
-        if self.exhausted {
-            return Err(TransactionError::GenerationExhausted);
-        }
-        let access = vault::unlock_with_master(worker.base_bytes()?, password)?;
-        self.install(worker, Access::Master(access))
+        let job = self.begin_master_authentication(worker, caller, password)?;
+        self.complete_authentication(worker, caller, job.run())
     }
 
     /// Fresh restricted authentication after lock or a completed recovery commit.
@@ -125,14 +147,8 @@ impl Session {
         caller: CallerId,
         paper: &str,
     ) -> Result<(), TransactionError> {
-        self.check_scope(worker, caller)?;
-        worker.check_idle()?;
-        self.lock();
-        if self.exhausted {
-            return Err(TransactionError::GenerationExhausted);
-        }
-        let access = vault::begin_recovery(worker.base_bytes()?, paper)?;
-        self.install(worker, Access::Recovery(access))
+        let job = self.begin_recovery_authentication(worker, caller, paper)?;
+        self.complete_authentication(worker, caller, job.run())
     }
 
     /// Restart canceled/failed uncommitted enrollment with a newly transcribed code.
