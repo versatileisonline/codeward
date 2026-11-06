@@ -41,6 +41,9 @@ This candidate sequence does not establish storage acceptance or acknowledge sav
 A private `cfg(test)` bridge now exercises the core transaction worker against
 these native operations. It verifies creation, changes, recovery, uncertainty and
 residue authority with synthetic files; it is absent from the runtime library.
+Its [kernel write-failure cases](../../docs/macos-write-failures.md) now exercise
+zero/partial native writes in isolated children on managed synthetic homes, with
+no false commit or replay when the process file-size limit is restored.
 
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or

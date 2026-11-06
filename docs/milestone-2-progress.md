@@ -416,6 +416,14 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+A [kernel write-failure experiment](macos-write-failures.md) now exercises actual
+macOS EFBIG/short progress through native staging and the test-only core bridge in
+managed synthetic homes. Creation, content and recovery failures never advance the
+committed revision or publish; base access and partial residue are preserved.
+Known IDs do not replay after the limit is removed; a new explicit request can
+retry, with fresh enrollment required for creation. This closes that bounded native
+error-path gap without claiming disk-full/quota/media evidence or enabling a writer.
+
 A [managed working-location entry](macos-managed-location.md) now selects the
 fixed macOS account app-data tree and prepares private directories without
 creating a vault. Managed paths revalidate trusted ancestors and private app
