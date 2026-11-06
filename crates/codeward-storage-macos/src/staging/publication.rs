@@ -58,7 +58,7 @@ impl PreparedStage<'_> {
         // Serialize the full base-check/rename/postcheck interval. Contention or
         // poisoning fails before publication rather than trusting a stale base.
         let _publication = lease
-            .publication
+            .publication()
             .try_lock()
             .map_err(|_| PublicationError::NotPublished(NativeError::WriterUnavailable))?;
         let before = || -> Result<File, NativeError> {
@@ -66,7 +66,7 @@ impl PreparedStage<'_> {
                 return Err(NativeError::TooLarge);
             }
             lease.verify()?;
-            let stage = native::open_at(lease.path.parent(), &self._name, libc::O_RDONLY, 0)
+            let stage = native::open_at(lease.path().parent(), &self._name, libc::O_RDONLY, 0)
                 .map_err(open_error)?;
             self.verify_stage(&stage)?;
 
@@ -74,7 +74,7 @@ impl PreparedStage<'_> {
             // recheck its name, so an observed substitution/ACL change refuses.
             let current = if expected.is_some() {
                 let file =
-                    native::open_at(lease.path.parent(), &lease.path.name, libc::O_RDONLY, 0)
+                    native::open_at(lease.path().parent(), &lease.path().name, libc::O_RDONLY, 0)
                         .map_err(open_error)?;
                 private_acl(&file)?;
                 let metadata = file.metadata().map_err(|_| NativeError::Io)?;
@@ -88,7 +88,7 @@ impl PreparedStage<'_> {
             }
             if let Some((file, metadata)) = current {
                 private_acl(&file)?;
-                lease.match_named(&lease.path.name, &metadata)?;
+                lease.match_named(&lease.path().name, &metadata)?;
             }
             self.verify_stage(&stage)?;
             lease.verify()?;
@@ -100,9 +100,9 @@ impl PreparedStage<'_> {
         // syscall error (including EINTR/EIO/EEXIST) as unknown; no retry or
         // speculative restore. An injected lost reply after success is identical.
         publish(
-            lease.path.parent(),
+            lease.path().parent(),
             &self._name,
-            &lease.path.name,
+            &lease.path().name,
             expected.is_none(),
         )
         .map_err(|_| PublicationError::OutcomeUnknown)?;
@@ -119,7 +119,7 @@ impl PreparedStage<'_> {
             {
                 return Err(NativeError::Conflict);
             }
-            lease.match_named(&lease.path.name, &metadata)?;
+            lease.match_named(&lease.path().name, &metadata)?;
             lease.verify()
         };
         after().map_err(|_| PublicationError::OutcomeUnknown)

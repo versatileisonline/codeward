@@ -122,7 +122,7 @@ impl ReadLease {
             }
             let name = CString::new(name).expect("hex name");
             match native::open_at(
-                self.path.parent(),
+                self.path().parent(),
                 &name,
                 libc::O_WRONLY | libc::O_CREAT | libc::O_EXCL,
                 0o600,
