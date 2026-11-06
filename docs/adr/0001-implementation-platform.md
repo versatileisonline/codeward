@@ -56,6 +56,11 @@ plugins. Native file selection passes only a scoped reference to the core. Rust
 still enforces the [UI/core contract](../ui-core-contract.md); caller identity
 comes from Tauri, not UI fields. Permissions are not proof of human intent.
 
+For the first prototype, the owner-selected managed-location direction uses
+`open_managed_vault` instead of file selection; see the proposed
+[managed working-location contract](0006-managed-working-location.md).
+Custom working-location selection remains deferred.
+
 Mutation payloads carry a 32-character lowercase-hex request ID, expected global
 vault revision, session generation and operation-specific fields. Encode revisions/generations as
 decimal strings at the TypeScript boundary to avoid JavaScript integer rounding;

@@ -27,6 +27,7 @@ struct Directory {
     file: File,
     name: CString,
     identity: Identity,
+    private: bool,
 }
 
 /// Handle-rooted macOS destination for synthetic storage experiments.
@@ -38,6 +39,7 @@ pub struct VaultPath {
     root: File,
     directories: Vec<Directory>,
     pub(super) name: CString,
+    managed: bool,
 }
 
 impl VaultPath {
@@ -45,26 +47,13 @@ impl VaultPath {
     /// extended ACLs on local writable nonremovable APFS. Does not authenticate a
     /// vault or authorize UI. Cloud-synchronization/location policy is unfinished.
     pub fn resolve(path: &Path) -> Result<Self, NativeError> {
-        let bytes = path.as_os_str().as_bytes();
-        if bytes.len() > libc::PATH_MAX as usize || !bytes.starts_with(b"/") {
-            return Err(NativeError::InvalidPath);
-        }
-        let mut names = Vec::new();
-        for part in bytes[1..].split(|b| *b == b'/') {
-            if part.is_empty() || part == b"." || part == b".." {
-                return Err(NativeError::InvalidPath);
-            }
-            names.push(CString::new(part).map_err(|_| NativeError::InvalidPath)?);
-        }
-        let name = names.pop().ok_or(NativeError::InvalidPath)?;
-        if crate::staging::reserved_name(name.as_bytes()) {
-            return Err(NativeError::InvalidPath);
-        }
+        let (names, name) = components(path)?;
         let root = File::open("/").map_err(|_| NativeError::Io)?;
         let mut result = Self {
             root,
             directories: Vec::new(),
             name,
+            managed: false,
         };
         for name in names {
             let file = native::open_at(
@@ -79,6 +68,7 @@ impl VaultPath {
                 file,
                 name,
                 identity,
+                private: false,
             });
         }
         result.verify()?;
@@ -91,7 +81,10 @@ impl VaultPath {
             .map_or(&self.root, |entry| &entry.file)
     }
 
-    pub(super) fn verify(&self) -> Result<(), NativeError> {
+    fn verify_chain(&self) -> Result<(), NativeError> {
+        if self.managed {
+            managed::directory_permissions(&self.root, false)?;
+        }
         let mut parent = &self.root;
         for entry in &self.directories {
             let named =
@@ -101,13 +94,23 @@ impl VaultPath {
             {
                 return Err(NativeError::Conflict);
             }
+            if self.managed {
+                managed::directory_permissions(&entry.file, entry.private)?;
+            }
             parent = &entry.file;
         }
-        let metadata = self.parent().metadata().map_err(|_| NativeError::Io)?;
-        if metadata.uid() != native::effective_uid() || metadata.mode() & 0o022 != 0 {
-            return Err(NativeError::Permissions);
+        Ok(())
+    }
+
+    pub(super) fn verify(&self) -> Result<(), NativeError> {
+        self.verify_chain()?;
+        if !self.managed {
+            let metadata = self.parent().metadata().map_err(|_| NativeError::Io)?;
+            if metadata.uid() != native::effective_uid() || metadata.mode() & 0o022 != 0 {
+                return Err(NativeError::Permissions);
+            }
+            private_acl(self.parent())?;
         }
-        private_acl(self.parent())?;
         // Revalidate the retained destination's mount at every shared checkpoint,
         // not only at initial resolution. Ancestor mounts may legitimately differ.
         // These flags do not prove that a local APFS directory is outside sync.
@@ -155,6 +158,27 @@ impl VaultPath {
         Ok(lease)
     }
 }
+
+fn components(path: &Path) -> Result<(Vec<CString>, CString), NativeError> {
+    let bytes = path.as_os_str().as_bytes();
+    if bytes.len() > libc::PATH_MAX as usize || !bytes.starts_with(b"/") {
+        return Err(NativeError::InvalidPath);
+    }
+    let mut names = Vec::new();
+    for part in bytes[1..].split(|b| *b == b'/') {
+        if part.is_empty() || part == b"." || part == b".." {
+            return Err(NativeError::InvalidPath);
+        }
+        names.push(CString::new(part).map_err(|_| NativeError::InvalidPath)?);
+    }
+    let name = names.pop().ok_or(NativeError::InvalidPath)?;
+    if crate::staging::reserved_name(name.as_bytes()) {
+        return Err(NativeError::InvalidPath);
+    }
+    Ok((names, name))
+}
+
+mod managed;
 
 /// Native writer-exclusion ownership with bounded reads and synthetic staging.
 ///

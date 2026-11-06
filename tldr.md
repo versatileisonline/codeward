@@ -28,6 +28,7 @@ Root:
 - [macos-transaction-experiment.md](docs/macos-transaction-experiment.md): Test-only core/native transaction composition, residue authority and interruption evidence.
 - [macos-acl-admission.md](docs/macos-acl-admission.md): Synthetic parent/companion/read ACL refusal, revalidation and failure evidence.
 - [macos-location-admission.md](docs/macos-location-admission.md): Destination mount-policy revalidation, injected transitions and remaining cloud/ancestor gates.
+- [macos-managed-location.md](docs/macos-managed-location.md): Reviewed managed-directory APIs, ancestor policy, synthetic preparation evidence and limits.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -38,6 +39,7 @@ Root:
 - [0003-committed-writes.md](docs/adr/0003-committed-writes.md): Crash-safe saves.
 - [0004-offline-recovery.md](docs/adr/0004-offline-recovery.md): Reusable paper-secret recovery.
 - [0005-session-and-drafts.md](docs/adr/0005-session-and-drafts.md): Locking and unsaved edits.
+- [0006-managed-working-location.md](docs/adr/0006-managed-working-location.md): Managed working file, platform location proposal and backup/portability discussion.
 - [template.md](docs/adr/template.md): New decision template.
 
 `.github/`:
@@ -83,6 +85,8 @@ Root:
 - [src/namespace.rs](crates/codeward-storage-macos/src/namespace.rs): Expected-state synthetic file/parent synchronization under publication exclusion.
 - [src/namespace/tests.rs](crates/codeward-storage-macos/src/namespace/tests.rs): Native barrier order, errors, observation changes, contention and child-kill tests.
 - [src/path.rs](crates/codeward-storage-macos/src/path.rs): Retained directory identities and stable companion writer lease.
+- [src/path/managed.rs](crates/codeward-storage-macos/src/path/managed.rs): OS-account managed destination, private directory preparation and ancestor revalidation.
+- [src/path/managed/tests.rs](crates/codeward-storage-macos/src/path/managed/tests.rs): Synthetic preparation, collisions, inheritance, substitutions, competing preparations and child-umask cases.
 - [src/reading.rs](crates/codeward-storage-macos/src/reading.rs): Bounded unauthenticated reads with change detection.
 - [src/reading/tests.rs](crates/codeward-storage-macos/src/reading/tests.rs): Synthetic native path/read and subprocess-lock tests.
 - [src/staging.rs](crates/codeward-storage-macos/src/staging.rs): Lease-bound encrypted sibling preparation; no publication or save acknowledgement.

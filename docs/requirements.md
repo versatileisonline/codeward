@@ -35,6 +35,12 @@ OS locking or packaged application acceptance.
 
 ## Functional requirements
 
+The initial prototype uses a managed working location under the current OS account.
+Rust resolves its destination; arbitrary UI paths are not accepted. The location,
+missing-file and portable-copy boundaries are recorded in the implementation
+proposal [ADR-0006](adr/0006-managed-working-location.md). Directory preparation
+does not satisfy FR-01's committed-creation gate or add backup/restore features.
+
 | ID | Requirement | Acceptance evidence |
 | --- | --- | --- |
 | FR-01 | Create a local encrypted vault with one random data key and separate master-password and recovery slots protecting copies of that key. It is ready only after the complete initial state commits. | Create, close, reopen, and unlock offline through each independent route; inspect for no plaintext secrets/unwrapped keys. Interrupt creation; no partial file is presented as ready. |

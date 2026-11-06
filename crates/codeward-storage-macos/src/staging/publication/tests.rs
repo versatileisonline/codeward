@@ -24,6 +24,41 @@ const PAPER: &str =
 const NEW_PASSWORD: &str = "replacement synthetic publication password";
 
 #[test]
+fn managed_ancestor_change_after_rename_preserves_candidate_and_unknown_outcome() {
+    use std::os::unix::fs::OpenOptionsExt;
+    for create in [false, true] {
+        let dir = TestDir::new();
+        let path = VaultPath::managed_for_test(&dir.0).unwrap();
+        if !create {
+            fs::OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .mode(0o600)
+                .open(dir.managed_vault())
+                .unwrap()
+                .write_all(b"synthetic original")
+                .unwrap();
+        }
+        let lease = path.acquire().unwrap();
+        let stage = lease.prepare_stage(b"synthetic candidate").unwrap();
+        let result = stage.publish_with(
+            (!create).then_some(b"synthetic original".as_slice()),
+            |parent, from, to, create| {
+                native::publish_at(parent, from, to, create)?;
+                fs::set_permissions(dir.0.join("Library"), Permissions::from_mode(0o777)).unwrap();
+                Ok(())
+            },
+        );
+        assert_eq!(result, Err(PublicationError::OutcomeUnknown));
+        assert_eq!(
+            fs::read(dir.managed_vault()).unwrap(),
+            b"synthetic candidate"
+        );
+        assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+    }
+}
+
+#[test]
 fn mount_policy_changes_after_native_publication_preserve_candidate_and_unknown_outcome() {
     for fault in [MountFault::Refused, MountFault::QueryFailed] {
         for create in [false, true] {

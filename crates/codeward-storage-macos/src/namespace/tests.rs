@@ -18,6 +18,43 @@ use crate::{
 
 // (directory descriptor, full flush rather than fsync).
 type Step = (bool, bool);
+
+#[test]
+fn managed_ancestor_change_at_last_barrier_refuses_present_or_absent_success() {
+    use std::os::unix::fs::OpenOptionsExt;
+    for present in [false, true] {
+        let dir = TestDir::new();
+        let path = VaultPath::managed_for_test(&dir.0).unwrap();
+        if present {
+            use std::io::Write;
+            OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .mode(0o600)
+                .open(dir.managed_vault())
+                .unwrap()
+                .write_all(b"synthetic original")
+                .unwrap();
+        }
+        let lease = path.acquire().unwrap();
+        let count = if present { 4 } else { 2 };
+        let mut probe = Probe {
+            hook: Some(Box::new(|index| {
+                if index == count {
+                    chmod_acl(&dir.0.join("Library"), "everyone allow read");
+                }
+            })),
+            ..Probe::default()
+        };
+        let expected = present.then_some(b"synthetic original".as_slice());
+        assert_eq!(
+            lease.namespace_with(expected, &mut probe),
+            Err(NativeError::Permissions)
+        );
+        assert_eq!(probe.calls.len(), count);
+        assert_eq!(fs::read(dir.managed_vault()).ok().as_deref(), expected);
+    }
+}
 #[derive(Default)]
 struct Probe<'a> {
     calls: Vec<Step>,

@@ -71,6 +71,11 @@ imports, backups, or other integrations.
 For each declared platform, review file permissions, local-storage durability,
 session events, memory/dump limits, and installer/runtime dependencies. No platform
 security behavior is assumed identical solely because the core is shared Rust.
+The managed working-location choice narrows ordinary path selection; it does not
+prevent independent sync tools, deletion or device loss. Managed ancestors and
+private directories have separate ACL rules under the proposed
+[ADR-0006](adr/0006-managed-working-location.md). T-04/T-08/T-10 remain relevant:
+folder management and encrypted transaction residue do not constitute backups.
 
 The [Milestone 1 handoff](milestone-1-handoff.md) now collects the concrete
 contracts accepted on 2026-10-29. The approved logical save protocol stages a whole

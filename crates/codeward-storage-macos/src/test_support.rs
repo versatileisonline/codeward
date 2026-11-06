@@ -76,6 +76,10 @@ impl TestDir {
     pub(crate) fn vault(&self) -> PathBuf {
         self.0.join("vault.cw")
     }
+    pub(crate) fn managed_vault(&self) -> PathBuf {
+        self.0
+            .join("Library/Application Support/Codeward/Vaults/vault.cw")
+    }
     pub(crate) fn companion(&self) -> PathBuf {
         self.0.join(".codeward.writer-lock")
     }
@@ -142,6 +146,17 @@ pub(crate) fn chmod_acl(path: &Path, text: &str) {
         Command::new("/bin/chmod")
             .arg("+a")
             .arg(text)
+            .arg(path)
+            .status()
+            .unwrap()
+            .success()
+    );
+}
+
+pub(crate) fn clear_test_acl(path: &Path) {
+    assert!(
+        Command::new("/bin/chmod")
+            .arg("-N")
             .arg(path)
             .status()
             .unwrap()

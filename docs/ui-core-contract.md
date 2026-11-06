@@ -19,7 +19,7 @@ final transport schema. Security/recovery, commit, and session details remain in
 - **Rust core:** validates intent and state, controls secrets and credential data,
   authorizes access, generates passwords, runs recovery, and owns committed writes.
   Its application operations must be testable without React or the WebView.
-- **Platform adapters:** native file selection, filesystem behavior, session events,
+- **Platform adapters:** managed app-data resolution, filesystem behavior, session events,
   and packaging integration for the declared macOS/Windows/Linux support matrix.
 
 The selected topology is in [system-design.md](system-design.md). UI state may
@@ -32,8 +32,8 @@ be refined before implementation without widening privileges silently.
 
 | Operation | UI to core | Core to requesting UI |
 | --- | --- | --- |
-| `select_vault` | Request native file selection | Scoped vault reference, display name, locked/open status; no decrypted contents |
-| `begin_create_vault` | Approved destination reference and entered master password | Volatile enrollment reference and recovery secret for transcription display; not a ready/saved vault |
+| `open_managed_vault` | Request the current OS account's managed working vault | Scoped vault reference, display name, locked/open/missing status; no decrypted contents or arbitrary path input |
+| `begin_create_vault` | Managed destination reference obtained from Rust and entered master password | Volatile enrollment reference and recovery secret for transcription display; not a ready/saved vault |
 | `confirm_recovery_enrollment` | Enrollment reference and transcribed recovery secret for core validation | Ready status only after the complete initial vault/access metadata commits |
 | `unlock_vault` | Vault reference and entered master password | Authoritative session status/generation or controlled error; no session keys |
 | `begin_recovery` / `complete_recovery` | Vault reference, entered paper secret, and replacement master password at the appropriate step | Restricted recovery state, then completion only after the access change commits; no ordinary credential browsing during recovery |
@@ -48,6 +48,10 @@ be refined before implementation without widening privileges silently.
 Closing/canceling releases the relevant volatile operation context and denies new
 access. ADR-0005 defines the accepted dirty-draft and in-flight-write policies;
 acceptance is not implemented behavior.
+The owner selected a managed working location for the initial prototype; concrete
+paths, missing-file behavior and backup/portability boundaries are submitted in
+[ADR-0006](adr/0006-managed-working-location.md). These command names remain a
+design surface, not implemented IPC. Custom file selection/import/restore is deferred.
 The reusable paper secret opens the independent recovery slot for the same vault
 key as the master-password slot. Routine recovery commits a new master-password
 slot and keeps the paper secret valid; it never returns the old master password.
@@ -68,8 +72,9 @@ adding them later needs a separate exposure/clearing policy and command review.
 
 1. Allow only named application operations. No generic `read_file`, `write_file`,
    arbitrary SQL, shell, unrestricted decryption, or broad filesystem interface is
-   exposed to the UI. Native file selection yields a reference whose destination
-   and overwrite behavior the core validates; a UI-provided path is not permission.
+   exposed to the UI. Rust resolves and validates the managed destination and
+   overwrite behavior; a UI-provided path is not permission. Future copy/restore
+   workflows need their own scoped commands and review.
 2. Bind references to the appropriate caller/window, vault and operation context.
    Record/draft IDs are identifiers, not authorization tokens. The selected vault
    reference may survive locking so it can be unlocked again; session/draft access
