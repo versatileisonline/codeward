@@ -26,7 +26,8 @@ changing an ADR from undecided to accepted.
 For docs, verify relative links, Markdown tables/fences, Mermaid rendering, terms
 and scope. Code PRs require the [Rust CI checks](docs/continuous-integration.md):
 locked/offline workspace tests including doctests, rustfmt and all-target Clippy
-with warnings denied using the pinned toolchain.
+with warnings denied using the pinned toolchain. Check default builds separately;
+tests/doctests and Clippy include all workspace features, including experiments.
 
 Run focused local checks while developing a change. A successful hosted `Rust CI`
 run for the current PR head/base satisfies the full-suite requirement; do not

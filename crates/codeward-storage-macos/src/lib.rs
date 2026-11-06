@@ -1,8 +1,8 @@
 //! Experimental macOS reads, exclusion, staging and publication for synthetic data.
 //!
-//! This is not a writable storage adapter or a supported credential store. Native
-//! namespace synchronization remains experimental; cloud-location validation,
-//! transaction integration and storage acceptance remain separate work.
+//! Default builds do not export a writable core adapter. The explicit
+//! `experimental-writer` feature adds one for synthetic development only, not a
+//! supported credential store. Location and persistence acceptance remain pending.
 //! Staging/publication refuse extended ACLs on the parent and candidate; nothing
 //! here reports a committed save. Replacement also refuses destination ACLs.
 
@@ -20,8 +20,12 @@ mod reading;
 mod staging;
 #[cfg(test)]
 mod test_support;
+#[cfg(any(test, feature = "experimental-writer"))]
+mod writer;
 pub use path::{ReadLease, VaultPath};
 pub use staging::{PreparedStage, PublicationError};
+#[cfg(feature = "experimental-writer")]
+pub use writer::{ExperimentalStorage, ExperimentalWriterLease};
 
 /// Fixed diagnostic categories; paths and OS error text never enter these values.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

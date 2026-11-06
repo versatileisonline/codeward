@@ -2,7 +2,7 @@
 
 Status: in progress, 2026-11-04. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
-Native committed storage and complete application workflows remain absent. The milestone
+Accepted native storage and complete application workflows remain absent. The milestone
 is not complete.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
@@ -416,6 +416,13 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
+traits for explicit experimental feature opt-in; default runtime builds omit it.
+The existing synthetic lifecycle, uncertainty, process-kill and kernel-failure
+tests delegate to this implementation. Public construction uses only the managed
+location; arbitrary test paths/fault controls stay private. Bounded fallible copies
+and observation invalidation do not replace native admission/persistence acceptance.
+
 [Owned native stages](macos-stage-ownership.md) now retain the same writer state
 independently of the caller's lease. The test-only transaction worker stores the
 actual marker, removing private field extraction/reconstruction. Final-owner drop
@@ -468,8 +475,8 @@ publication. The namespace experiment above adds candidate barriers; neither
 experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Complete macOS namespace acceptance and authoritative residue handling under
-   ADR-0003, then promote the tested composition into a separately validated runtime
-   writable path after its admission gates are complete. Validate remaining ancestor/
+   ADR-0003, then enable the experimental writer in an application only after its
+   admission gates are complete. Validate remaining ancestor/
    location policy before real-vault support; implement/validate Windows/Linux separately.
 2. Complete application session/lifecycle orchestration, including asynchronous
    authentication cancellation, draft ownership and automatic snapshot refresh.
@@ -477,6 +484,6 @@ experiment establishes complete persistence acceptance or the writable adapter.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 
-There is no credential store ready for use, native writer, save guarantee,
+There is no credential store ready for use, accepted production writer/save guarantee,
 complete application/OS session implementation, native committed recovery or desktop UI.
 OS-crash/power-loss evidence and packaged support remain outstanding.

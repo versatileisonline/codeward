@@ -44,8 +44,10 @@ not purchase, publish or invent signing credentials as part of core implementati
 The owner selected managed working storage for the first prototype. The concrete
 per-platform paths and backup/portability contract are in
 [ADR-0006](adr/0006-managed-working-location.md). macOS now has a parameterless
-native directory-preparation entry; Windows/Linux managed resolution and all
-runtime writers remain pending. Do not infer packaged support from that entry.
+native directory-preparation entry and a
+[default-off experimental writer](macos-experimental-writer.md) for synthetic
+development. Windows/Linux managed resolution and accepted production writers
+remain pending. Do not infer real-vault or packaged support from those experiments.
 
 Support only regular files in user-controlled local directories on the declared
 filesystems. Reject symlink/reparse-point vault paths and hard-linked vault files;

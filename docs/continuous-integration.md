@@ -17,8 +17,12 @@ branch-push and PR pipelines. Superseded runs for the same PR/ref are canceled.
 `rust-toolchain.toml` supplies the exact Rust version/components; no floating stable
 toolchain or reduced KDF profile is substituted. Each check fetches `Cargo.lock`
 dependencies with `--locked`, then runs tests/Clippy with `--locked --offline`.
-Cargo tests compile the library/tests/examples and include doctests; a duplicate
-standalone build is not needed for this library-only workspace.
+Each platform checks the default workspace with `--no-default-features`, then
+runs tests/doctests and all-target Clippy with `--all-features`. This covers the
+default-off experimental writer's feature-enabled exports and documentation while
+also compiling its disabled default boundary. Tests use synthetic destinations;
+the public managed-constructor example compiles without running on a real home.
+Cargo tests compile the library/tests/examples; no duplicate full test run is needed.
 
 Default PR checkout validates GitHub's test merge revision. Logs record that tested
 SHA and toolchain, which must be associated with the PR's current head/base. A green

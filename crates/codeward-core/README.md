@@ -57,7 +57,9 @@ layer adds the bounded admission/session-generation behavior below.
 `transaction` separates a secret-owning `Session` from an encrypted-only
 `Committer` with a retained exclusive `WriterLease`. The trusted `Storage`
 adapter must acquire stable writer exclusion and implement restrictive staging,
-atomic create/replace and persistence barriers; no native implementation exists.
+atomic create/replace and persistence barriers. The macOS crate now supplies a
+[default-off experiment](../../docs/macos-experimental-writer.md) for synthetic
+development; no production native adapter is accepted.
 The worker checks the complete authenticated base's SHA-256, vault ID and revision
 before publication admission. Only final barriers advance the committed revision.
 Ambiguous publication/barrier failure blocks mutations until fresh authentication,
@@ -80,9 +82,10 @@ exact validation scope and residual memory/storage/platform limitations.
 From the workspace root with the pinned Rust toolchain installed:
 
 ```sh
-cargo test --workspace --locked --offline
+cargo check --workspace --no-default-features --locked --offline
+cargo test --workspace --all-features --locked --offline
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked --offline -- -D warnings
+cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings
 ```
 
 The optional synthetic timing example runs with

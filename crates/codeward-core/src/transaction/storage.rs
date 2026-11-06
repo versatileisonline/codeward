@@ -1,4 +1,5 @@
-//! Trusted storage boundary. There is intentionally no native implementation yet.
+//! Trusted storage boundary. Native implementations require separate acceptance;
+//! the macOS crate offers only a default-off experiment for synthetic development.
 
 /// Controlled storage failure, with no paths, secret input or OS diagnostics.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
