@@ -2,10 +2,13 @@
 
 use std::{
     ffi::CStr,
+    ffi::OsStr,
     fs::File,
     io,
     mem::MaybeUninit,
     os::fd::{AsRawFd, FromRawFd, IntoRawFd},
+    os::unix::ffi::OsStrExt,
+    path::PathBuf,
 };
 
 // macOS 26.3.1 SDK sys/mount.h; libc 0.2.191 does not bind MNT_REMOVABLE.
@@ -82,6 +85,79 @@ pub(super) fn effective_uid() -> u32 {
     unsafe { libc::geteuid() }
 }
 
+pub(super) fn account_home() -> io::Result<PathBuf> {
+    // A fixed bound avoids unbounded account-service ERANGE retries. The call
+    // itself may block in the OS account service; this is not a latency bound.
+    let mut buffer = Vec::new();
+    buffer
+        .try_reserve_exact(64 * 1024)
+        .map_err(|_| io::ErrorKind::OutOfMemory)?;
+    buffer.resize(64 * 1024, 0u8);
+    let uid = effective_uid();
+    let mut record = MaybeUninit::<libc::passwd>::uninit();
+    let mut result = std::ptr::null_mut();
+    // SAFETY: live writable record, byte buffer and result pointer with the
+    // declared lengths. getpwuid_r retains no ownership of caller storage.
+    let status = unsafe {
+        libc::getpwuid_r(
+            uid,
+            record.as_mut_ptr(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len(),
+            &mut result,
+        )
+    };
+    if status != 0 {
+        // getpwuid_r returns its error number directly, not through errno.
+        return Err(io::Error::from_raw_os_error(status));
+    }
+    if result.is_null() {
+        return Err(io::ErrorKind::NotFound.into());
+    }
+    if result != record.as_mut_ptr() {
+        return Err(io::ErrorKind::InvalidData.into());
+    }
+    // SAFETY: a successful query returned this supplied record as its result.
+    let record = unsafe { record.assume_init() };
+    account_home_bytes(&buffer, uid, record.pw_uid, record.pw_dir)
+        .map(|bytes| PathBuf::from(OsStr::from_bytes(bytes)))
+}
+
+fn account_home_bytes(
+    buffer: &[u8],
+    expected_uid: u32,
+    uid: u32,
+    home: *const libc::c_char,
+) -> io::Result<&[u8]> {
+    if expected_uid != uid {
+        return Err(io::ErrorKind::InvalidData.into());
+    }
+    // Validate the returned pointer against caller-owned storage before reading
+    // it. No CStr walk can escape the fixed buffer on a malformed OS result.
+    let offset = (home as usize)
+        .checked_sub(buffer.as_ptr() as usize)
+        .filter(|offset| *offset < buffer.len())
+        .ok_or(io::ErrorKind::InvalidData)?;
+    let tail = &buffer[offset..];
+    let length = tail
+        .iter()
+        .position(|b| *b == 0)
+        .ok_or(io::ErrorKind::InvalidData)?;
+    if length == 0 || length > libc::PATH_MAX as usize || tail[0] != b'/' {
+        return Err(io::ErrorKind::InvalidData.into());
+    }
+    Ok(&tail[..length])
+}
+
+pub(super) fn mkdir_at(parent: &File, name: &CStr) -> io::Result<()> {
+    // SAFETY: retained live directory descriptor and a NUL-terminated single
+    // component. One call only: errors preserve any possibly-created directory.
+    if unsafe { libc::mkdirat(parent.as_raw_fd(), name.as_ptr(), 0o700) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 // macOS SDK sys/acl.h. libc 0.2.191 does not expose these Darwin ACL APIs.
 unsafe extern "C" {
     fn acl_get_fd_np(fd: libc::c_int, kind: libc::c_int) -> *mut libc::c_void;
@@ -91,9 +167,18 @@ unsafe extern "C" {
         entry: *mut *mut libc::c_void,
     ) -> libc::c_int;
     fn acl_free(acl: *mut libc::c_void) -> libc::c_int;
+    fn acl_get_tag_type(entry: *mut libc::c_void, tag: *mut libc::c_int) -> libc::c_int;
 }
 
 pub(super) fn no_extended_acl(file: &File) -> io::Result<bool> {
+    restrictive_acl(file, false)
+}
+
+pub(super) fn no_acl_grants(file: &File) -> io::Result<bool> {
+    restrictive_acl(file, true)
+}
+
+fn restrictive_acl(file: &File, allow_denies: bool) -> io::Result<bool> {
     // SAFETY: live owned descriptor, SDK ACL_TYPE_EXTENDED = 0x100.
     let acl = unsafe { acl_get_fd_np(file.as_raw_fd(), 0x100) };
     if acl.is_null() {
@@ -107,21 +192,45 @@ pub(super) fn no_extended_acl(file: &File) -> io::Result<bool> {
             Err(error)
         };
     }
-    let mut entry = std::ptr::null_mut();
-    // SAFETY: successful retrieval returns a valid ACL; entry is writable.
-    // Darwin returns 0 for an entry and -1/EINVAL for an empty valid ACL.
-    let result = unsafe { acl_get_entry(acl, 0, &mut entry) };
-    let error = io::Error::last_os_error();
+    let checked = (|| {
+        // SDK ACL_MAX_ENTRIES=128. One final probe recognizes a full ACL's end.
+        for index in 0..=128 {
+            let mut entry = std::ptr::null_mut();
+            // SAFETY: the copied ACL stays live; entry is writable. Darwin uses
+            // 0/FIRST then -1/NEXT, returning -1/EINVAL at the end of a valid ACL.
+            let result = unsafe { acl_get_entry(acl, if index == 0 { 0 } else { -1 }, &mut entry) };
+            if result == -1 {
+                let error = io::Error::last_os_error();
+                return if error.raw_os_error() == Some(libc::EINVAL) {
+                    Ok(true)
+                } else {
+                    Err(error)
+                };
+            }
+            if result != 0 || index == 128 {
+                return Err(io::ErrorKind::InvalidData.into());
+            }
+            if !allow_denies {
+                return Ok(false);
+            }
+            let mut tag = 0;
+            // SAFETY: retrieval succeeded and the ACL/entry remain live; tag is
+            // writable. SDK acl_tag_t is a C enum; EXTENDED_DENY=2.
+            if unsafe { acl_get_tag_type(entry, &mut tag) } != 0 {
+                return Err(io::Error::last_os_error());
+            }
+            if tag != 2 {
+                return Ok(false);
+            }
+        }
+        Err(io::ErrorKind::InvalidData.into())
+    })();
     // SAFETY: this allocation is owned once and no entry is used after release.
     let freed = unsafe { acl_free(acl) };
     if freed != 0 {
         return Err(io::Error::last_os_error());
     }
-    match result {
-        0 => Ok(false),
-        -1 if error.raw_os_error() == Some(libc::EINVAL) => Ok(true),
-        _ => Err(error),
-    }
+    checked
 }
 
 pub(super) fn stage_random() -> io::Result<[u8; 16]> {
@@ -195,7 +304,85 @@ pub(super) fn publish_at(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::{MountFault, MountProbe, TestDir};
+    use crate::test_support::{MountFault, MountProbe, TestDir, chmod_acl};
+
+    #[test]
+    fn account_home_results_are_bounded_account_bound_and_preserve_os_bytes() {
+        let bytes = b"prefix/home/\xff\0unused";
+        assert_eq!(
+            account_home_bytes(bytes, 7, 7, bytes.as_ptr().wrapping_add(6).cast()).unwrap(),
+            b"/home/\xff"
+        );
+        assert!(account_home_bytes(bytes, 7, 8, bytes.as_ptr().wrapping_add(6).cast()).is_err());
+        for value in [b"\0".as_slice(), b"relative\0", b"/unterminated"] {
+            assert!(account_home_bytes(value, 7, 7, value.as_ptr().cast()).is_err());
+        }
+        for pointer in [
+            std::ptr::null(),
+            bytes.as_ptr().wrapping_sub(1).cast(),
+            bytes.as_ptr().wrapping_add(bytes.len()).cast(),
+        ] {
+            assert!(account_home_bytes(bytes, 7, 7, pointer).is_err());
+        }
+        let mut over = vec![b'x'; libc::PATH_MAX as usize + 2];
+        over[0] = b'/';
+        *over.last_mut().unwrap() = 0;
+        assert!(account_home_bytes(&over, 7, 7, over.as_ptr().cast()).is_err());
+    }
+
+    #[test]
+    fn current_account_home_lookup_is_read_only_and_absolute() {
+        let home = account_home().unwrap();
+        assert!(home.is_absolute());
+        assert!(home.as_os_str().as_bytes().len() <= libc::PATH_MAX as usize);
+    }
+
+    #[test]
+    fn deny_only_ancestor_acls_do_not_relax_private_directory_policy() {
+        let dir = TestDir::new();
+        let file = File::open(&dir.0).unwrap();
+        assert!(no_acl_grants(&file).unwrap());
+        assert!(no_extended_acl(&file).unwrap());
+        chmod_acl(&dir.0, "everyone deny delete");
+        assert!(no_acl_grants(&file).unwrap());
+        assert!(!no_extended_acl(&file).unwrap());
+        chmod_acl(&dir.0, "everyone deny writeextattr");
+        assert!(no_acl_grants(&file).unwrap());
+        chmod_acl(&dir.0, "everyone allow read");
+        assert!(!no_acl_grants(&file).unwrap());
+        assert!(!no_extended_acl(&file).unwrap());
+        // Clear only this synthetic fixture's ACL so its owner can remove it.
+        assert!(
+            std::process::Command::new("/bin/chmod")
+                .arg("-N")
+                .arg(&dir.0)
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
+
+    #[test]
+    fn managed_mkdir_is_exclusive_and_preserves_existing_entries() {
+        let dir = TestDir::new();
+        let parent = File::open(&dir.0).unwrap();
+        std::fs::write(dir.0.join("occupied"), b"synthetic untouched").unwrap();
+        assert_eq!(
+            mkdir_at(&parent, c"occupied").unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists
+        );
+        assert_eq!(
+            std::fs::read(dir.0.join("occupied")).unwrap(),
+            b"synthetic untouched"
+        );
+        mkdir_at(&parent, c"fresh").unwrap();
+        let child = open_at(&parent, c"fresh", libc::O_RDONLY | libc::O_DIRECTORY, 0).unwrap();
+        assert!(child.metadata().unwrap().is_dir());
+        assert_eq!(
+            mkdir_at(&parent, c"fresh").unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists
+        );
+    }
 
     #[test]
     fn mount_probe_is_scoped_and_isolated_to_the_current_test_thread() {
