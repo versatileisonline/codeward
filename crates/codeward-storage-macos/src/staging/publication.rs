@@ -19,7 +19,7 @@ pub enum PublicationError {
     OutcomeUnknown,
 }
 
-impl PreparedStage<'_> {
+impl PreparedStage {
     /// Consume this synthetic stage and atomically publish only at an absent name.
     ///
     /// A racing creation cannot be overwritten. Success confirms visibility only,
@@ -28,7 +28,7 @@ impl PreparedStage<'_> {
     ///
     /// ```compile_fail
     /// use codeward_storage_macos::PreparedStage;
-    /// fn cannot_publish_twice(stage: PreparedStage<'_>) {
+    /// fn cannot_publish_twice(stage: PreparedStage) {
     ///     let _ = stage.publish_create();
     ///     let _ = stage.publish_create();
     /// }
@@ -53,7 +53,7 @@ impl PreparedStage<'_> {
         expected: Option<&[u8]>,
         publish: impl FnOnce(&File, &CStr, &CStr, bool) -> io::Result<()>,
     ) -> Result<(), PublicationError> {
-        let lease = self._lease;
+        let lease = &self._lease;
         // The OS companion excludes other leases, not threads sharing this one.
         // Serialize the full base-check/rename/postcheck interval. Contention or
         // poisoning fails before publication rather than trusting a stale base.
@@ -135,5 +135,7 @@ impl PreparedStage<'_> {
     }
 }
 
+#[cfg(test)]
+mod ownership_tests;
 #[cfg(test)]
 mod tests;

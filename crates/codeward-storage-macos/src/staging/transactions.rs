@@ -56,8 +56,7 @@ impl SyntheticStorage {
 }
 
 struct PendingStage {
-    name: CString,
-    metadata: Metadata,
+    prepared: PreparedStage,
     encrypted: Vec<u8>,
 }
 
@@ -133,13 +132,10 @@ impl WriterLease for SyntheticLease {
                 NativeError::Close => StorageError::Close,
                 _ => StorageError::CreateStage,
             })?;
-        // This private test module can retain marker fields without a self-
-        // referential struct. No runtime raw-stage or unchecked publication API
-        // is added. Publication reconstructs a marker under the same owned lease
-        // and still executes every native name/metadata/permission/base check.
+        // Retain the actual opaque stage; it owns the same native exclusion as
+        // this worker without borrowing a field or reconstructing private parts.
         self.pending = Some(PendingStage {
-            name: stage._name,
-            metadata: stage.metadata,
+            prepared: stage,
             encrypted: encrypted.to_vec(),
         });
         Ok(())
@@ -155,14 +151,9 @@ impl WriterLease for SyntheticLease {
         if self.fault(Fault::PublishBefore) {
             return Err(PublishError::OutcomeUnknown);
         }
-        let prepared = PreparedStage {
-            _lease: &self.native,
-            _name: stage.name,
-            metadata: stage.metadata,
-        };
         let result = match expected {
-            Some(bytes) => prepared.publish_replace(bytes),
-            None => prepared.publish_create(),
+            Some(bytes) => stage.prepared.publish_replace(bytes),
+            None => stage.prepared.publish_create(),
         };
         result.map_err(|error| match error {
             PublicationError::NotPublished(_) => PublishError::NotPublished,

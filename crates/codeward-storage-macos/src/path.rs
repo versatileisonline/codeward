@@ -187,6 +187,8 @@ mod managed;
 ///
 /// Does not implement the core's writable `Storage`/`WriterLease` interface. There
 /// is no raw handle, clone, unlock, cleanup, plaintext or save-acknowledgement API.
+/// Prepared stages privately retain the same state; dropping this caller's lease
+/// releases exclusion only when no stage still owns it.
 pub struct ReadLease {
     state: Arc<LeaseState>,
 }
@@ -200,7 +202,8 @@ struct LeaseState {
 
 impl Drop for LeaseState {
     fn drop(&mut self) {
-        // No intentional duplicate descriptor escapes this lease. Explicitly
+        // Only the last shared state owner unlocks. No intentional duplicate
+        // descriptor escapes this state. Explicitly
         // release the lock before closing so a transient inherited descriptor
         // during an unrelated concurrent process spawn cannot prolong ownership.
         // File drop still closes our fd if unlocking reports an OS error.
@@ -209,6 +212,14 @@ impl Drop for LeaseState {
 }
 
 impl ReadLease {
+    // Stages retain the same handles, lock and publication mutex. This is not a
+    // public Clone capability and never duplicates/reopens a native descriptor.
+    pub(super) fn retain_for_stage(&self) -> Self {
+        Self {
+            state: Arc::clone(&self.state),
+        }
+    }
+
     pub(super) fn path(&self) -> &VaultPath {
         &self.state.path
     }
