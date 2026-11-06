@@ -12,6 +12,38 @@ use crate::VaultPath;
 use crate::test_support::{MountFault, MountProbe, TestDir, chmod_acl, fixture, stages};
 
 #[test]
+fn managed_ancestor_change_during_read_returns_no_bytes() {
+    for acl in [false, true] {
+        let dir = TestDir::new();
+        let path = VaultPath::managed_for_test(&dir.0).unwrap();
+        OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .mode(0o600)
+            .open(dir.managed_vault())
+            .unwrap()
+            .write_all(b"synthetic original")
+            .unwrap();
+        let lease = path.acquire().unwrap();
+        let ancestor = dir.0.join("Library");
+        assert_eq!(
+            lease.read_with_hook(|| {
+                if acl {
+                    chmod_acl(&ancestor, "everyone allow read");
+                } else {
+                    fs::set_permissions(&ancestor, Permissions::from_mode(0o777)).unwrap();
+                }
+            }),
+            Err(NativeError::Permissions)
+        );
+        assert_eq!(
+            fs::read(dir.managed_vault()).unwrap(),
+            b"synthetic original"
+        );
+    }
+}
+
+#[test]
 fn mount_policy_is_rechecked_before_acquisition_and_present_or_absent_reads() {
     for (fault, error) in [
         (MountFault::Refused, NativeError::Unsupported),
