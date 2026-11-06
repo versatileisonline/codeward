@@ -2,18 +2,18 @@ use super::*;
 use crate::{credentials::CredentialSnapshot, crypto, vault};
 
 mod authentication;
-mod model;
+pub(super) mod model;
 use model::{Event, Fault, Lease, Model};
 
 const OWNER: CallerId = CallerId(7);
 const PASSWORD: &str = "synthetic password";
-fn request(n: u8, revision: u64) -> Request {
+pub(super) fn request(n: u8, revision: u64) -> Request {
     Request {
         id: RequestId([n; 16]),
         expected_revision: revision,
     }
 }
-fn fixture() -> Vec<u8> {
+pub(super) fn fixture() -> Vec<u8> {
     include_str!("../../tests/fixtures/authenticated-v1.hex")
         .split_ascii_whitespace()
         .flat_map(|line| {
@@ -23,13 +23,13 @@ fn fixture() -> Vec<u8> {
         })
         .collect()
 }
-fn paper() -> &'static str {
+pub(super) fn paper() -> &'static str {
     include_str!("../../tests/fixtures/authenticated-recovery.txt").trim()
 }
-fn empty() -> CredentialSnapshot {
+pub(super) fn empty() -> CredentialSnapshot {
     CredentialSnapshot::new(Vec::new()).unwrap()
 }
-fn opened() -> (Model, Session, Committer<Lease>) {
+pub(super) fn opened() -> (Model, Session, Committer<Lease>) {
     let model = Model::new(Some(fixture()));
     let (session, worker) = Committer::open_master(model.clone(), OWNER, PASSWORD).unwrap();
     (model, session, worker)
@@ -39,7 +39,7 @@ fn prepare(session: &mut Session, worker: &mut Committer<Lease>, n: u8) -> Opera
         .prepare_contents(worker, OWNER, request(n, 1), &empty())
         .unwrap()
 }
-fn complete(worker: &mut Committer<Lease>) -> OperationStatus {
+pub(super) fn complete(worker: &mut Committer<Lease>) -> OperationStatus {
     loop {
         let status = worker.advance().expect("active operation");
         if !matches!(status, OperationStatus::Pending(_)) {

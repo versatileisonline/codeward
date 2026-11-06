@@ -20,7 +20,10 @@ use crate::{envelope::UnauthenticatedEnvelope, vault::VaultError};
 mod session;
 mod storage;
 mod worker;
-pub use session::{AuthenticationJob, AuthenticationResult, Session};
+pub use session::{
+    ActivityRef, AuthenticationJob, AuthenticationResult, INACTIVITY_TIMEOUT, Session,
+    SessionActivity, SessionEvent,
+};
 pub use storage::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 pub use worker::Committer;
 
@@ -112,6 +115,8 @@ pub enum TransactionError {
     GenerationExhausted,
     /// Authentication belongs to a canceled, replaced or otherwise stale attempt.
     AuthenticationCanceled,
+    /// A monotonic observation regressed or a deadline could not be represented.
+    ClockUnavailable,
     /// Allocation failed before admitting a mutation or authentication job.
     AllocationFailed,
     /// Actual bytes cannot be established as the known base/candidate.

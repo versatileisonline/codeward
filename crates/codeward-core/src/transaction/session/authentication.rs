@@ -146,6 +146,7 @@ impl Session {
         kind: Kind,
     ) -> Result<AuthenticationJob, TransactionError> {
         self.check_scope(worker, caller)?;
+        self.poll_inactivity();
         worker.check_idle()?;
         if self.authentication_job.upgrade().is_some() {
             return Err(TransactionError::Busy);
@@ -182,6 +183,7 @@ impl Session {
         let slot = Arc::new(());
         self.authentication_job = Arc::downgrade(&slot);
         self.authentication = Some(attempt.clone());
+        self.start_inactivity_at(std::time::Instant::now())?;
         Ok(AuthenticationJob {
             attempt,
             bytes,
@@ -201,6 +203,7 @@ impl Session {
         result: AuthenticationResult,
     ) -> Result<(), TransactionError> {
         self.check_scope(worker, caller)?;
+        self.poll_inactivity();
         let current = self
             .authentication
             .as_ref()
@@ -209,11 +212,17 @@ impl Session {
             return Err(TransactionError::AuthenticationCanceled);
         }
         self.authentication = None;
-        result.attempt.check()?;
-        worker.check_idle()?;
-        if worker.fingerprint != Some(result.attempt.source) {
-            return Err(TransactionError::ReloadRequired);
+        let completion = (|| {
+            result.attempt.check()?;
+            worker.check_idle()?;
+            if worker.fingerprint != Some(result.attempt.source) {
+                return Err(TransactionError::ReloadRequired);
+            }
+            self.install(worker, result.access?)
+        })();
+        if completion.is_err() {
+            self.inactivity.disarm();
         }
-        self.install(worker, result.access?)
+        completion
     }
 }

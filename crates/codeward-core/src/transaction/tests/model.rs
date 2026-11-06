@@ -3,7 +3,7 @@ use std::sync::{Mutex, mpsc};
 use super::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Fault {
+pub(in crate::transaction) enum Fault {
     Read,
     Create,
     ShortWrite,
@@ -16,7 +16,7 @@ pub(super) enum Fault {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Event {
+pub(in crate::transaction) enum Event {
     Read,
     Create,
     Write,
@@ -26,7 +26,7 @@ pub(super) enum Event {
     Barrier,
 }
 
-pub(super) struct Disk {
+pub(in crate::transaction) struct Disk {
     pub live: Option<Vec<u8>>,
     pub durable: Option<Vec<u8>>,
     pub stages: Vec<Vec<u8>>,
@@ -38,8 +38,8 @@ pub(super) struct Disk {
 }
 
 #[derive(Clone)]
-pub(super) struct Model(pub Arc<Mutex<Disk>>);
-pub(super) struct Lease(Model);
+pub(in crate::transaction) struct Model(pub Arc<Mutex<Disk>>);
+pub(in crate::transaction) struct Lease(Model);
 
 impl Model {
     pub fn new(bytes: Option<Vec<u8>>) -> Self {
