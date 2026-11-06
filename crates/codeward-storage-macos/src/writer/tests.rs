@@ -34,7 +34,7 @@ fn failed_reads_invalidate_cached_bytes_until_fresh_selection() {
     dir.write(&bytes);
     let mut writer = lease(&dir);
     assert_eq!(writer.read_current(), Ok(Some(bytes.clone())));
-    fs::set_permissions(dir.vault(), Permissions::from_mode(0)).unwrap();
+    fs::set_permissions(dir.vault(), Permissions::from_mode(0o000)).unwrap();
     assert_eq!(writer.read_current(), Err(StorageError::Read));
     fs::set_permissions(dir.vault(), Permissions::from_mode(0o600)).unwrap();
     assert_eq!(writer.persist(), Err(StorageError::Barrier));
