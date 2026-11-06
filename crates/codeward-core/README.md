@@ -71,7 +71,15 @@ History holds at most 64 IDs and fails closed rather than evicting/replaying the
 Lock releases owned access and cancels pending admission atomically; an admitted
 worker can finish while the session stays locked. After commit, a new mutation
 requires explicit reload/authentication of the worker's current base. This slice
-has no credential-reply API, draft manager, inactivity timer or OS event adapter.
+has no credential-reply API, draft manager, background timer or OS event adapter.
+
+The [core inactivity/event policy](../../docs/session-inactivity.md) owns a fixed
+five-minute monotonic deadline, checks it before privileged operations and cancels
+expired authentication. Only current caller/vault/generation activity refreshes it;
+completion/storage progress does not. Trusted security events revoke immediately,
+including resume without a prior suspend event. Hosts must schedule idle polls,
+deliver validated OS observations and poll before reporting session-state snapshots.
+No platform suspend detector, UI redaction or complete auto-lock support is claimed.
 
 [`open_locked` and split-phase authentication](../../docs/session-authentication.md)
 let the control side revoke a session while a separate Rust worker authenticates.

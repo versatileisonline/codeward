@@ -16,13 +16,17 @@ enum Access {
 }
 
 mod authentication;
+mod policy;
 use authentication::Attempt;
 pub use authentication::{AuthenticationJob, AuthenticationResult};
+use policy::Inactivity;
+pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent};
 
 /// Secret-owning admission context, separate from potentially blocked storage.
 ///
-/// This bounded layer exposes no credential replies, timers, OS events or draft
-/// manager. The host must call lock on security events and redact its own copies.
+/// The core checks inactivity before privileged operations. The host must schedule
+/// deadline polls, deliver trusted security events and redact its own copies;
+/// no background timer, OS adapter, credential replies or draft manager is supplied.
 /// After a commit, explicitly reload/authenticate before preparing a new mutation;
 /// the old authenticated snapshot is never silently treated as the new revision.
 pub struct Session {
@@ -36,6 +40,7 @@ pub struct Session {
     permit: Option<Arc<Permit>>,
     authentication: Option<Arc<Attempt>>,
     authentication_job: Weak<()>,
+    inactivity: Inactivity,
 }
 
 impl Session {
@@ -43,6 +48,7 @@ impl Session {
         worker: &Committer<L>,
         access: Option<Access>,
     ) -> Result<Self, TransactionError> {
+        let inactivity = Inactivity::new(std::time::Instant::now(), access.is_some())?;
         Ok(Self {
             scope: worker.scope.clone(),
             caller: worker.caller,
@@ -58,6 +64,7 @@ impl Session {
             permit: None,
             authentication: None,
             authentication_job: Weak::new(),
+            inactivity,
         })
     }
 
@@ -106,6 +113,7 @@ impl Session {
     /// owned keys/records/enrollment. Already admitted publication still resolves.
     /// This needs no storage-thread mutex and never waits for a storage operation.
     pub fn lock(&mut self) {
+        self.inactivity.disarm();
         if let Some(attempt) = self.authentication.take() {
             attempt.cancel();
         }
@@ -121,7 +129,8 @@ impl Session {
         }
     }
 
-    /// Whether this admission context has released its secret access.
+    /// Whether this admission context has released its secret access. This is a
+    /// snapshot; hosts must poll inactivity before composing a session-state reply.
     pub fn is_locked(&self) -> bool {
         self.access.is_none()
     }
@@ -158,6 +167,7 @@ impl Session {
         caller: CallerId,
     ) -> Result<(), TransactionError> {
         self.check_scope(worker, caller)?;
+        self.poll_inactivity();
         worker.check_idle()?;
         if worker.fingerprint.is_some() {
             return Err(TransactionError::ReloadRequired);
@@ -166,7 +176,9 @@ impl Session {
         if self.exhausted {
             return Err(TransactionError::GenerationExhausted);
         }
-        self.install(worker, Access::Enrollment(Enrollment::begin()?))
+        let access = Access::Enrollment(Enrollment::begin()?);
+        self.install(worker, access)?;
+        self.start_inactivity_at(std::time::Instant::now())
     }
 
     fn install<L: WriterLease>(
@@ -181,10 +193,14 @@ impl Session {
     }
 
     /// Enrollment-only temporary code display, scoped to the owning trusted caller.
-    pub fn recovery_code(&self, caller: CallerId) -> Result<Zeroizing<String>, TransactionError> {
+    pub fn recovery_code(
+        &mut self,
+        caller: CallerId,
+    ) -> Result<Zeroizing<String>, TransactionError> {
         if caller != self.caller {
             return Err(TransactionError::Unauthorized);
         }
+        self.poll_inactivity();
         match self.access.as_ref() {
             Some(Access::Enrollment(access)) => Ok(access.recovery_code()?),
             _ => Err(TransactionError::Locked),
@@ -202,6 +218,7 @@ impl Session {
         snapshot: &CredentialSnapshot,
     ) -> Result<OperationRef, TransactionError> {
         self.check_scope(worker, caller)?;
+        self.poll_inactivity();
         if !matches!(self.access, Some(Access::Master(_))) {
             return Err(TransactionError::Locked);
         }
@@ -229,6 +246,7 @@ impl Session {
         confirmation: &str,
     ) -> Result<OperationRef, TransactionError> {
         self.check_scope(worker, caller)?;
+        self.poll_inactivity();
         if !matches!(self.access, Some(Access::Recovery(_))) {
             return Err(TransactionError::Locked);
         }
@@ -261,6 +279,7 @@ impl Session {
         paper: &str,
     ) -> Result<OperationRef, TransactionError> {
         self.check_scope(worker, caller)?;
+        self.poll_inactivity();
         if !matches!(self.access, Some(Access::Enrollment(_))) {
             return Err(TransactionError::Locked);
         }

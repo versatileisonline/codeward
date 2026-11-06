@@ -1,6 +1,6 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-05. Authenticated vault operations now compose with
+Status: in progress, 2026-11-06. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
 Accepted native storage and complete application workflows remain absent. The milestone
 is not complete.
@@ -276,6 +276,33 @@ all-target Clippy with warnings denied, workspace formatting and whitespace pass
 Six affected Markdown files/172 local links and anchors plus fences passed;
 Mermaid diagrams are unchanged. This is focused local evidence; the full workspace
 and three-platform run remain subject to current-head/base hosted Rust CI.
+
+## Core inactivity and security-event policy
+
+The [inactivity policy](session-inactivity.md) adds the accepted fixed five-minute
+monotonic deadline to normal/restricted access, enrollment and pending authentication.
+Privileged mutation/code-display/completion gates check expiry; late activity cannot
+revive access. Opaque references bind keyboard/pointer/assistive activity to actual
+opened scope, caller and generation. Background work and auth completion do not
+refresh it. Typed host security events revoke through the existing lock path,
+including resume/reconnection without an observed suspend. Clock regression and
+checked deadline overflow fail closed; generation exhaustion remains enforced.
+
+Expiry cancels pending authentication/publication admission without waiting for
+workers. Admitted commits still resolve; unknown outcomes are not cleared or
+reported saved. Tests use controlled private observations, not sleeps or actual
+OS notifications. The host must schedule idle polls and deliver validated native
+events/suspend-gap observations. No new dependency, format/schema, crypto profile
+or native writer feature; full dispatch, drafts, refresh, OS/UI behavior and native
+acceptance remain pending.
+
+Local evidence on 2026-11-06: ten policy tests passed (20.86s) and ten authentication
+tests passed (25.89s) after final deadline cleanup. An earlier 35-function transaction
+regression run passed (119.74s). All five core compile-fail doctests, workspace
+all-target/all-feature Clippy with warnings denied, formatting and whitespace passed.
+Seven affected Markdown files/184 local links and anchors plus fences passed;
+Mermaid unchanged. Full current-head/base workspace coverage uses hosted Rust CI;
+no full local workspace test repeat was performed.
 
 ## Native macOS read and exclusion foundation
 
