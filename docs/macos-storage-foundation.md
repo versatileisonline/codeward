@@ -40,7 +40,7 @@ mount flags must describe local writable nonremovable APFS.
 refuses symlink/hardlink/nonregular, foreign-owner, nonempty or non-0600 companions,
 and takes a nonblocking exclusive OS lock. All vault names in one directory share
 that companion, conservatively serializing access even across case/Unicode aliases.
-The lease exposes no clone, raw descriptor or public unlock. Normal drop explicitly
+The lease exposes no clone, raw descriptor or public unlock. Last-owner drop explicitly
 unlocks before close; termination releases the process's descriptors. The adapter
 never unlinks the companion. Observed replacement invalidates the old lease; locks
 coordinate participants and cannot stop arbitrary external programs bypassing them.

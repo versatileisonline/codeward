@@ -102,7 +102,7 @@ fn candidate() -> &'static [u8] {
     })
 }
 
-fn stage_path(dir: &TestDir, stage: &PreparedStage<'_>) -> std::path::PathBuf {
+fn stage_path(dir: &TestDir, stage: &PreparedStage) -> std::path::PathBuf {
     dir.0.join(stage._name.to_str().unwrap())
 }
 
@@ -373,6 +373,8 @@ fn shared_lease_serializes_base_check_through_publication_and_refuses_stale_foll
     let lease = dir.lease();
     let first = lease.prepare_stage(b"first candidate").unwrap();
     let second = lease.prepare_stage(b"second candidate").unwrap();
+    let stale = lease.prepare_stage(b"stale candidate").unwrap();
+    drop(lease);
     let second_path = stage_path(&dir, &second);
     let (entered, preflight_done) = mpsc::channel();
     let (release, proceed) = mpsc::channel();
@@ -402,10 +404,7 @@ fn shared_lease_serializes_base_check_through_publication_and_refuses_stale_foll
     assert_eq!(fs::read(dir.vault()).unwrap(), b"first candidate");
     assert_eq!(fs::read(second_path).unwrap(), b"second candidate");
     assert_eq!(
-        lease
-            .prepare_stage(b"stale candidate")
-            .unwrap()
-            .publish_replace(b"original"),
+        stale.publish_replace(b"original"),
         Err(PublicationError::NotPublished(NativeError::Conflict))
     );
 }

@@ -39,12 +39,12 @@ impl ReadLease {
         // One lease can be shared by threads. Neither a replacement nor another
         // barrier observation may interleave with this check/sync/postcheck.
         let _publication = self
-            .publication
+            .publication()
             .try_lock()
             .map_err(|_| NativeError::WriterUnavailable)?;
         self.verify()?;
         let current = if expected.is_some() {
-            let file = native::open_at(self.path.parent(), &self.path.name, libc::O_RDONLY, 0)
+            let file = native::open_at(self.path().parent(), &self.path().name, libc::O_RDONLY, 0)
                 .map_err(open_error)?;
             stage_permissions(&file)?;
             let metadata = file.metadata().map_err(|_| NativeError::Io)?;
@@ -65,10 +65,10 @@ impl ReadLease {
                 .map_err(|_| NativeError::SyncNamespace)?;
         }
         operations
-            .fsync(self.path.parent())
+            .fsync(self.path().parent())
             .map_err(|_| NativeError::SyncNamespace)?;
         operations
-            .full_sync(self.path.parent())
+            .full_sync(self.path().parent())
             .map_err(|_| NativeError::SyncNamespace)?;
         self.verify_observation(&current)
     }
@@ -80,9 +80,9 @@ impl ReadLease {
             if stamp(&file.metadata().map_err(|_| NativeError::Io)?) != stamp(before) {
                 return Err(NativeError::Conflict);
             }
-            self.match_named(&self.path.name, before)
+            self.match_named(&self.path().name, before)
         } else {
-            match native::named_stat(self.path.parent(), &self.path.name) {
+            match native::named_stat(self.path().parent(), &self.path().name) {
                 Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
                 _ => Err(NativeError::Conflict),
             }

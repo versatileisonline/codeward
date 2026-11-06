@@ -70,6 +70,9 @@ ancestor revalidation. Backup/copy/restore workflows remain explicitly deferred.
 Actual child-local [kernel write failures](macos-write-failures.md) now exercise
 the managed transaction path without false acknowledgement or automatic replay.
 This is bounded EFBIG evidence, not native storage acceptance or milestone completion.
+[Owned native stages](macos-stage-ownership.md) now remove the transaction bridge's
+marker reconstruction while retaining one shared writer state through pending work.
+Runtime integration and native acceptance remain separate gates.
 
 ## Implementation and evidence boundaries
 

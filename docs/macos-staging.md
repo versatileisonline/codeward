@@ -51,7 +51,9 @@ effective-user-owned, mode 0600 and free of extended ACL entries. The write loop
 handles short progress and interrupted calls, rejects zero progress, and requires
 file synchronization and checked close. File length, permissions and observed
 parent/companion/stage substitutions are checked before returning an opaque
-`PreparedStage` borrowing the lease. No raw handle or stage name is exposed.
+owned `PreparedStage` retaining writer exclusion. No raw handle or stage name is
+exposed. The [owned-stage boundary](macos-stage-ownership.md) replaces the original
+borrowed marker so a transaction worker can store it directly.
 
 The trusted caller supplies encrypted bytes; staging does not authenticate,
 encrypt or establish a valid envelope. Every error leaves the destination

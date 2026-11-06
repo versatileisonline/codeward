@@ -4,6 +4,7 @@ use std::{
     io,
     os::unix::{ffi::OsStrExt, fs::MetadataExt},
     path::Path,
+    sync::{Arc, Mutex},
 };
 
 use crate::{NativeError, native};
@@ -122,7 +123,7 @@ impl VaultPath {
 
     /// Acquire the stable directory companion without truncating or unlinking it.
     /// A second descriptor/process is refused. All vaults in this directory share
-    /// exclusion, including aliases; dropping the lease releases OS ownership.
+    /// exclusion, including aliases; dropping the last owner releases OS ownership.
     pub fn acquire(self) -> Result<ReadLease, NativeError> {
         self.verify()?;
         let companion = match native::open_at(
@@ -149,10 +150,12 @@ impl VaultPath {
             Err(TryLockError::Error(_)) => return Err(NativeError::Io),
         }
         let lease = ReadLease {
-            path: self,
-            identity: Identity::of(&metadata),
-            companion,
-            publication: std::sync::Mutex::new(()),
+            state: Arc::new(LeaseState {
+                path: self,
+                identity: Identity::of(&metadata),
+                companion,
+                publication: Mutex::new(()),
+            }),
         };
         lease.verify()?;
         Ok(lease)
@@ -184,16 +187,23 @@ mod managed;
 ///
 /// Does not implement the core's writable `Storage`/`WriterLease` interface. There
 /// is no raw handle, clone, unlock, cleanup, plaintext or save-acknowledgement API.
+/// Prepared stages privately retain the same state; dropping this caller's lease
+/// releases exclusion only when no stage still owns it.
 pub struct ReadLease {
-    pub(super) path: VaultPath,
-    identity: Identity,
-    companion: File,
-    pub(super) publication: std::sync::Mutex<()>,
+    state: Arc<LeaseState>,
 }
 
-impl Drop for ReadLease {
+struct LeaseState {
+    path: VaultPath,
+    identity: Identity,
+    companion: File,
+    publication: Mutex<()>,
+}
+
+impl Drop for LeaseState {
     fn drop(&mut self) {
-        // No intentional duplicate descriptor escapes this lease. Explicitly
+        // Only the last shared state owner unlocks. No intentional duplicate
+        // descriptor escapes this state. Explicitly
         // release the lock before closing so a transient inherited descriptor
         // during an unrelated concurrent process spawn cannot prolong ownership.
         // File drop still closes our fd if unlocking reports an OS error.
@@ -202,21 +212,44 @@ impl Drop for ReadLease {
 }
 
 impl ReadLease {
+    // Stages retain the same handles, lock and publication mutex. This is not a
+    // public Clone capability and never duplicates/reopens a native descriptor.
+    pub(super) fn retain_for_stage(&self) -> Self {
+        Self {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    pub(super) fn path(&self) -> &VaultPath {
+        &self.state.path
+    }
+
+    pub(super) fn publication(&self) -> &Mutex<()> {
+        &self.state.publication
+    }
+
     pub(super) fn verify(&self) -> Result<(), NativeError> {
-        self.path.verify()?;
-        let meta = self.companion.metadata().map_err(|_| NativeError::Io)?;
+        self.path().verify()?;
+        let meta = self
+            .state
+            .companion
+            .metadata()
+            .map_err(|_| NativeError::Io)?;
         validate_regular(&meta)?;
-        if Identity::of(&meta) != self.identity || meta.mode() & 0o777 != 0o600 || meta.len() != 0 {
+        if Identity::of(&meta) != self.state.identity
+            || meta.mode() & 0o777 != 0o600
+            || meta.len() != 0
+        {
             return Err(NativeError::Conflict);
         }
-        private_acl(&self.companion)?;
+        private_acl(&self.state.companion)?;
         self.match_named(COMPANION, &meta)?;
         Ok(())
     }
 
     pub(super) fn match_named(&self, name: &CStr, expected: &Metadata) -> Result<(), NativeError> {
         let meta =
-            native::named_stat(self.path.parent(), name).map_err(|_| NativeError::Conflict)?;
+            native::named_stat(self.path().parent(), name).map_err(|_| NativeError::Conflict)?;
         if meta.st_mode & libc::S_IFMT != libc::S_IFREG
             || u64::from(meta.st_nlink) != expected.nlink()
             || Identity::of_stat(&meta) != Identity::of(expected)
@@ -233,7 +266,7 @@ impl ReadLease {
     }
 
     pub(super) fn is_companion(&self, file: &Metadata) -> bool {
-        Identity::of(file) == self.identity
+        Identity::of(file) == self.state.identity
     }
 }
 

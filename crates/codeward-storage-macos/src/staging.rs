@@ -21,23 +21,24 @@ pub(super) fn reserved_name(name: &[u8]) -> bool {
         .is_some_and(|start| start.eq_ignore_ascii_case(RESERVED))
 }
 
-/// Opaque completed synthetic stage, borrowing its writer-exclusion lease.
+/// Opaque completed synthetic stage, owning a share of writer exclusion.
 ///
 /// Dropping this marker preserves the file. Consuming publication methods change
 /// visibility only; there is no cleanup, committed-revision or save-success
-/// operation. Stage names and handles are not exposed. Preparation and
-/// publication alone never establish namespace persistence.
+/// operation. It can move independently of the caller's lease; exclusion ends
+/// only after that lease and every stage release ownership. Stage names and
+/// handles are not exposed. The transaction owner must retain its own lease
+/// through barriers/reconciliation: consuming the last stage can release exclusion.
+/// Preparation and publication alone never establish namespace persistence.
 ///
 /// ```compile_fail
-/// use codeward_storage_macos::ReadLease;
-/// fn cannot_release_writer_early(lease: ReadLease) {
-///     let stage = lease.prepare_stage(b"synthetic encrypted bytes").unwrap();
-///     drop(lease);
-///     drop(stage);
+/// use codeward_storage_macos::PreparedStage;
+/// fn cannot_duplicate_a_stage(stage: PreparedStage) {
+///     let _duplicate = stage.clone();
 /// }
 /// ```
-pub struct PreparedStage<'lease> {
-    _lease: &'lease ReadLease,
+pub struct PreparedStage {
+    _lease: ReadLease,
     _name: CString,
     metadata: Metadata,
 }
@@ -51,7 +52,7 @@ impl ReadLease {
     /// The cap is checked before creation. Parent/stage ACLs must be empty;
     /// complete writes, fsync, F_FULLFSYNC and explicit close must all succeed.
     /// Every failure leaves the live destination untouched and preserves residue.
-    pub fn prepare_stage(&self, encrypted: &[u8]) -> Result<PreparedStage<'_>, NativeError> {
+    pub fn prepare_stage(&self, encrypted: &[u8]) -> Result<PreparedStage, NativeError> {
         self.prepare_with(encrypted, &mut SystemIo, &mut native::stage_random)
     }
 
@@ -60,7 +61,7 @@ impl ReadLease {
         encrypted: &[u8],
         operations: &mut impl StageIo,
         random: &mut impl FnMut() -> io::Result<[u8; 16]>,
-    ) -> Result<PreparedStage<'_>, NativeError> {
+    ) -> Result<PreparedStage, NativeError> {
         if encrypted.len() > MAX_FILE_LENGTH {
             return Err(NativeError::TooLarge);
         }
@@ -103,7 +104,7 @@ impl ReadLease {
         self.verify()?;
         self.match_named(&name, &metadata)?;
         Ok(PreparedStage {
-            _lease: self,
+            _lease: self.retain_for_stage(),
             _name: name,
             metadata,
         })
@@ -122,7 +123,7 @@ impl ReadLease {
             }
             let name = CString::new(name).expect("hex name");
             match native::open_at(
-                self.path.parent(),
+                self.path().parent(),
                 &name,
                 libc::O_WRONLY | libc::O_CREAT | libc::O_EXCL,
                 0o600,

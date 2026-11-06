@@ -19,7 +19,7 @@ pub enum PublicationError {
     OutcomeUnknown,
 }
 
-impl PreparedStage<'_> {
+impl PreparedStage {
     /// Consume this synthetic stage and atomically publish only at an absent name.
     ///
     /// A racing creation cannot be overwritten. Success confirms visibility only,
@@ -28,7 +28,7 @@ impl PreparedStage<'_> {
     ///
     /// ```compile_fail
     /// use codeward_storage_macos::PreparedStage;
-    /// fn cannot_publish_twice(stage: PreparedStage<'_>) {
+    /// fn cannot_publish_twice(stage: PreparedStage) {
     ///     let _ = stage.publish_create();
     ///     let _ = stage.publish_create();
     /// }
@@ -53,12 +53,12 @@ impl PreparedStage<'_> {
         expected: Option<&[u8]>,
         publish: impl FnOnce(&File, &CStr, &CStr, bool) -> io::Result<()>,
     ) -> Result<(), PublicationError> {
-        let lease = self._lease;
+        let lease = &self._lease;
         // The OS companion excludes other leases, not threads sharing this one.
         // Serialize the full base-check/rename/postcheck interval. Contention or
         // poisoning fails before publication rather than trusting a stale base.
         let _publication = lease
-            .publication
+            .publication()
             .try_lock()
             .map_err(|_| PublicationError::NotPublished(NativeError::WriterUnavailable))?;
         let before = || -> Result<File, NativeError> {
@@ -66,7 +66,7 @@ impl PreparedStage<'_> {
                 return Err(NativeError::TooLarge);
             }
             lease.verify()?;
-            let stage = native::open_at(lease.path.parent(), &self._name, libc::O_RDONLY, 0)
+            let stage = native::open_at(lease.path().parent(), &self._name, libc::O_RDONLY, 0)
                 .map_err(open_error)?;
             self.verify_stage(&stage)?;
 
@@ -74,7 +74,7 @@ impl PreparedStage<'_> {
             // recheck its name, so an observed substitution/ACL change refuses.
             let current = if expected.is_some() {
                 let file =
-                    native::open_at(lease.path.parent(), &lease.path.name, libc::O_RDONLY, 0)
+                    native::open_at(lease.path().parent(), &lease.path().name, libc::O_RDONLY, 0)
                         .map_err(open_error)?;
                 private_acl(&file)?;
                 let metadata = file.metadata().map_err(|_| NativeError::Io)?;
@@ -88,7 +88,7 @@ impl PreparedStage<'_> {
             }
             if let Some((file, metadata)) = current {
                 private_acl(&file)?;
-                lease.match_named(&lease.path.name, &metadata)?;
+                lease.match_named(&lease.path().name, &metadata)?;
             }
             self.verify_stage(&stage)?;
             lease.verify()?;
@@ -100,9 +100,9 @@ impl PreparedStage<'_> {
         // syscall error (including EINTR/EIO/EEXIST) as unknown; no retry or
         // speculative restore. An injected lost reply after success is identical.
         publish(
-            lease.path.parent(),
+            lease.path().parent(),
             &self._name,
-            &lease.path.name,
+            &lease.path().name,
             expected.is_none(),
         )
         .map_err(|_| PublicationError::OutcomeUnknown)?;
@@ -119,7 +119,7 @@ impl PreparedStage<'_> {
             {
                 return Err(NativeError::Conflict);
             }
-            lease.match_named(&lease.path.name, &metadata)?;
+            lease.match_named(&lease.path().name, &metadata)?;
             lease.verify()
         };
         after().map_err(|_| PublicationError::OutcomeUnknown)
@@ -135,5 +135,7 @@ impl PreparedStage<'_> {
     }
 }
 
+#[cfg(test)]
+mod ownership_tests;
 #[cfg(test)]
 mod tests;

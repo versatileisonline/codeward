@@ -212,13 +212,13 @@ fn refuses_parent_acl_without_modifying_it_or_writing_a_stage() {
         let dir = TestDir::new();
         let lease = dir.lease();
         chmod_acl(&dir.0, acl);
-        assert!(!native::no_extended_acl(lease.path.parent()).unwrap());
+        assert!(!native::no_extended_acl(lease.path().parent()).unwrap());
         assert_eq!(
             lease.prepare_stage(b"candidate").err(),
             Some(NativeError::Permissions)
         );
         assert!(stages(&dir.0).is_empty());
-        assert!(!native::no_extended_acl(lease.path.parent()).unwrap());
+        assert!(!native::no_extended_acl(lease.path().parent()).unwrap());
         // Remove only our synthetic ACL after proving staging preserved it.
         assert!(
             Command::new("/bin/chmod")
