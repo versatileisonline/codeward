@@ -60,8 +60,9 @@ input copies need their own cleanup; neither job nor result may be serialized,
 logged or exposed to a WebView. Keep error/status messages free of secret input.
 
 No dependency, vault bytes/schema, primitive, KDF cost or native writer feature
-changes. No background executor is started. Inactivity timers, OS lock/resume
-adapters, enrollment cancellation orchestration, draft management, automatic
+changes. No background executor is started. The [core inactivity policy](session-inactivity.md)
+now gates authentication completion and revokes timed-out attempts. Host timer
+scheduling, OS lock/resume adapters, enrollment cancellation orchestration, draft management, automatic
 snapshot refresh, scoped credential replies and UI redaction remain pending.
 Native storage acceptance and Milestone 2 completion remain separate gates.
 

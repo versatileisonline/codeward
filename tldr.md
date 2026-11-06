@@ -15,6 +15,7 @@ Root:
 - [system-design.md](docs/system-design.md): System design and Mermaid diagrams.
 - [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [session-authentication.md](docs/session-authentication.md): Split-phase core authentication, revocation, ownership and limits.
+- [session-inactivity.md](docs/session-inactivity.md): Core inactivity deadline, scoped activity, security events and host obligations.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
@@ -71,6 +72,8 @@ Root:
 - [src/transaction.rs](crates/codeward-core/src/transaction.rs): Scoped request/status types, complete-file fingerprints and atomic publication admission.
 - [src/transaction/session.rs](crates/codeward-core/src/transaction/session.rs): Secret-owning admission, generation revocation and explicit reload.
 - [src/transaction/session/authentication.rs](crates/codeward-core/src/transaction/session/authentication.rs): Scoped authentication jobs/completions that cannot restore revoked access.
+- [src/transaction/session/policy.rs](crates/codeward-core/src/transaction/session/policy.rs): Fixed inactivity deadline, scoped activity and trusted host event handling.
+- [src/transaction/session/policy/tests.rs](crates/codeward-core/src/transaction/session/policy/tests.rs): Controlled-clock policy, authentication and commit-revocation tests.
 - [src/transaction/worker.rs](crates/codeward-core/src/transaction/worker.rs): Encrypted commit stages, bounded request history and unknown-outcome reconciliation.
 - [src/transaction/storage.rs](crates/codeward-core/src/transaction/storage.rs): Trusted exclusive storage-adapter contract; native acceptance stays separate.
 - [src/transaction/tests.rs](crates/codeward-core/src/transaction/tests.rs): Commit fault, scope, lock and recovery tests using the in-memory model in tests/model.rs.

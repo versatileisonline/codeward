@@ -31,7 +31,7 @@ filesystem checks without accepting cloud locations or changing the save contrac
 | [0002](0002-vault-security-and-format.md) | Security, key relationships, format, compatibility | Accepted — authenticated core tested; committed workflow pending | Milestone 1 gate |
 | [0003](0003-committed-writes.md) | Crash-safe commits, durability, conflicting writers | Accepted — logical protocol model-tested; native adapter validation required | Milestone 1 gate |
 | [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Accepted — paper/core recovery preparation tested; committed workflow pending | Milestone 1 gate |
-| [0005](0005-session-and-drafts.md) | Lock triggers, session lifetime, drafts, save feedback | Accepted — admission/commit locking and split-phase authentication tested; full session/draft implementation pending | Milestone 1 gate |
+| [0005](0005-session-and-drafts.md) | Lock triggers, session lifetime, drafts, save feedback | Accepted — admission/commit locking, split-phase authentication and core inactivity policy tested; host scheduling/events and drafts pending | Milestone 1 gate |
 | [0006](0006-managed-working-location.md) | Managed working storage, backup and portability boundaries | Proposed implementation contract — owner selected managed direction; concrete paths/behavior under review | Milestone 2 / prototype storage |
 
 ## Process
