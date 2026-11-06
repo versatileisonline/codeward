@@ -30,6 +30,7 @@ Root:
 - [macos-location-admission.md](docs/macos-location-admission.md): Destination mount-policy revalidation, injected transitions and remaining cloud/ancestor gates.
 - [macos-managed-location.md](docs/macos-managed-location.md): Reviewed managed-directory APIs, ancestor policy, synthetic preparation evidence and limits.
 - [macos-write-failures.md](docs/macos-write-failures.md): Child-isolated kernel write refusals, managed transaction retries and evidence limits.
+- [macos-stage-ownership.md](docs/macos-stage-ownership.md): Owned staging markers, shared writer lifetime and transaction ownership boundaries.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:
@@ -94,6 +95,7 @@ Root:
 - [src/staging/tests.rs](crates/codeward-storage-macos/src/staging/tests.rs): Synthetic collisions, ACLs, staged I/O failures and subprocess interruption tests.
 - [src/staging/publication.rs](crates/codeward-storage-macos/src/staging/publication.rs): Consuming synthetic publication with no-replace creation and expected-base replacement.
 - [src/staging/publication/tests.rs](crates/codeward-storage-macos/src/staging/publication/tests.rs): Native publication races, uncertainty, coherent access and process-kill tests.
+- [src/staging/publication/ownership_tests.rs](crates/codeward-storage-macos/src/staging/publication/ownership_tests.rs): Owned-stage lifetime, cross-thread/process exclusion, failure and unwind cases.
 - [src/staging/transactions.rs](crates/codeward-storage-macos/src/staging/transactions.rs): Test-only native Storage/WriterLease bridge, absent from the runtime library.
 - [src/staging/transactions/tests.rs](crates/codeward-storage-macos/src/staging/transactions/tests.rs): Synthetic native lifecycle, uncertainty, residue and process-kill checks through the core worker.
 - [src/staging/transactions/tests/write_failures.rs](crates/codeward-storage-macos/src/staging/transactions/tests/write_failures.rs): Actual child-local EFBIG/partial-write and managed explicit-retry checks.

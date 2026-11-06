@@ -416,6 +416,13 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+[Owned native stages](macos-stage-ownership.md) now retain the same writer state
+independently of the caller's lease. The test-only transaction worker stores the
+actual marker, removing private field extraction/reconstruction. Final-owner drop
+releases exclusion; a worker still retains its own lease through barriers and
+reconciliation. This prepares runtime integration without exporting or accepting
+a writable adapter.
+
 A [kernel write-failure experiment](macos-write-failures.md) now exercises actual
 macOS EFBIG/short progress through native staging and the test-only core bridge in
 managed synthetic homes. Creation, content and recovery failures never advance the

@@ -9,9 +9,10 @@ exported, and real-vault admission/location policy remains unfinished.
 ## Ownership and authority
 
 The test bridge owns one native lease, the last successful encrypted observation
-and at most one prepared stage. It retains the prepared name/metadata privately
-without a self-referential lease borrow; publication reconstructs a marker under
-the same owned lease and executes the existing native checks. A successful
+and at most one [owned prepared stage](macos-stage-ownership.md). It stores and
+consumes the actual native marker without a self-referential borrow, copied private
+metadata or reconstruction. The worker retains its separate lease through barriers
+and reconciliation, even after a stage is consumed. A successful
 publication selects the candidate for barriers. Reconciliation instead selects
 the actual result of a fresh bounded read. Failed reads invalidate that observation.
 No snapshot in this bridge grants authentication or session access.
@@ -30,8 +31,10 @@ Reopening authenticates visible current bytes; it does not reconstruct historica
 request status or prove an earlier process completed its barriers. Cleanup is
 optional under ADR-0003 and is not added by this experiment.
 
-No dependency, feature, unsafe syscall, runtime API, vault byte, cryptographic
-profile or accepted contract changes. Shared synthetic fixture parsing and a
+The original integration added no dependency, feature, unsafe syscall, runtime API,
+vault byte, cryptographic profile or accepted contract changes. The subsequent
+owned-stage slice removes the native marker's borrow lifetime without enabling a
+runtime writable adapter. Shared synthetic fixture parsing and a
 test-only master-derivation guard avoid duplicate loaders and incidental contention
 with the core's intentionally nonblocking single-derivation policy.
 

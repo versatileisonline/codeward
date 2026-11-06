@@ -25,8 +25,11 @@ It returns encrypted bytes, never authenticated access or a committed revision.
 
 `ReadLease::prepare_stage` prepares a fresh private sibling with bounded complete
 writes, file synchronization and checked close. It refuses parent/stage extended
-ACLs, preserves residue and returns a marker borrowing the lease. Preparation
-does not publish the vault or acknowledge a save.
+ACLs, preserves residue and returns an owned marker retaining the same writer state.
+Stages can move into a worker independently of the caller's lease; final-owner drop
+releases exclusion. The transaction owner retains its own lease through barriers
+and reconciliation. See [stage ownership](../../docs/macos-stage-ownership.md).
+Preparation does not publish the vault or acknowledge a save.
 
 Consuming `PreparedStage::publish_create` atomically refuses existing destinations;
 `publish_replace` requires the complete expected encrypted base to match. Both
@@ -41,6 +44,7 @@ This candidate sequence does not establish storage acceptance or acknowledge sav
 A private `cfg(test)` bridge now exercises the core transaction worker against
 these native operations. It verifies creation, changes, recovery, uncertainty and
 residue authority with synthetic files; it is absent from the runtime library.
+It stores the actual owned stage without extracting/rebuilding private marker fields.
 Its [kernel write-failure cases](../../docs/macos-write-failures.md) now exercise
 zero/partial native writes in isolated children on managed synthetic homes, with
 no false commit or replay when the process file-size limit is restored.
