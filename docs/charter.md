@@ -25,6 +25,9 @@ forgetting the master password. Work in small milestones with explicit review ga
   The accepted bounded initial matrix and packaging plan are in
   [platform-validation.md](platform-validation.md); runtime evidence is pending.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
+- Use a Codeward-managed working file per OS account for the first prototype.
+  [ADR-0006](adr/0006-managed-working-location.md) records the selected direction,
+  concrete platform contract under review, and separate backup/portability discussion.
 - Generate passwords on demand and explicitly save them with credentials.
 - Use a master password for normal access and a separate handwritten recovery
   secret for access to an intact vault when the master password is forgotten.

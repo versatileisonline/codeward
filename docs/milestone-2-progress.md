@@ -416,6 +416,13 @@ inside-syscall interruption, OS-crash/power-loss or native transaction acceptanc
 
 ## Remaining work
 
+A [managed working-location entry](macos-managed-location.md) now selects the
+fixed macOS account app-data tree and prepares private directories without
+creating a vault. Managed paths revalidate trusted ancestors and private app
+directories through the existing native operations. [ADR-0006](adr/0006-managed-working-location.md)
+records the selected direction and backup/portability discussion; its concrete
+contract is submitted for review. No runtime writer or real-vault admission added.
+
 A [destination mount-policy check](macos-location-admission.md) now repeats the
 local/writable/nonremovable APFS query through path verification, including reads,
 staging, publication and barriers. Injected refusals/query errors preserve definite

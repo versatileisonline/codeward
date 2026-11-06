@@ -4,6 +4,15 @@ Experimental native path resolution, bounded unauthenticated reads, stable
 directory-level exclusion, encrypted staging and atomic publication for synthetic
 data. Rust 1.99.1 is pinned.
 
+`VaultPath::managed()` prepares the current OS account's fixed
+`Library/Application Support/Codeward/Vaults/vault.cw` destination. It has no UI
+path/HOME override and creates missing fixed directories with restrictive modes.
+It rechecks root/user-owned ancestors without ACL grants and private app directories
+without any ACLs. Existing entries are never repaired, replaced or cleaned up.
+Preparation does not create a vault or establish a committed/ready state.
+The generic `resolve` entry remains synthetic infrastructure, not runtime permission
+to open arbitrary working locations.
+
 `VaultPath::resolve` retains directory handles and rejects ambiguous paths/symlink
 traversal. `acquire` owns the stable `.codeward.writer-lock` OS lock; all vaults in
 one directory share it. `ReadLease::read_current` caps input allocation at 16 MiB,
@@ -50,6 +59,9 @@ The [ACL admission evidence](../../docs/macos-acl-admission.md) records the shar
 read/exclusion checks and remaining location-policy limits.
 The [mount-policy evidence](../../docs/macos-location-admission.md) records repeated
 filesystem checks; cloud-location admission remains incomplete.
+The [managed-location evidence](../../docs/macos-managed-location.md) and
+[working/copy policy](../../docs/adr/0006-managed-working-location.md) distinguish
+native preparation from backup, portability workflows and runtime acceptance.
 
 From the workspace root, using the configured toolchain homes:
 

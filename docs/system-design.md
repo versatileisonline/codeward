@@ -55,6 +55,12 @@ implementation and platform validation remain incomplete. See the [UI/core contr
 
 ## Installed application separation
 
+The first prototype's working vault is in Codeward-managed per-account app data.
+Rust resolves the fixed destination; ordinary opening does not select arbitrary
+files. [ADR-0006](adr/0006-managed-working-location.md) separates that choice from
+encrypted copies, backup/restore and future custom locations. Native directory
+preparation is distinct from accepting a writable adapter or committed workflow.
+
 ```mermaid
 flowchart TB
     subgraph app["Installed Codeward application"]

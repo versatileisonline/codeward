@@ -64,6 +64,9 @@ Remaining location policy and runtime storage acceptance are still required.
 A [mount-policy recheck](macos-location-admission.md) now spans shared native
 verification checkpoints; it does not prove that an APFS directory is outside sync.
 No native commit/durability guarantee exists; Milestone 2 remains incomplete.
+The selected [managed working-location contract](adr/0006-managed-working-location.md)
+now has [macOS directory-preparation evidence](macos-managed-location.md), including
+ancestor revalidation. Backup/copy/restore workflows remain explicitly deferred.
 
 ## Implementation and evidence boundaries
 
