@@ -55,12 +55,12 @@ threshold is inferred from `Instant`: clock behavior across sleep and event
 delivery require native evidence on every supported target. These tests do not
 establish prompt OS notifications or UI redaction.
 
-Draft ownership/close dialogs, timed reveal, automatic committed-snapshot refresh,
-host scheduling/dispatch, OS adapters and packaged behavior remain pending. An
-executing KDF cannot be forcibly stopped and a previously returned opaque result
-can retain access until delivery/drop. Clearing owned buffers is not complete
-erasure. No dependency, vault bytes/schema, crypto profile or native writer-feature
-change; synthetic use and native storage acceptance gates remain unchanged.
+Draft ownership/close dialogs, timed reveal, host scheduling/dispatch, OS adapters
+and packaged behavior remain pending. An executing KDF cannot be forcibly stopped
+and a previously returned opaque result can retain access until delivery/drop.
+Clearing owned buffers is not complete erasure. The slice retains the existing
+dependencies, vault bytes/schema, crypto profile and native writer feature.
+Synthetic use and native storage acceptance gates still apply.
 
 ## Evidence
 

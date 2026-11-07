@@ -1,7 +1,8 @@
 use super::*;
 use crate::{
-    credentials::{Credential, CredentialInput},
-    envelope::UnauthenticatedEnvelope,
+    credentials::{Credential, CredentialError, CredentialInput},
+    encoding::EnvelopeParts,
+    envelope::{UnauthenticatedEnvelope, payload_aad},
     vault::{
         begin_recovery,
         tests::{fixture, paper_code},
@@ -59,6 +60,44 @@ fn content_candidates_retain_slots_and_do_not_rerun_argon2_or_change_source() {
         2
     );
     assert_eq!(bytes, before);
+}
+
+#[test]
+fn committed_contents_refresh_validates_payload_and_schema_before_replacing_access() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let mut vault = unlock_with_master(&fixture("valid"), "synthetic password").unwrap();
+    let before = vault.snapshot().encode().unwrap();
+    let guard = crypto::occupy_master_derivation();
+    let candidate = vault.prepare_contents(1, &edited_snapshot()).unwrap();
+    let mut damaged = candidate.as_bytes().to_vec();
+    *damaged.last_mut().unwrap() ^= 1;
+    assert_eq!(
+        vault.refresh_contents(&damaged),
+        Err(VaultError::Crypto(CryptoError::AuthenticationFailed))
+    );
+
+    let mut header = vault.next_header(1).unwrap();
+    let nonce = EncryptionNonce::generate().unwrap();
+    header.payload_nonce = *nonce.as_bytes();
+    let malformed = br#"{"schema":2,"credentials":[]}"#;
+    let aad = payload_aad(&header.encode(malformed.len() + TAG_LENGTH).unwrap());
+    let payload = crypto::seal(&vault.data_key, nonce, &aad, malformed).unwrap();
+    let invalid = EnvelopeParts {
+        header,
+        encrypted_payload: &payload,
+    }
+    .encode()
+    .unwrap();
+    assert_eq!(
+        vault.refresh_contents(&invalid),
+        Err(VaultError::Credentials(CredentialError::InvalidSnapshot))
+    );
+    assert_eq!(vault.revision(), 1);
+    assert_eq!(&*vault.snapshot().encode().unwrap(), &*before);
+    vault.refresh_contents(candidate.as_bytes()).unwrap();
+    assert_eq!(vault.revision(), 2);
+    assert_eq!(vault.snapshot().credentials().len(), 1);
+    drop(guard);
 }
 
 #[test]

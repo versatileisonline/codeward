@@ -223,21 +223,28 @@ fn authenticate(
     key_bytes.copy_from_slice(&unwrapped);
     drop(unwrapped);
     let data_key = SecretKey::from_bytes(key_bytes);
-    // Always use original parsed header bytes for authentication, including both
-    // encrypted slots. Successfully opening one slot never waives this check.
-    let plaintext = crypto::open(
-        &data_key,
-        &header.payload_nonce,
-        &envelope.payload_aad(),
-        envelope.encrypted_payload(),
-    )?;
-    let snapshot = CredentialSnapshot::decode(&plaintext)?;
-    drop(plaintext);
+    let snapshot = authenticate_snapshot(&envelope, &header, &data_key)?;
     Ok(AuthenticatedVault {
         header,
         data_key,
         snapshot,
     })
+}
+
+fn authenticate_snapshot(
+    envelope: &UnauthenticatedEnvelope<'_>,
+    header: &HeaderParts,
+    data_key: &SecretKey,
+) -> Result<CredentialSnapshot, VaultError> {
+    // Always use original parsed header bytes for authentication, including both
+    // encrypted slots. Successfully opening one slot never waives this check.
+    let plaintext = crypto::open(
+        data_key,
+        &header.payload_nonce,
+        &envelope.payload_aad(),
+        envelope.encrypted_payload(),
+    )?;
+    Ok(CredentialSnapshot::decode(&plaintext)?)
 }
 
 fn validate_password(password: &str) -> Result<(), VaultError> {

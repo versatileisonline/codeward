@@ -78,10 +78,13 @@ storage-trait implementation for explicit opt-in and reuses it in synthetic test
 Default builds omit it; real-vault use and milestone acceptance remain gated.
 The [split-phase authentication slice](session-authentication.md) now lets a core
 session revoke a queued/running verification and reject stale completion. Full
-session dispatch, host timers, drafts, snapshot refresh and platform adapters remain pending.
+session dispatch, host timers, drafts and platform adapters remain pending.
 The [core inactivity/event policy](session-inactivity.md) now checks the accepted
 five-minute deadline, scoped interaction and security observations through session
 revocation. Idle scheduling and native event/suspend detection still require a host.
+[Committed content refresh](milestone-2-progress.md#committed-content-refresh) lets
+the host adopt a confirmed content save in the same unlocked session. Application
+dispatch still needs to call it and handle the result.
 
 ## Implementation and evidence boundaries
 
