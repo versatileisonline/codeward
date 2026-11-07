@@ -203,9 +203,13 @@ fn publication_ambiguity_and_barrier_failure_block_mutations_until_reconciled() 
 fn proven_nonpublication_is_failure_without_unknown_or_revision_advance() {
     let _test = crypto::MASTER_TESTS.lock().unwrap();
     let (model, mut session, mut worker) = opened();
-    prepare(&mut session, &mut worker, 1);
+    let operation = prepare(&mut session, &mut worker, 1);
     model.fault(Fault::PublishBefore);
     assert_eq!(complete(&mut worker), OperationStatus::NotPublished);
+    assert_eq!(
+        session.refresh_committed_contents(&worker, OWNER, &operation),
+        Err(TransactionError::ReloadRequired)
+    );
     assert_eq!(model.live(), Some(fixture()));
     prepare(&mut session, &mut worker, 2);
     assert_eq!(
@@ -520,7 +524,7 @@ fn recovery_is_restricted_and_commits_master_and_payload_with_reusable_paper_slo
         let status = complete(&mut worker);
         if fault == Fault::Close {
             assert_eq!(status, OperationStatus::Failed(StorageError::Close));
-            session
+            let retry = session
                 .prepare_recovery(
                     &mut worker,
                     OWNER,
@@ -532,6 +536,10 @@ fn recovery_is_restricted_and_commits_master_and_payload_with_reusable_paper_slo
             assert_eq!(
                 complete(&mut worker),
                 OperationStatus::Committed { revision: 2 }
+            );
+            assert_eq!(
+                session.refresh_committed_contents(&worker, OWNER, &retry),
+                Err(TransactionError::Locked)
             );
         } else {
             assert_eq!(status, OperationStatus::OutcomeUnknown);

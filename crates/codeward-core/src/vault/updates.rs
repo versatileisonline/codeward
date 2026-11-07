@@ -2,7 +2,8 @@
 
 use super::{
     AuthenticatedVault, CredentialSnapshot, CryptoError, EncryptionNonce, HeaderParts,
-    RecoveryAccess, VaultCandidate, VaultError, crypto, seal_snapshot, validate_new_password,
+    RecoveryAccess, UnauthenticatedEnvelope, VaultCandidate, VaultError, authenticate_snapshot,
+    crypto, seal_snapshot, validate_new_password,
 };
 use crate::envelope::{Slot, TAG_LENGTH, slot_aad};
 
@@ -22,6 +23,22 @@ impl AuthenticatedVault {
             &self.data_key,
             snapshot,
         )
+    }
+
+    // The transaction caller proves these are the exact bytes of its committed
+    // content update, which preserves both slots and the current data key.
+    pub(crate) fn refresh_contents(&mut self, bytes: &[u8]) -> Result<(), VaultError> {
+        let envelope = UnauthenticatedEnvelope::parse(bytes)?;
+        let header = HeaderParts::from_envelope(&envelope);
+        if header.vault_id != self.header.vault_id
+            || Some(header.revision) != self.header.revision.checked_add(1)
+        {
+            return Err(VaultError::RevisionConflict);
+        }
+        let snapshot = authenticate_snapshot(&envelope, &header, &self.data_key)?;
+        self.snapshot = snapshot;
+        self.header = header;
+        Ok(())
     }
 
     fn next_header(&self, expected_revision: u64) -> Result<HeaderParts, VaultError> {

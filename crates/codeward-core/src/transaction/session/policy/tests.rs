@@ -19,6 +19,32 @@ fn expire_now(session: &mut Session) {
 }
 
 #[test]
+fn committed_contents_refresh_at_expiry_revokes_access_without_undoing_save() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let (_, mut session, mut worker) = opened();
+    let operation = session
+        .prepare_contents(&mut worker, OWNER, request(1, 1), &empty())
+        .unwrap();
+    assert_eq!(
+        complete(&mut worker),
+        OperationStatus::Committed { revision: 2 }
+    );
+    let generation = session.generation();
+    expire_now(&mut session);
+    assert_eq!(
+        session.refresh_committed_contents(&worker, OWNER, &operation),
+        Err(TransactionError::Locked)
+    );
+    assert!(session.is_locked());
+    assert_eq!(session.generation(), generation + 1);
+    assert_eq!(session.inactivity_deadline(), None);
+    assert_eq!(
+        worker.status(OWNER, &operation),
+        Ok(OperationStatus::Committed { revision: 2 })
+    );
+}
+
+#[test]
 fn exact_deadline_expires_once_and_each_allowed_activity_refreshes_before_expiry() {
     let _test = crypto::MASTER_TESTS.lock().unwrap();
     assert_eq!(INACTIVITY_TIMEOUT, Duration::from_secs(300));

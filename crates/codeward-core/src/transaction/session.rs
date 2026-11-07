@@ -17,6 +17,8 @@ enum Access {
 
 mod authentication;
 mod policy;
+#[cfg(test)]
+mod tests;
 use authentication::Attempt;
 pub use authentication::{AuthenticationJob, AuthenticationResult};
 use policy::Inactivity;
@@ -27,8 +29,8 @@ pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent}
 /// The core checks inactivity before privileged operations. The host must schedule
 /// deadline polls, deliver trusted security events and redact its own copies;
 /// no background timer, OS adapter, credential replies or draft manager is supplied.
-/// After a commit, explicitly reload/authenticate before preparing a new mutation;
-/// the old authenticated snapshot is never silently treated as the new revision.
+/// After a commit, refresh a current content update or explicitly reload before
+/// preparing a new mutation. The old snapshot never stands in for a new revision.
 pub struct Session {
     scope: Arc<()>,
     caller: CallerId,
@@ -233,6 +235,51 @@ impl Session {
         };
         let candidate = access.prepare_contents(request.expected_revision, snapshot)?;
         self.submit(worker, request, intent, candidate)
+    }
+
+    /// Refresh ordinary access after this generation's content commit. The trusted
+    /// host calls this with the returned operation reference once storage resolves.
+    /// Reuses the current data key without refreshing inactivity or returning
+    /// credentials. Repeating the refresh of the current commit is harmless.
+    pub fn refresh_committed_contents<L: WriterLease>(
+        &mut self,
+        worker: &Committer<L>,
+        caller: CallerId,
+        reference: &OperationRef,
+    ) -> Result<(), TransactionError> {
+        self.check_scope(worker, caller)?;
+        if reference.caller != caller || !Arc::ptr_eq(&self.scope, &reference.scope) {
+            return Err(TransactionError::Unauthorized);
+        }
+        self.poll_inactivity();
+        let Some(Access::Master(access)) = self.access.as_mut() else {
+            return Err(TransactionError::Locked);
+        };
+        if reference.generation != self.generation {
+            return Err(TransactionError::Locked);
+        }
+        worker.check_idle()?;
+        let Some(committed) = worker.fingerprint else {
+            return Err(TransactionError::ReloadRequired);
+        };
+        // Only this generation's master access can have submitted this operation.
+        // The worker advances the revision only for a barrier-completed commit.
+        let status = OperationStatus::Committed {
+            revision: committed.revision,
+        };
+        if worker.status(caller, reference)? != status {
+            return Err(TransactionError::ReloadRequired);
+        }
+        if self.source == Some(committed) {
+            return Ok(());
+        }
+        let result = access.refresh_contents(worker.base_bytes()?);
+        if self.poll_inactivity() {
+            return Err(TransactionError::Locked);
+        }
+        result?;
+        self.source = Some(committed);
+        Ok(())
     }
 
     /// Admit a coherent replacement master slot/payload in restricted recovery.
