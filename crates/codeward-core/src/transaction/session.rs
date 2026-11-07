@@ -16,11 +16,13 @@ enum Access {
 }
 
 mod authentication;
+mod listing;
 mod policy;
 #[cfg(test)]
 mod tests;
 use authentication::Attempt;
 pub use authentication::{AuthenticationJob, AuthenticationResult};
+pub use listing::{CredentialCursor, CredentialPage, CredentialSummary, MAX_CREDENTIAL_SUMMARIES};
 use policy::Inactivity;
 pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent};
 
@@ -28,7 +30,7 @@ pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent}
 ///
 /// The core checks inactivity before privileged operations. The host must schedule
 /// deadline polls, deliver trusted security events and redact its own copies;
-/// no background timer, OS adapter, credential replies or draft manager is supplied.
+/// no background timer, OS adapter, IPC or draft manager is supplied.
 /// After a commit, refresh a current content update or explicitly reload before
 /// preparing a new mutation. The old snapshot never stands in for a new revision.
 pub struct Session {

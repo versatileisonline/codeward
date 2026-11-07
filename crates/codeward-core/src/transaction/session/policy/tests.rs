@@ -19,6 +19,21 @@ fn expire_now(session: &mut Session) {
 }
 
 #[test]
+fn credential_listing_at_expiry_revokes_access_without_returning_a_page() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let (_, mut session, worker) = opened();
+    let generation = session.generation();
+    expire_now(&mut session);
+    assert!(matches!(
+        session.list_credentials(&worker, OWNER, generation, 1, None),
+        Err(TransactionError::Locked)
+    ));
+    assert!(session.is_locked());
+    assert_eq!(session.generation(), generation + 1);
+    assert!(session.inactivity_deadline().is_none());
+}
+
+#[test]
 fn committed_contents_refresh_at_expiry_revokes_access_without_undoing_save() {
     let _test = crypto::MASTER_TESTS.lock().unwrap();
     let (_, mut session, mut worker) = opened();

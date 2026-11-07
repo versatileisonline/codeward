@@ -73,6 +73,7 @@ Root:
 - [src/transaction/session.rs](crates/codeward-core/src/transaction/session.rs): Secret-owning admission, generation revocation and explicit reload.
 - [src/transaction/session/tests.rs](crates/codeward-core/src/transaction/session/tests.rs): Committed content refresh, scoping and reconciliation tests.
 - [src/transaction/session/authentication.rs](crates/codeward-core/src/transaction/session/authentication.rs): Scoped authentication jobs/completions that cannot restore revoked access.
+- [src/transaction/session/listing.rs](crates/codeward-core/src/transaction/session/listing.rs): Bounded credential summaries and revision-scoped continuations.
 - [src/transaction/session/policy.rs](crates/codeward-core/src/transaction/session/policy.rs): Fixed inactivity deadline, scoped activity and trusted host event handling.
 - [src/transaction/session/policy/tests.rs](crates/codeward-core/src/transaction/session/policy/tests.rs): Controlled-clock policy, authentication and commit-revocation tests.
 - [src/transaction/worker.rs](crates/codeward-core/src/transaction/worker.rs): Encrypted commit stages, bounded request history and unknown-outcome reconciliation.

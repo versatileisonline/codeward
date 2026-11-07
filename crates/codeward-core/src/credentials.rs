@@ -169,7 +169,7 @@ impl CredentialSnapshot {
     }
 }
 
-fn copy_text(text: &str) -> Result<Zeroizing<String>, CredentialError> {
+pub(crate) fn copy_text(text: &str) -> Result<Zeroizing<String>, CredentialError> {
     let mut owned = Zeroizing::new(String::new());
     owned
         .try_reserve_exact(text.len())
