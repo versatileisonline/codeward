@@ -338,6 +338,39 @@ compile-fail doctests, workspace formatting and all-feature/all-target Clippy wi
 warnings denied passed locally. Six affected Markdown files passed 171 local link
 and anchor checks and fence checks. Mermaid diagrams are unchanged.
 
+## Scoped credential listing
+
+[`Session::list_credentials`](../crates/codeward-core/src/transaction/session/listing.rs)
+implements the Rust listing boundary for FR-02/03 and NFR-09 under
+[ADR-0001](adr/0001-implementation-platform.md) and
+[ADR-0005](adr/0005-session-and-drafts.md). The trusted host supplies the caller,
+opened worker and expected session generation. Listing requires ordinary master
+access to the worker's current authenticated committed snapshot. The session polls
+inactivity before preparing and before returning a page. Reads leave the deadline
+and generation alone.
+
+The requested page size is 1–100. A page can be shorter or empty at the end of
+the snapshot. Summaries carry the stored record ID, title and username in ascending ID
+order. The owned fields clear on drop. Each opaque continuation is bound to the
+caller, opened worker, session generation and exact committed fingerprint. Lock,
+reauthentication, reopening and a newer commit invalidate it.
+
+The core pauses listing during pending or uncertain writes. When reconciliation
+confirms the base is unchanged, its cursor is usable again. A new commit requires
+refresh or reload before starting a new list. An observed conflict requires reopen.
+The host must keep the original caller and opened-worker context, poll for expiry,
+and check the context, generation and revision before delivering queued pages.
+Copies already handed to a caller require its own cleanup. Search, selected-record
+details, password reveal, IPC and presentation remain pending.
+
+Focused local checks on 2026-11-07 passed all five listing tests, all five
+committed-content refresh regressions and all five core compile-fail doctests.
+The listing tests cover the cap, stable order, exact summary fields, caller and
+vault scope, lock/expiry, restricted access, write reconciliation, conflicts and
+cursor invalidation. Workspace formatting and all-feature/all-target Clippy with
+warnings denied passed. Five affected Markdown files passed 172 local link and
+anchor checks and fence checks. Mermaid diagrams are unchanged.
+
 ## Native macOS read and exclusion foundation
 
 Implemented 2026-11-02 in a separate

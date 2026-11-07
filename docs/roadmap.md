@@ -85,6 +85,8 @@ revocation. Idle scheduling and native event/suspend detection still require a h
 [Committed content refresh](milestone-2-progress.md#committed-content-refresh) lets
 the host adopt a confirmed content save in the same unlocked session. Application
 dispatch still needs to call it and handle the result.
+[Scoped credential listing](milestone-2-progress.md#scoped-credential-listing) adds
+bounded Rust summaries and continuations for the current authenticated snapshot.
 
 ## Implementation and evidence boundaries
 

@@ -76,6 +76,12 @@ committed snapshot with the session's data key. Explicit reload remains availabl
 and is required when the session cannot adopt a commit. See the
 [refresh contract](../../docs/milestone-2-progress.md#committed-content-refresh).
 
+`Session::list_credentials` returns up to 100 summaries from the current
+authenticated committed snapshot. Each contains the record ID, title and username.
+The caller and opened worker scope the request, and a continuation is valid only
+for the same generation and revision. See the
+[listing contract](../../docs/milestone-2-progress.md#scoped-credential-listing).
+
 The [core inactivity/event policy](../../docs/session-inactivity.md) owns a fixed
 five-minute monotonic deadline, checks it before privileged operations and cancels
 expired authentication. Only current caller/vault/generation activity refreshes it;
