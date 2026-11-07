@@ -69,9 +69,12 @@ Caller/opened-vault/generation scope gates preparation. A per-generation keyed
 intent digest supports duplicate-request matching without storing passwords.
 History holds at most 64 IDs and fails closed rather than evicting/replaying them.
 Lock releases owned access and cancels pending admission atomically; an admitted
-worker can finish while the session stays locked. After commit, a new mutation
-requires explicit reload/authentication of the worker's current base. This slice
-has no credential-reply API, draft manager, background timer or OS event adapter.
+worker can finish while the session stays locked. After a content commit, the host
+can call `Session::refresh_committed_contents` with the current operation reference
+to continue editing in the same unlock. It authenticates and validates the exact
+committed snapshot with the session's data key. Explicit reload remains available
+and is required when the session cannot adopt a commit. See the
+[refresh contract](../../docs/milestone-2-progress.md#committed-content-refresh).
 
 The [core inactivity/event policy](../../docs/session-inactivity.md) owns a fixed
 five-minute monotonic deadline, checks it before privileged operations and cancels

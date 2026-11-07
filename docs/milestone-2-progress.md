@@ -1,6 +1,6 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-06. Authenticated vault operations now compose with
+Status: in progress, 2026-11-07. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
 Accepted native storage and complete application workflows remain absent. The milestone
 is not complete.
@@ -228,10 +228,10 @@ The 64-entry history fails closed at capacity and never evicts IDs to permit rep
 Post-lock status is caller/scoped and contains no credentials. Reopening loads an
 authenticated visible baseline but loses historical status and cannot prove a
 previous process's barriers; an unavailable result never means an operation did not commit.
-After successful commit, a new mutation requires explicit reload/authentication
-of the current worker base, creating a fresh generation. Automatic secret-snapshot
-refresh, draft management and an asynchronous authentication/session dispatcher
-remain outside this bounded admission slice.
+The original admission slice required explicit reload/authentication after every
+commit. [Committed content refresh](#committed-content-refresh) now offers an
+in-session path for ordinary content commits. Draft management and a complete
+application dispatcher remain pending.
 
 Sixteen new tests cover every modeled staging failure (creation, short write,
 close and sync), read failure, definite/ambiguous publication and final barriers;
@@ -303,6 +303,40 @@ all-target/all-feature Clippy with warnings denied, formatting and whitespace pa
 Seven affected Markdown files/184 local links and anchors plus fences passed;
 Mermaid unchanged. Full current-head/base workspace coverage uses hosted Rust CI;
 no full local workspace test repeat was performed.
+
+## Committed content refresh
+
+The trusted Rust host can call
+[`Session::refresh_committed_contents`](../crates/codeward-core/src/transaction/session.rs)
+after an ordinary content save under FR-02/03/05 and ADR-0003/0005. The operation
+reference must belong to the current caller, opened worker and session generation.
+The worker must be idle and its current revision must match the referenced
+barrier-completed commit. This includes a candidate whose uncertain outcome was
+successfully reconciled. An unchanged outcome or observed conflict cannot refresh.
+
+The session authenticates the worker's exact committed payload and validates its
+schema with the existing data key. Both key slots were preserved by the content
+update. The session replaces its snapshot and source only for the same vault at
+the next revision. A repeated refresh for the current commit is safe. No password
+derivation, storage I/O, credential reply, request history reset or deadline
+extension occurs. A failed payload/schema check leaves the previous snapshot and
+source in place. Lock and expiry still revoke access, including when the write
+already committed. A refresh error leaves the worker's commit status intact.
+
+The host invokes refresh explicitly when handling a result. Without it, a stale
+session still requires an explicit reload before another mutation. Enrollment
+and restricted recovery require ordinary master authentication to grant normal
+access. Host result dispatch, drafts, UI and native storage acceptance remain pending.
+
+Focused local tests on 2026-11-07 passed all five refresh cases, the definite
+nonpublication and restricted recovery regressions, and all fourteen vault tests
+(including one refresh case). Tests cover successive saves, request deduplication,
+caller/scope/generation isolation, expiry, reconciled commits, unchanged outcomes,
+conflicts, and failure to authenticate or validate a replacement payload. The
+vault test holds the master derivation guard while refreshing. All five core
+compile-fail doctests, workspace formatting and all-feature/all-target Clippy with
+warnings denied passed locally. Six affected Markdown files passed 171 local link
+and anchor checks and fence checks. Mermaid diagrams are unchanged.
 
 ## Native macOS read and exclusion foundation
 
@@ -530,8 +564,8 @@ experiment establishes complete persistence acceptance or the writable adapter.
    ADR-0003, then enable the experimental writer in an application only after its
    admission gates are complete. Validate remaining ancestor/
    location policy before real-vault support; implement/validate Windows/Linux separately.
-2. Complete application session/lifecycle orchestration, including asynchronous
-   authentication cancellation, draft ownership and automatic snapshot refresh.
+2. Complete application session/lifecycle orchestration, including dispatch of
+   authentication and commit results, draft ownership and post-save refresh.
    Later UI/OS event adapters must enforce the accepted lock/redaction policy.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
