@@ -21,8 +21,9 @@ mod session;
 mod storage;
 mod worker;
 pub use session::{
-    ActivityRef, AuthenticationJob, AuthenticationResult, INACTIVITY_TIMEOUT, Session,
-    SessionActivity, SessionEvent,
+    ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialPage,
+    CredentialSummary, INACTIVITY_TIMEOUT, MAX_CREDENTIAL_SUMMARIES, Session, SessionActivity,
+    SessionEvent,
 };
 pub use storage::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 pub use worker::Committer;
@@ -96,15 +97,19 @@ pub enum OperationStatus {
     Unavailable,
 }
 
-/// Controlled admission/reconciliation errors, without sensitive inputs.
+/// Controlled transaction and session errors, without sensitive inputs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransactionError {
     /// Caller or opened-vault scope differs.
     Unauthorized,
     /// Session is locked or lacks the requested access mode.
     Locked,
-    /// Fresh mutation needs explicit authentication of the current committed base.
+    /// Current access needs refresh, reload or reopen before using the worker's base.
     ReloadRequired,
+    /// The requested summary page size is outside the supported range.
+    InvalidPageSize,
+    /// The list cursor belongs to an older session generation or committed revision.
+    StaleCursor,
     /// Another transaction is active, including an uncertain outcome.
     Busy,
     /// A known ID was reused with different arguments or session generation.
@@ -117,7 +122,7 @@ pub enum TransactionError {
     AuthenticationCanceled,
     /// A monotonic observation regressed or a deadline could not be represented.
     ClockUnavailable,
-    /// Allocation failed before admitting a mutation or authentication job.
+    /// Allocation failed while preparing a core operation or response.
     AllocationFailed,
     /// Actual bytes cannot be established as the known base/candidate.
     OutcomeUnknown,
