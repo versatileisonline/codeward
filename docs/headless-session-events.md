@@ -58,9 +58,41 @@ and mappings. A main-thread smoke test registers the real bridge and posts
 workspace notifications within its own process, then verifies they revoke an
 enrollment through the control loop. It does not lock or suspend the machine.
 
-Actual OS lock/sleep delivery, GUI redaction and integration with the desktop
-event loop remain to be exercised. Synchronous open and candidate preparation
-can delay native event collection. An event first collected after a command may
-arrive after a write already crossed publication admission. The existing commit
-and reconciliation rules govern that write. Windows/Linux native events, drafts,
-IPC and packaging are separate work.
+### Live macOS probe
+
+Run each probe separately from a logged-in macOS session with the repository
+toolchain. The ordinary test suite runs the process-local smoke test. The live
+flags opt into a passive probe of operator-driven OS transitions.
+
+```sh
+cargo test -p codeward-host-macos --locked --offline --test native_events -- --live-lock
+cargo test -p codeward-host-macos --locked --offline --test native_events -- --live-sleep
+```
+
+Each probe prints `ARMED` once volatile synthetic enrollment can retrieve its
+paper code. It observes events for up to 120 seconds of awake time without
+logging the code, writing a vault, or changing OS power or lock state.
+
+- The lock probe requires `OsSessionLocked` to cause the first revocation and
+  then waits for `Reconnected` during the unlock transition. The adapter uses
+  that same event for a screen-unlock hint or a workspace session becoming active.
+- The sleep probe requires `Suspend`, `Resume` or `DetectedSuspendGap` to
+  cause the first revocation. A `Suspend` result also requires a later wake
+  observation or clock gap. A screen lock that arrives first cannot prove
+  sleep caused the revocation, so the probe reports it and fails the attempt.
+- Both probes require the source to stay available and the headless host to
+  deny paper-code access after the observed transition. Inactivity, a failed
+  event source, and a missing observation cannot pass.
+
+Both operator-driven probes passed on Apple silicon macOS 26.3.1 (25D2128) on
+2026-11-08. `OsSessionLocked` revoked enrollment before `Reconnected` and
+`Suspend` revoked it before `Resume`. The host denied paper-code access after
+both cycles. This exercise covered the volatile enrollment path in one logged-in
+session. The clock-gap fallback retains unit-test coverage.
+
+GUI redaction and desktop event-loop integration still require validation.
+Synchronous open and candidate preparation can delay native event collection.
+An event first collected after a command may arrive after a write already
+crossed publication admission. The existing commit and reconciliation rules
+govern that write. Windows/Linux native events, drafts, IPC and packaging are
+separate work.

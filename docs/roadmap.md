@@ -86,8 +86,9 @@ The owner accepted the bounded macOS storage policy on 2026-11-07. The
 [headless vault host](headless-vault-host.md) composes session control, background
 authentication and commit results on the synthetic managed path.
 [Headless session events](headless-session-events.md) add idle deadline scheduling,
-macOS workspace observations and a suspend-gap check. Actual OS-event validation
-and desktop integration remain pending.
+macOS workspace observations and a suspend-gap check. Live lock/unlock and
+sleep/wake revoked synthetic headless enrollment on macOS 26.3.1. Desktop
+integration and packaged event validation remain pending.
 The [split-phase authentication slice](session-authentication.md) now lets a core
 session revoke a queued/running verification and reject stale completion. Desktop
 event dispatch, drafts and other platform adapters remain pending.
