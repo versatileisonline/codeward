@@ -17,6 +17,7 @@ Root:
 - [session-authentication.md](docs/session-authentication.md): Split-phase core authentication, revocation, ownership and limits.
 - [session-inactivity.md](docs/session-inactivity.md): Core inactivity deadline, scoped activity, security events and host obligations.
 - [headless-vault-host.md](docs/headless-vault-host.md): Control-side lifecycle, worker outcomes and event-loop obligations.
+- [headless-session-events.md](docs/headless-session-events.md): Headless timer, revocation ordering, macOS notifications and suspend-gap evidence.
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.

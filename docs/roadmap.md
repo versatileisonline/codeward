@@ -85,12 +85,15 @@ mounts and recognized cloud roots, and verifies preservation of leftover files.
 The owner accepted the bounded macOS storage policy on 2026-11-07. The
 [headless vault host](headless-vault-host.md) composes session control, background
 authentication and commit results on the synthetic managed path.
+[Headless session events](headless-session-events.md) add idle deadline scheduling,
+macOS workspace observations and a suspend-gap check. Actual OS-event validation
+and desktop integration remain pending.
 The [split-phase authentication slice](session-authentication.md) now lets a core
-session revoke a queued/running verification and reject stale completion. Full
-desktop event dispatch, host timers, drafts and platform adapters remain pending.
+session revoke a queued/running verification and reject stale completion. Desktop
+event dispatch, drafts and other platform adapters remain pending.
 The [core inactivity/event policy](session-inactivity.md) now checks the accepted
 five-minute deadline, scoped interaction and security observations through session
-revocation. Idle scheduling and native event/suspend detection still require a host.
+revocation. The headless control loop drives that policy for the macOS source.
 [Committed content refresh](milestone-2-progress.md#committed-content-refresh) lets
 the host adopt a confirmed content save in the same unlocked session. The headless
 host now dispatches that refresh separately from the save outcome.

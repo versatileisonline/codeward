@@ -1,9 +1,9 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-07. Authenticated vault operations now compose with
+Status: in progress, 2026-11-08. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
-Accepted native storage and complete application workflows remain absent. The milestone
-is not complete.
+The bounded macOS storage policy is accepted for synthetic use. Product storage
+admission and complete application workflows remain pending.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
 The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonline/codeward/pull/4),
@@ -570,6 +570,13 @@ macOS test runs create, unlock, save, close, reopen and recovery through the hos
 The owner accepted the bounded macOS storage policy on 2026-11-07 under
 [ADR-0006](adr/0006-managed-working-location.md).
 
+The [headless timer and macOS event source](headless-session-events.md) now
+schedule idle expiry and process revocation before commands and worker replies.
+Workspace sleep/wake and session switch observations use AppKit. Undocumented
+distributed screen-lock hints can only revoke. Bracketed Mach clocks provide
+a suspend-gap check even when a wake notice is missed. Process-local delivery
+was tested. Actual OS lock/sleep and desktop integration remain separate.
+
 ## Remaining work
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
@@ -632,8 +639,8 @@ experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Implement and validate Windows/Linux native storage. The bounded macOS policy
    is accepted. Quota and media-fault evidence and product admission remain separate.
-2. Integrate the headless host with a control loop that schedules deadline polls
-   and validates OS events. Draft ownership and close interactions remain pending.
+2. Validate real OS lock/sleep delivery and integrate the headless control loop
+   with the desktop host. Draft ownership and close interactions remain pending.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 

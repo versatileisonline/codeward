@@ -32,16 +32,16 @@ shared writer and a disposable managed APFS home under the
 
 ## Event-loop boundary
 
-Poll for worker results when `has_pending_work` is true and at
-`inactivity_deadline`, including during a blocked commit or while idle. The
-caller supplies wakeups and trusted activity/security events. Reading state or
-draining results does not extend the deadline. The caller retains the original
-scope of any queued credential page and rechecks it before delivery.
+The [headless control loop](headless-session-events.md) polls for worker results
+and at `inactivity_deadline`, including during a blocked commit or while idle.
+The macOS source supplies platform observations. Reading state or draining
+results does not extend the deadline. The caller retains the original scope of
+any queued credential page and rechecks it before delivery.
 
 Opening storage and candidate preparation are synchronous. Creation and password
 replacement still perform their preparation KDF on the invoking thread. Before
 dispatch, expiry can cancel the prepared candidate without skipping worker cleanup.
-Draft ownership, close dialogs, native event and timer wiring, IPC and UI remain
+Draft ownership, close dialogs, desktop event integration, IPC and UI remain
 separate. The macOS writer remains opt-in for synthetic development.
 
 ## Evidence

@@ -51,6 +51,7 @@ pub struct ActivityRef {
 pub(super) struct Inactivity {
     observed: Instant,
     deadline: Option<Instant>,
+    revocation_pending: bool,
 }
 
 impl Inactivity {
@@ -58,6 +59,7 @@ impl Inactivity {
         let mut policy = Self {
             observed: now,
             deadline: None,
+            revocation_pending: false,
         };
         if active {
             policy.start(now)?;
@@ -90,6 +92,11 @@ impl Inactivity {
 }
 
 impl Session {
+    #[cfg(test)]
+    pub(in crate::transaction) fn set_deadline_for_test(&mut self, deadline: Instant) {
+        self.inactivity.deadline = Some(deadline);
+    }
+
     /// Snapshot of the core-owned deadline for a trusted host to schedule a wakeup.
     /// `None` means no active access/authentication deadline, not saved/ready status.
     pub fn inactivity_deadline(&self) -> Option<Instant> {
@@ -105,11 +112,16 @@ impl Session {
 
     fn poll_inactivity_at(&mut self, now: Instant) -> bool {
         if self.inactivity.expired(now) {
+            self.inactivity.revocation_pending = true;
             self.lock();
             true
         } else {
             false
         }
+    }
+
+    pub(in crate::transaction) fn take_inactivity_revocation(&mut self) -> bool {
+        std::mem::take(&mut self.inactivity.revocation_pending)
     }
 
     pub(super) fn start_inactivity_at(&mut self, now: Instant) -> Result<(), TransactionError> {
