@@ -7,6 +7,7 @@ use std::{
     path::Path,
 };
 
+mod capacity;
 mod workflow;
 
 fn lease(dir: &TestDir) -> ExperimentalWriterLease {

@@ -62,16 +62,30 @@ pub(super) fn local_writable_apfs(file: &File) -> io::Result<bool> {
     if let Some(result) = crate::test_support::mount_result() {
         return result;
     }
+    let output = filesystem_stats(file)?;
+    let name = output.f_fstypename.map(|byte| byte as u8);
+    let flags = output.f_flags;
+    // Disk images are removable. The opt-in capacity test exempts only its
+    // own device, leaving the kernel I/O and all other checks active.
+    #[cfg(test)]
+    let flags = {
+        use std::os::unix::fs::MetadataExt;
+        match crate::test_support::capacity_image_device() {
+            Some(device) if file.metadata()?.dev() == device => flags & !MNT_REMOVABLE,
+            _ => flags,
+        }
+    };
+    Ok(filesystem_allowed(flags, &name))
+}
+
+pub(super) fn filesystem_stats(file: &File) -> io::Result<libc::statfs> {
     let mut output = MaybeUninit::uninit();
     // SAFETY: valid owned fd and writable correctly aligned statfs storage.
     if unsafe { libc::fstatfs(file.as_raw_fd(), output.as_mut_ptr()) } != 0 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: successful fstatfs initialized the output. Use a bounded array
-    // comparison rather than assuming its filesystem-name buffer terminates.
-    let output = unsafe { output.assume_init() };
-    let name = output.f_fstypename.map(|byte| byte as u8);
-    Ok(filesystem_allowed(output.f_flags, &name))
+    // SAFETY: successful fstatfs initialized the output structure.
+    Ok(unsafe { output.assume_init() })
 }
 
 fn filesystem_allowed(flags: u32, name: &[u8]) -> bool {
