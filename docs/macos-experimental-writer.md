@@ -68,8 +68,10 @@ and platform matrix; focused local results do not substitute for that required g
 The [managed workflow](macos-managed-workflow.md) now uses this adapter directly
 to exercise acknowledged saves, termination, exclusion and recovery on local APFS.
 The headless harness supplies a disposable home to the managed resolver.
+The owner accepted the [bounded macOS storage policy](adr/0006-managed-working-location.md)
+on 2026-11-07. The [headless host](headless-vault-host.md) integrates the opt-in writer
+on that same disposable path.
 
-An opt-in writer is not accepted native storage, a usable credential application,
-an OS-crash/power-loss guarantee or packaged support. Location/native persistence
-acceptance, full application sessions, Windows/Linux adapters and integrated
-Milestone 2 acceptance remain pending. Backup/copy/restore and UI stay deferred.
+Real-vault admission, quota/media and OS-crash/power-loss evidence, desktop host
+integration, Windows/Linux adapters and full Milestone 2 acceptance remain pending.
+Backup/copy/restore and UI stay deferred.

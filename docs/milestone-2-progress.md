@@ -559,6 +559,17 @@ The native suite and doctests passed locked/offline locally. The opt-in capacity
 case and final focused admission/residue tests passed separately, along with
 workspace formatting and all-feature/all-target Clippy with warnings denied.
 
+## Headless vault lifecycle
+
+The [headless host](headless-vault-host.md) owns the session on the control side
+and dispatches authentication, encrypted commits and reconciliation to workers.
+Lock and close can revoke while a worker is blocked. Confirmed ordinary saves
+refresh current access without changing commit status if refresh is refused.
+The model tests exercise cancellation, uncertainty and worker loss. The managed
+macOS test runs create, unlock, save, close, reopen and recovery through the host.
+The owner accepted the bounded macOS storage policy on 2026-11-07 under
+[ADR-0006](adr/0006-managed-working-location.md).
+
 ## Remaining work
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
@@ -619,13 +630,10 @@ doctests, native Clippy/formatting, concurrent readers and 14 child kills around
 publication. The namespace experiment above adds candidate barriers; neither
 experiment establishes complete persistence acceptance or the writable adapter.
 
-1. Review the macOS application-termination and disk-full evidence, supported
-   location and preserve-all residue policy under ADR-0003/0006 before real-vault
-   admission. Quota and media-fault evidence remain separate. Implement and
-   validate Windows/Linux native storage.
-2. Complete application session/lifecycle orchestration, including dispatch of
-   authentication and commit results, draft ownership and post-save refresh.
-   Later UI/OS event adapters must enforce the accepted lock/redaction policy.
+1. Implement and validate Windows/Linux native storage. The bounded macOS policy
+   is accepted. Quota and media-fault evidence and product admission remain separate.
+2. Integrate the headless host with a control loop that schedules deadline polls
+   and validates OS events. Draft ownership and close interactions remain pending.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 

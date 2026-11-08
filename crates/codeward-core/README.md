@@ -82,6 +82,11 @@ The caller and opened worker scope the request, and a continuation is valid only
 for the same generation and revision. See the
 [listing contract](../../docs/milestone-2-progress.md#scoped-credential-listing).
 
+The [headless host](../../docs/headless-vault-host.md) keeps the session on the
+control side, dispatches authentication and writes off that thread, and reports
+commit outcome separately from post-save refresh. The caller schedules deadline
+polls and supplies trusted events.
+
 The [core inactivity/event policy](../../docs/session-inactivity.md) owns a fixed
 five-minute monotonic deadline, checks it before privileged operations and cancels
 expired authentication. Only current caller/vault/generation activity refreshes it;

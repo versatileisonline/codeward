@@ -4,7 +4,9 @@ This Milestone 2 slice implements part of [FR-02/NFR-09](requirements.md),
 [ADR-0005](adr/0005-session-and-drafts.md) and the [UI/core contract](ui-core-contract.md).
 It separates expensive authentication from the secret-owning session so a host can
 revoke access while verification is running. It is a Rust API, not an IPC command,
-application dispatcher or complete session lifecycle.
+application dispatcher or complete session lifecycle. The later
+[headless host](headless-vault-host.md) dispatches these jobs and drops their
+receivers on revocation.
 
 ## Ownership and use
 

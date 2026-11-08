@@ -49,9 +49,10 @@ Closing/canceling releases the relevant volatile operation context and denies ne
 access. ADR-0005 defines the accepted dirty-draft and in-flight-write policies;
 acceptance is not implemented behavior.
 The owner selected a managed working location for the initial prototype; concrete
-paths, missing-file behavior and backup/portability boundaries are submitted in
-[ADR-0006](adr/0006-managed-working-location.md). These command names remain a
-design surface, not implemented IPC. Custom file selection/import/restore is deferred.
+paths, missing-file behavior and backup/portability boundaries are recorded in
+[ADR-0006](adr/0006-managed-working-location.md). The bounded macOS storage policy
+is accepted. These names describe the future IPC surface. Custom file selection,
+import and restore remain deferred.
 The reusable paper secret opens the independent recovery slot for the same vault
 key as the master-password slot. Routine recovery commits a new master-password
 slot and keeps the paper secret valid; it never returns the old master password.

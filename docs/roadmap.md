@@ -82,15 +82,18 @@ Managed commits now flush each directory entry through the account home.
 [Capacity and admission evidence](macos-capacity-and-admission.md) adds real
 disk-full failure and explicit retry on an isolated APFS image, rejects nested
 mounts and recognized cloud roots, and verifies preservation of leftover files.
+The owner accepted the bounded macOS storage policy on 2026-11-07. The
+[headless vault host](headless-vault-host.md) composes session control, background
+authentication and commit results on the synthetic managed path.
 The [split-phase authentication slice](session-authentication.md) now lets a core
 session revoke a queued/running verification and reject stale completion. Full
-session dispatch, host timers, drafts and platform adapters remain pending.
+desktop event dispatch, host timers, drafts and platform adapters remain pending.
 The [core inactivity/event policy](session-inactivity.md) now checks the accepted
 five-minute deadline, scoped interaction and security observations through session
 revocation. Idle scheduling and native event/suspend detection still require a host.
 [Committed content refresh](milestone-2-progress.md#committed-content-refresh) lets
-the host adopt a confirmed content save in the same unlocked session. Application
-dispatch still needs to call it and handle the result.
+the host adopt a confirmed content save in the same unlocked session. The headless
+host now dispatches that refresh separately from the save outcome.
 [Scoped credential listing](milestone-2-progress.md#scoped-credential-listing) adds
 bounded Rust summaries and continuations for the current authenticated snapshot.
 
