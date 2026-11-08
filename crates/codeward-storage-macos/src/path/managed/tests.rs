@@ -195,7 +195,7 @@ fn managed_preparation_refuses_recognized_cloud_roots_and_filesystem_aliases() {
     let dir = TestDir::new();
     for (cloud, alias) in [
         ("Library/CloudStorage", "Library/Cloudſtorage"),
-        ("library/mobile documents", "library/mobile documentſ"),
+        ("Library/Mobile Documents", "library/mobile documentſ"),
     ] {
         let home = dir.0.join(cloud).join("synthetic-account-home");
         fs::create_dir_all(&home).unwrap();
