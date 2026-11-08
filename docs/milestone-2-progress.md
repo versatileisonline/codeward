@@ -574,8 +574,10 @@ The [headless timer and macOS event source](headless-session-events.md) now
 schedule idle expiry and process revocation before commands and worker replies.
 Workspace sleep/wake and session switch observations use AppKit. Undocumented
 distributed screen-lock hints can only revoke. Bracketed Mach clocks provide
-a suspend-gap check even when a wake notice is missed. Process-local delivery
-was tested. Actual OS lock/sleep and desktop integration remain separate.
+a suspend-gap check even when a wake notice is missed. The
+[live probes](headless-session-events.md#live-macos-probe) passed for real
+lock/unlock and sleep/wake on macOS 26.3.1. Each revoked synthetic enrollment
+and confirmed that paper-code access remained denied afterward.
 
 ## Remaining work
 
@@ -639,8 +641,8 @@ experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Implement and validate Windows/Linux native storage. The bounded macOS policy
    is accepted. Quota and media-fault evidence and product admission remain separate.
-2. Validate real OS lock/sleep delivery and integrate the headless control loop
-   with the desktop host. Draft ownership and close interactions remain pending.
+2. Integrate the headless control loop with the desktop host and verify packaged
+   event delivery and redaction. Draft ownership and close interactions remain pending.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 

@@ -56,9 +56,9 @@ delivery require native evidence on every supported target. These tests do not
 establish prompt OS notifications or UI redaction.
 
 The [headless control loop](headless-session-events.md) schedules this deadline
-and collects macOS revocation observations. Live OS-event validation, desktop
-integration, draft ownership and close dialogs, timed reveal and packaged
-behavior remain pending.
+and collects macOS revocation observations. Live lock/unlock and sleep/wake
+revoked synthetic enrollment on macOS 26.3.1. Desktop integration, draft
+ownership and close dialogs, timed reveal and packaged behavior remain pending.
 An executing KDF runs to completion and a previously returned opaque result can
 retain access until delivery/drop.
 Clearing owned buffers is not complete erasure. The slice retains the existing

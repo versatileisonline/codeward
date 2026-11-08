@@ -1,10 +1,24 @@
 fn main() {
     #[cfg(target_os = "macos")]
-    macos::run();
+    match std::env::args().nth(1).as_deref() {
+        Some("--live-lock") => macos::live::run(macos::live::Scenario::Lock),
+        Some("--live-sleep") => macos::live::run(macos::live::Scenario::Sleep),
+        _ => macos::run(),
+    }
+    #[cfg(not(target_os = "macos"))]
+    if matches!(
+        std::env::args().nth(1).as_deref(),
+        Some("--live-lock" | "--live-sleep")
+    ) {
+        panic!("live session-event probes require macOS");
+    }
 }
 
 #[cfg(target_os = "macos")]
 mod macos {
+    #[path = "live.rs"]
+    pub(super) mod live;
+
     use std::{
         ffi::{CStr, c_char, c_void},
         time::Duration,
