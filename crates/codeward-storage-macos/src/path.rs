@@ -82,6 +82,21 @@ impl VaultPath {
             .map_or(&self.root, |entry| &entry.file)
     }
 
+    pub(super) fn namespace_directories(&self) -> impl Iterator<Item = &File> {
+        let count = if self.managed {
+            // Include the existing account home, which names Library.
+            managed::DIRECTORY_COUNT + 1
+        } else {
+            1
+        };
+        self.directories
+            .iter()
+            .rev()
+            .map(|entry| &entry.file)
+            .chain(std::iter::once(&self.root))
+            .take(count)
+    }
+
     fn verify_chain(&self) -> Result<(), NativeError> {
         if self.managed {
             managed::directory_permissions(&self.root, false)?;

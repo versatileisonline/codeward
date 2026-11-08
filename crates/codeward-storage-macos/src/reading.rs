@@ -11,6 +11,12 @@ use crate::{
     path::{open_error, private_acl, validate_regular},
 };
 
+pub(super) struct ObservedFile {
+    pub(super) file: File,
+    pub(super) metadata: Metadata,
+    pub(super) bytes: Vec<u8>,
+}
+
 impl ReadLease {
     /// Read bounded, unauthenticated encrypted input under retained exclusion.
     ///
@@ -22,10 +28,24 @@ impl ReadLease {
     /// Returned bytes still need the core's
     /// structural, authentication and schema gates; a read never grants access.
     pub fn read_current(&self) -> Result<Option<Vec<u8>>, NativeError> {
-        self.read_with_hook(|| {})
+        Ok(self.observe_current()?.map(|observed| observed.bytes))
     }
 
+    pub(super) fn observe_current(&self) -> Result<Option<ObservedFile>, NativeError> {
+        self.observe_with_hook(|| {})
+    }
+
+    #[cfg(test)]
     fn read_with_hook(&self, after_open: impl FnOnce()) -> Result<Option<Vec<u8>>, NativeError> {
+        Ok(self
+            .observe_with_hook(after_open)?
+            .map(|observed| observed.bytes))
+    }
+
+    fn observe_with_hook(
+        &self,
+        after_open: impl FnOnce(),
+    ) -> Result<Option<ObservedFile>, NativeError> {
         self.verify()?;
         let mut file =
             match native::open_at(self.path().parent(), &self.path().name, libc::O_RDONLY, 0) {
@@ -60,7 +80,11 @@ impl ReadLease {
         }
         self.verify()?;
         self.match_named(&self.path().name, &after)?;
-        Ok(Some(bytes))
+        Ok(Some(ObservedFile {
+            file,
+            metadata: after,
+            bytes,
+        }))
     }
 }
 

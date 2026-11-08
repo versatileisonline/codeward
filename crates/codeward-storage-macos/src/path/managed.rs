@@ -1,6 +1,7 @@
 use super::*;
 
 const SUFFIX: &str = "Library/Application Support/Codeward/Vaults/vault.cw";
+pub(super) const DIRECTORY_COUNT: usize = 4;
 
 impl VaultPath {
     /// Prepare the current OS account's fixed managed working location.
@@ -28,7 +29,10 @@ impl VaultPath {
             return Err(NativeError::InvalidPath);
         }
         let (names, name) = components(&home.join(SUFFIX))?;
-        let start = names.len().checked_sub(4).ok_or(NativeError::InvalidPath)?;
+        let start = names
+            .len()
+            .checked_sub(DIRECTORY_COUNT)
+            .ok_or(NativeError::InvalidPath)?;
         let private_start = names.len() - 2;
         let mut result = Self {
             root: File::open("/").map_err(|_| NativeError::Io)?,

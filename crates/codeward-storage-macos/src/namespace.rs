@@ -1,12 +1,11 @@
-use std::{
-    fs::{File, Metadata},
-    io,
-};
+use std::{fs::File, io};
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
 use crate::{
-    NativeError, ReadLease, native, path::open_error, reading::stamp, staging::stage_permissions,
+    NativeError, ReadLease, native,
+    reading::{ObservedFile, stamp},
+    staging::stage_permissions,
 };
 
 impl ReadLease {
@@ -15,8 +14,9 @@ impl ReadLease {
     /// `Some` supplies complete encrypted bytes from a trusted caller's already
     /// authenticated state; `None` requires the actual name to be absent. Bounds,
     /// bytes, identities, permissions and ACLs are checked under the same local
-    /// guard as publication. Present files and the parent each require fsync then
-    /// F_FULLFSYNC. Absence still requires both parent calls. No fallback/retry.
+    /// guard as publication. The checked file and directory handles each require
+    /// fsync then F_FULLFSYNC. Managed paths include every directory from Vaults
+    /// through the account home, even on reopen or when the vault is absent.
     ///
     /// Success establishes only that this candidate sequence completed against the
     /// checked observation. It does not authenticate input, authorize access or
@@ -42,21 +42,16 @@ impl ReadLease {
             .publication()
             .try_lock()
             .map_err(|_| NativeError::WriterUnavailable)?;
-        self.verify()?;
-        let current = if expected.is_some() {
-            let file = native::open_at(self.path().parent(), &self.path().name, libc::O_RDONLY, 0)
-                .map_err(open_error)?;
-            stage_permissions(&file)?;
-            let metadata = file.metadata().map_err(|_| NativeError::Io)?;
-            Some((file, metadata))
-        } else {
-            None
-        };
-        if self.read_current()?.as_deref() != expected {
+        let current = self.observe_current()?;
+        if current.as_ref().map(|file| file.bytes.as_slice()) != expected {
             return Err(NativeError::Conflict);
         }
-        self.verify_observation(&current)?;
-        if let Some((file, _)) = &current {
+        self.verify_observation(current.as_ref())?;
+        for file in current
+            .iter()
+            .map(|file| &file.file)
+            .chain(self.path().namespace_directories())
+        {
             operations
                 .fsync(file)
                 .map_err(|_| NativeError::SyncNamespace)?;
@@ -64,23 +59,18 @@ impl ReadLease {
                 .full_sync(file)
                 .map_err(|_| NativeError::SyncNamespace)?;
         }
-        operations
-            .fsync(self.path().parent())
-            .map_err(|_| NativeError::SyncNamespace)?;
-        operations
-            .full_sync(self.path().parent())
-            .map_err(|_| NativeError::SyncNamespace)?;
-        self.verify_observation(&current)
+        self.verify_observation(current.as_ref())
     }
 
-    fn verify_observation(&self, current: &Option<(File, Metadata)>) -> Result<(), NativeError> {
+    fn verify_observation(&self, current: Option<&ObservedFile>) -> Result<(), NativeError> {
         self.verify()?;
-        if let Some((file, before)) = current {
-            stage_permissions(file)?;
-            if stamp(&file.metadata().map_err(|_| NativeError::Io)?) != stamp(before) {
+        if let Some(current) = current {
+            stage_permissions(&current.file)?;
+            let after = current.file.metadata().map_err(|_| NativeError::Io)?;
+            if stamp(&after) != stamp(&current.metadata) {
                 return Err(NativeError::Conflict);
             }
-            self.match_named(&self.path().name, before)
+            self.match_named(&self.path().name, &after)
         } else {
             match native::named_stat(self.path().parent(), &self.path().name) {
                 Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
