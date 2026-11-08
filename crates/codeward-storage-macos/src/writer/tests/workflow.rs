@@ -11,7 +11,8 @@ use std::{
 use codeward_core::{
     credentials::{Credential, CredentialInput, CredentialSnapshot},
     transaction::{
-        CallerId, Committer, OperationStatus, Phase, Request, RequestId, Session, TransactionError,
+        AccessProof, CallerId, Committer, HeadlessVault, HostCompletion, OperationStatus, Phase,
+        Request, RequestId, Session, TransactionError,
     },
     vault::unlock_with_master,
 };
@@ -243,4 +244,84 @@ fn managed_workflow_creates_saves_survives_termination_and_recovers() {
     let recovered = unlock_with_master(&fs::read(&vault).unwrap(), REPLACEMENT).unwrap();
     assert!(*recovered.snapshot().encode().unwrap() == *snapshot().encode().unwrap());
     assert_eq!(fs::read(&abandoned).unwrap(), residue);
+}
+
+#[test]
+fn managed_headless_host_creates_saves_closes_and_recovers() {
+    fn completion(host: &mut HeadlessVault<ExperimentalWriterLease>) -> HostCompletion {
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        loop {
+            if let Some(result) = host.poll().unwrap() {
+                return result;
+            }
+            assert!(host.has_pending_work());
+            assert!(std::time::Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    let _master = MASTER_TESTS.lock().unwrap();
+    let dir = TestDir::new();
+    let mut host = HeadlessVault::begin_create(managed(&dir.0), OWNER).unwrap();
+    let paper = host.recovery_code().unwrap();
+    host.create(request(0), PASSWORD, PASSWORD, &paper).unwrap();
+    assert!(matches!(
+        completion(&mut host),
+        HostCompletion::Transaction {
+            outcome: Ok(OperationStatus::Committed { revision: 1 }),
+            refresh: None,
+            ..
+        }
+    ));
+    host.begin_authentication(AccessProof::Master(PASSWORD))
+        .unwrap();
+    assert!(matches!(
+        completion(&mut host),
+        HostCompletion::Authentication(Ok(()))
+    ));
+    let generation = host.generation();
+    host.save(request(1), &snapshot()).unwrap();
+    assert!(matches!(
+        completion(&mut host),
+        HostCompletion::Transaction {
+            outcome: Ok(OperationStatus::Committed { revision: 2 }),
+            refresh: Some(Ok(())),
+            ..
+        }
+    ));
+    let page = host.list_credentials(generation, 10, None).unwrap();
+    assert_eq!(page.revision, 2);
+    assert_eq!(page.summaries[0].title.as_str(), TITLE);
+    host.close();
+
+    let mut host = HeadlessVault::open(managed(&dir.0), OWNER).unwrap();
+    assert!(host.is_locked());
+    host.begin_authentication(AccessProof::Paper(&paper))
+        .unwrap();
+    assert!(matches!(
+        completion(&mut host),
+        HostCompletion::Authentication(Ok(()))
+    ));
+    assert!(host.list_credentials(host.generation(), 10, None).is_err());
+    host.replace_master_password(request(2), REPLACEMENT, REPLACEMENT)
+        .unwrap();
+    assert!(matches!(
+        completion(&mut host),
+        HostCompletion::Transaction {
+            outcome: Ok(OperationStatus::Committed { revision: 3 }),
+            refresh: None,
+            ..
+        }
+    ));
+    host.begin_authentication(AccessProof::Master(REPLACEMENT))
+        .unwrap();
+    assert!(matches!(
+        completion(&mut host),
+        HostCompletion::Authentication(Ok(()))
+    ));
+    let page = host.list_credentials(host.generation(), 10, None).unwrap();
+    assert_eq!(page.revision, 3);
+    assert_eq!(page.summaries[0].title.as_str(), TITLE);
+    host.lock();
+    assert!(host.is_locked());
 }
