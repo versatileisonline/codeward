@@ -40,7 +40,7 @@ pub struct VaultPath {
     root: File,
     directories: Vec<Directory>,
     pub(super) name: CString,
-    managed: bool,
+    managed_home: Option<usize>,
 }
 
 impl VaultPath {
@@ -54,7 +54,7 @@ impl VaultPath {
             root,
             directories: Vec::new(),
             name,
-            managed: false,
+            managed_home: None,
         };
         for name in names {
             let file = native::open_at(
@@ -83,12 +83,9 @@ impl VaultPath {
     }
 
     pub(super) fn namespace_directories(&self) -> impl Iterator<Item = &File> {
-        let count = if self.managed {
-            // Include the existing account home, which names Library.
-            managed::DIRECTORY_COUNT + 1
-        } else {
-            1
-        };
+        let count = self
+            .managed_home
+            .map_or(1, |home| self.directories.len() - home);
         self.directories
             .iter()
             .rev()
@@ -98,11 +95,12 @@ impl VaultPath {
     }
 
     fn verify_chain(&self) -> Result<(), NativeError> {
-        if self.managed {
+        if self.managed_home.is_some() {
             managed::directory_permissions(&self.root, false)?;
         }
         let mut parent = &self.root;
-        for entry in &self.directories {
+        let mut managed_device = None;
+        for (index, entry) in self.directories.iter().enumerate() {
             let named =
                 native::named_stat(parent, &entry.name).map_err(|_| NativeError::Conflict)?;
             if named.st_mode & libc::S_IFMT != libc::S_IFDIR
@@ -110,7 +108,13 @@ impl VaultPath {
             {
                 return Err(NativeError::Conflict);
             }
-            if self.managed {
+            if let Some(home) = self.managed_home {
+                if index == home {
+                    managed_device = Some(entry.identity.0);
+                }
+                if managed_device.is_some_and(|device| entry.identity.0 != device) {
+                    return Err(NativeError::Unsupported);
+                }
                 managed::directory_permissions(&entry.file, entry.private)?;
             }
             parent = &entry.file;
@@ -120,7 +124,7 @@ impl VaultPath {
 
     pub(super) fn verify(&self) -> Result<(), NativeError> {
         self.verify_chain()?;
-        if !self.managed {
+        if self.managed_home.is_none() {
             let metadata = self.parent().metadata().map_err(|_| NativeError::Io)?;
             if metadata.uid() != native::effective_uid() || metadata.mode() & 0o022 != 0 {
                 return Err(NativeError::Permissions);
@@ -128,8 +132,7 @@ impl VaultPath {
             private_acl(self.parent())?;
         }
         // Revalidate the retained destination's mount at every shared checkpoint,
-        // not only at initial resolution. Ancestor mounts may legitimately differ.
-        // These flags do not prove that a local APFS directory is outside sync.
+        // not only at initial resolution. Mounts above the managed home may differ.
         if !native::local_writable_apfs(self.parent()).map_err(|_| NativeError::Io)? {
             return Err(NativeError::Unsupported);
         }

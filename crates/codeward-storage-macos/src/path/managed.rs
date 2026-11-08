@@ -1,16 +1,18 @@
 use super::*;
 
 const SUFFIX: &str = "Library/Application Support/Codeward/Vaults/vault.cw";
-pub(super) const DIRECTORY_COUNT: usize = 4;
+const DIRECTORY_COUNT: usize = 4;
 
 impl VaultPath {
     /// Prepare the current OS account's fixed managed working location.
     ///
     /// Uses the account database, never a UI path or HOME override. Missing
     /// fixed application-data directories are created privately and existing
-    /// entries are validated without repair. No vault file is created, copied,
-    /// deleted or declared ready. Synthetic inputs only until runtime storage
-    /// and persistence acceptance are complete. Initial nonsandboxed macOS only.
+    /// entries are validated without repair. The account home and managed tree
+    /// must share one local APFS device. Recognized cloud roots are refused.
+    /// Preparation leaves the vault file untouched. Synthetic inputs only until
+    /// runtime storage and persistence acceptance are complete. Initial
+    /// nonsandboxed macOS only.
     pub fn managed() -> Result<Self, NativeError> {
         let home = native::account_home().map_err(|_| NativeError::Io)?;
         Self::prepare_managed(&home, |_| {})
@@ -33,15 +35,28 @@ impl VaultPath {
             .len()
             .checked_sub(DIRECTORY_COUNT)
             .ok_or(NativeError::InvalidPath)?;
+        let home_index = start.checked_sub(1).ok_or(NativeError::InvalidPath)?;
+        if names[..start].windows(2).any(|pair| {
+            let root = pair[1].as_bytes();
+            pair[0].as_bytes().eq_ignore_ascii_case(b"Library")
+                && (root.eq_ignore_ascii_case(b"CloudStorage")
+                    || root.eq_ignore_ascii_case(b"Mobile Documents"))
+        }) {
+            return Err(NativeError::Unsupported);
+        }
         let private_start = names.len() - 2;
         let mut result = Self {
             root: File::open("/").map_err(|_| NativeError::Io)?,
             directories: Vec::new(),
             name,
-            managed: true,
+            managed_home: Some(home_index),
         };
         for (index, name) in names.into_iter().enumerate() {
-            result.verify_chain()?;
+            if index == start {
+                result.verify()?;
+            } else {
+                result.verify_chain()?;
+            }
             let open = || {
                 native::open_at(
                     result.parent(),

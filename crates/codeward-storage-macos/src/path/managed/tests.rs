@@ -191,6 +191,25 @@ fn managed_preparation_refuses_bad_home_or_mount_without_creating_a_fallback() {
 }
 
 #[test]
+fn managed_preparation_refuses_recognized_cloud_root_components_without_touching_them() {
+    let dir = TestDir::new();
+    for cloud in ["Library/CloudStorage", "library/mobile documents"] {
+        let home = dir.0.join(cloud).join("synthetic-account-home");
+        fs::create_dir_all(&home).unwrap();
+        fs::write(home.join("untouched"), b"synthetic").unwrap();
+        assert_eq!(
+            VaultPath::managed_for_test(&home).err(),
+            Some(NativeError::Unsupported)
+        );
+        assert_eq!(fs::read(home.join("untouched")).unwrap(), b"synthetic");
+        assert!(!home.join("Library").exists());
+    }
+    let home = dir.0.join("Library/CloudStorage-local/account");
+    fs::create_dir_all(&home).unwrap();
+    assert!(VaultPath::managed_for_test(&home).is_ok());
+}
+
+#[test]
 fn managed_substitution_after_open_is_refused_without_removing_either_directory() {
     for target_private in [false, true] {
         let dir = TestDir::new();
