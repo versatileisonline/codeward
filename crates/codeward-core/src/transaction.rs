@@ -17,9 +17,11 @@ use sha2::{Digest, Sha256};
 
 use crate::{envelope::UnauthenticatedEnvelope, vault::VaultError};
 
+mod host;
 mod session;
 mod storage;
 mod worker;
+pub use host::{AccessProof, HeadlessVault, HostCompletion, HostError};
 pub use session::{
     ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialPage,
     CredentialSummary, INACTIVITY_TIMEOUT, MAX_CREDENTIAL_SUMMARIES, Session, SessionActivity,
