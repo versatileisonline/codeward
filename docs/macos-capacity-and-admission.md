@@ -14,9 +14,10 @@ The path to the account home may cross onto an approved APFS volume. The managed
 subtree may not cross onto a second volume.
 
 An account home inside `Library/CloudStorage` or `Library/Mobile Documents` is
-refused before directory preparation. These component checks cover recognized
-File Provider and iCloud roots. A third-party tool can still copy any reachable
-directory; deliberately synced locations are outside the supported storage scope.
+refused before creating managed directories. The check uses filesystem lookup
+and directory identity, which also catches spellings that alias those roots.
+Third-party tools can still copy reachable directories. Locations configured for
+sync are outside the supported storage scope.
 [Dropbox File Provider layout](https://help.dropbox.com/installs/fix-domain-conflict-on-mac) ·
 [Apple iCloud container layout](https://developer.apple.com/library/archive/documentation/General/Conceptual/iCloudDesignGuide/Chapters/TestingandDebuggingforiCloud.html)
 

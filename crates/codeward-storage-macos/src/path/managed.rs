@@ -36,14 +36,6 @@ impl VaultPath {
             .checked_sub(DIRECTORY_COUNT)
             .ok_or(NativeError::InvalidPath)?;
         let home_index = start.checked_sub(1).ok_or(NativeError::InvalidPath)?;
-        if names[..start].windows(2).any(|pair| {
-            let root = pair[1].as_bytes();
-            pair[0].as_bytes().eq_ignore_ascii_case(b"Library")
-                && (root.eq_ignore_ascii_case(b"CloudStorage")
-                    || root.eq_ignore_ascii_case(b"Mobile Documents"))
-        }) {
-            return Err(NativeError::Unsupported);
-        }
         let private_start = names.len() - 2;
         let mut result = Self {
             root: File::open("/").map_err(|_| NativeError::Io)?,
@@ -51,6 +43,7 @@ impl VaultPath {
             name,
             managed_home: Some(home_index),
         };
+        let mut parent_is_library = false;
         for (index, name) in names.into_iter().enumerate() {
             if index == start {
                 result.verify()?;
@@ -81,6 +74,16 @@ impl VaultPath {
                 Err(error) => return Err(open_error(error)),
             };
             let identity = Identity::of(&file.metadata().map_err(|_| NativeError::Io)?);
+            if index < start {
+                if parent_is_library {
+                    for cloud in [c"CloudStorage", c"Mobile Documents"] {
+                        if named_directory_matches(result.parent(), cloud, identity)? {
+                            return Err(NativeError::Unsupported);
+                        }
+                    }
+                }
+                parent_is_library = named_directory_matches(result.parent(), c"Library", identity)?;
+            }
             result.directories.push(Directory {
                 file,
                 name,
@@ -92,6 +95,22 @@ impl VaultPath {
         }
         result.verify()?;
         Ok(result)
+    }
+}
+
+fn named_directory_matches(
+    parent: &File,
+    name: &CStr,
+    identity: Identity,
+) -> Result<bool, NativeError> {
+    // Let the mounted filesystem resolve spelling aliases before comparing.
+    match native::named_stat(parent, name) {
+        Ok(entry) => {
+            Ok(entry.st_mode & libc::S_IFMT == libc::S_IFDIR
+                && Identity::of_stat(&entry) == identity)
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(open_error(error)),
     }
 }
 
