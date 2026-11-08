@@ -116,6 +116,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "codeward-host-macos"
+version = "0.1.0"
+dependencies = [
+ "codeward-core",
+]
+
+[[package]]
 name = "codeward-storage-macos"
 version = "0.1.0"
 dependencies = [
