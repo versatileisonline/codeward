@@ -364,6 +364,22 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         self.discard_revoked_authentication();
     }
 
+    pub(super) fn take_inactivity_revocation(&mut self) -> bool {
+        self.poll_deadline();
+        let revoked = self.session.take_inactivity_revocation();
+        // A command can observe expiry internally and then start fresh access.
+        // If its reply is revoked, revoke that newly armed state as well.
+        if revoked && self.session.inactivity_deadline().is_some() {
+            self.lock();
+        }
+        revoked
+    }
+
+    #[cfg(test)]
+    pub(super) fn set_deadline_for_test(&mut self, deadline: Instant) {
+        self.session.set_deadline_for_test(deadline);
+    }
+
     fn discard_revoked_authentication(&mut self) {
         if self.session.inactivity_deadline().is_none() {
             self.discard_authentication();

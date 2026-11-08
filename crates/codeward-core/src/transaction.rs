@@ -17,10 +17,14 @@ use sha2::{Digest, Sha256};
 
 use crate::{envelope::UnauthenticatedEnvelope, vault::VaultError};
 
+mod event_loop;
 mod host;
 mod session;
 mod storage;
 mod worker;
+pub use event_loop::{
+    ControlError, ControlUpdate, EventSourceError, HeadlessControlLoop, HeadlessEventSource,
+};
 pub use host::{AccessProof, HeadlessVault, HostCompletion, HostError};
 pub use session::{
     ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialPage,
