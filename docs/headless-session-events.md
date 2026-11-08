@@ -11,8 +11,9 @@ at a time through `command`.
 - Each iteration collects pending revocation before draining worker results.
   It also checks immediately before and after a command. A queued lock wins
   before the command starts. Revocation at the second check discards the
-  command reply, including any credential page. The caller uses `Revoked` or
-  the update's revocation flag to clear prior access state and retained replies.
+  command reply, including any credential page. Clear prior access state and
+  retained replies on `Revoked`, `EventSourceUnavailable` or the update's
+  revocation flag.
 - The wait is bounded by the core's five-minute inactivity deadline, the
   caller's wait bound, and a 20 ms worker poll while work is outstanding.
   At the deadline the loop polls the core even when there is no active worker.

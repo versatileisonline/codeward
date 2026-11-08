@@ -27,7 +27,8 @@ pub enum ControlError {
     /// A trusted event or inactivity revoked access at the command boundary.
     /// Discard older access and redaction-sensitive state on this signal.
     Revoked,
-    /// The event source failed. Reconstruct the loop with a working source.
+    /// The event source failed and access was revoked. Discard older access and
+    /// redaction-sensitive state and reconstruct the loop with a working source.
     EventSourceUnavailable,
     /// The underlying headless host refused the command.
     Host(HostError),
