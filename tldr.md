@@ -35,6 +35,7 @@ Root:
 - [macos-stage-ownership.md](docs/macos-stage-ownership.md): Owned staging markers, shared writer lifetime and transaction ownership boundaries.
 - [macos-experimental-writer.md](docs/macos-experimental-writer.md): Default-off managed storage adapter, bounded observations, shared tests and acceptance limits.
 - [macos-managed-workflow.md](docs/macos-managed-workflow.md): Managed namespace barriers and headless create, save, terminate, reopen and recovery evidence.
+- [macos-capacity-and-admission.md](docs/macos-capacity-and-admission.md): Real disk-full evidence, managed location and leftover-file rules.
 - [continuous-integration.md](docs/continuous-integration.md): Rust CI checks, action pins, hosted evidence and local validation policy.
 
 `docs/adr/`:

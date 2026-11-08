@@ -546,6 +546,19 @@ The locked/offline native crate suite and doctests passed locally on 2026-11-07,
 along with workspace formatting and all-feature/all-target Clippy with warnings
 denied. This evidence covers the tested synthetic configuration.
 
+## macOS capacity and admission
+
+The [capacity and admission slice](macos-capacity-and-admission.md) requires one
+device from the account home through the managed subtree and refuses recognized
+cloud roots. The shared writer keeps the named vault authoritative and preserves
+complete, partial, linked and unrelated leftovers. A disposable APFS image test
+observed real kernel `ENOSPC`, preserved the previous committed bytes when staging
+failed and completed a new explicit retry after releasing space. It also exercised
+refusal of a real nested mount and reopened the retry through both access routes.
+The native suite and doctests passed locked/offline locally. The opt-in capacity
+case and final focused admission/residue tests passed separately, along with
+workspace formatting and all-feature/all-target Clippy with warnings denied.
+
 ## Remaining work
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
@@ -606,10 +619,10 @@ doctests, native Clippy/formatting, concurrent readers and 14 child kills around
 publication. The namespace experiment above adds candidate barriers; neither
 experiment establishes complete persistence acceptance or the writable adapter.
 
-1. Review the bounded macOS application-termination evidence, supported-location
-   and preserve-all residue policy under ADR-0003/0006. Complete remaining storage
-   fault evidence before real-vault admission. Implement and validate Windows/Linux
-   separately.
+1. Review the macOS application-termination and disk-full evidence, supported
+   location and preserve-all residue policy under ADR-0003/0006 before real-vault
+   admission. Quota and media-fault evidence remain separate. Implement and
+   validate Windows/Linux native storage.
 2. Complete application session/lifecycle orchestration, including dispatch of
    authentication and commit results, draft ownership and post-save refresh.
    Later UI/OS event adapters must enforce the accepted lock/redaction policy.

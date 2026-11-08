@@ -55,6 +55,10 @@ zero/partial native writes in isolated children on managed synthetic homes, with
 no false commit or replay when the process file-size limit is restored.
 The [managed workflow](../../docs/macos-managed-workflow.md) tests this shared
 writer directly through create, save, process kill, reopen and recovery.
+The [capacity runner](../../docs/macos-capacity-and-admission.md) adds opt-in real
+disk-full testing on a disposable APFS image. Managed admission refuses a second
+device inside the account subtree and recognized cloud roots. Leftover files
+are preserved, including when the named vault is missing or invalid.
 
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or
