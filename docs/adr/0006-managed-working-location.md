@@ -30,6 +30,14 @@ no group/world write and no ACL grants. Deny-only ancestor ACLs are permitted.
 Never follow symlinks, repair permissions, replace unrelated entries or clean up
 ambiguous residue to obtain a usable path. Unsupported storage refuses operations.
 
+For macOS, require one local writable nonremovable APFS device from the account
+home through the fixed managed subtree. Refuse account homes within the recognized
+`Library/CloudStorage` and `Library/Mobile Documents` roots. Arbitrarily configured
+third-party synchronization remains outside the supported location. Treat the
+named `vault.cw` as sole authority and preserve all leftover stages and unrelated
+entries, even when the vault is missing or invalid. See
+[capacity and admission evidence](../macos-capacity-and-admission.md).
+
 The existing generic native resolver remains synthetic experiment infrastructure;
 the future application runtime must obtain the managed destination. Its UI command
 surface cannot bypass admission through arbitrary file selection. A missing file

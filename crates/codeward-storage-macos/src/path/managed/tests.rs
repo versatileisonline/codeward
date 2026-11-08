@@ -191,6 +191,36 @@ fn managed_preparation_refuses_bad_home_or_mount_without_creating_a_fallback() {
 }
 
 #[test]
+fn managed_preparation_refuses_recognized_cloud_roots_and_filesystem_aliases() {
+    let dir = TestDir::new();
+    for (cloud, alias) in [
+        ("Library/CloudStorage", "Library/Cloudſtorage"),
+        ("Library/Mobile Documents", "library/mobile documentſ"),
+    ] {
+        let home = dir.0.join(cloud).join("synthetic-account-home");
+        fs::create_dir_all(&home).unwrap();
+        fs::write(home.join("untouched"), b"synthetic").unwrap();
+        assert_eq!(
+            VaultPath::managed_for_test(&home).err(),
+            Some(NativeError::Unsupported)
+        );
+        assert_eq!(fs::read(home.join("untouched")).unwrap(), b"synthetic");
+        assert!(!home.join("Library").exists());
+        let alias_home = dir.0.join(alias).join("synthetic-account-home");
+        if let Ok(metadata) = fs::metadata(&alias_home) {
+            assert!(Identity::of(&metadata) == Identity::of(&fs::metadata(&home).unwrap()));
+            assert_eq!(
+                VaultPath::managed_for_test(&alias_home).err(),
+                Some(NativeError::Unsupported)
+            );
+        }
+    }
+    let home = dir.0.join("Library/CloudStorage-local/account");
+    fs::create_dir_all(&home).unwrap();
+    assert!(VaultPath::managed_for_test(&home).is_ok());
+}
+
+#[test]
 fn managed_substitution_after_open_is_refused_without_removing_either_directory() {
     for target_private in [false, true] {
         let dir = TestDir::new();

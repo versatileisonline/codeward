@@ -48,9 +48,11 @@ checks succeed. Barrier failures after publication enter `OutcomeUnknown` under
 
 This evidence covers application termination at the stated checkpoints on the
 tested local configuration. The [native kernel write tests](macos-write-failures.md)
-cover real `EFBIG` and partial writes separately. Actual capacity/quota exhaustion,
-media faults, OS crashes and power loss require separate evidence. A fixed
-managed path and APFS checks cannot establish that third-party sync is absent.
+cover real `EFBIG` and partial writes separately. The later
+[capacity and admission tests](macos-capacity-and-admission.md) cover real disk-full
+staging failure. Quota exhaustion, media faults, OS crashes and power loss require
+separate evidence. A fixed managed path and APFS checks cannot establish that
+third-party sync is absent.
 Review the supported location and residue policy under
 [ADR-0006](adr/0006-managed-working-location.md) and
 [ADR-0003](adr/0003-committed-writes.md) before real-vault admission.

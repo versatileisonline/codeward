@@ -19,29 +19,40 @@ pub(crate) enum MountFault {
 
 thread_local! {
     static MOUNT_FAULT: Cell<Option<MountFault>> = const { Cell::new(None) };
+    static CAPACITY_IMAGE_DEVICE: Cell<Option<u64>> = const { Cell::new(None) };
 }
 
 // A scoped current-thread query result, never a real remount. Other test threads
 // and spawned child processes continue to query their actual native filesystem.
 pub(crate) struct MountProbe {
     previous: Option<MountFault>,
+    previous_capacity_device: Option<u64>,
     _thread: std::marker::PhantomData<std::rc::Rc<()>>,
 }
 impl MountProbe {
     pub(crate) fn new() -> Self {
         Self {
             previous: MOUNT_FAULT.replace(None),
+            previous_capacity_device: CAPACITY_IMAGE_DEVICE.replace(None),
             _thread: std::marker::PhantomData,
         }
     }
     pub(crate) fn set(&self, fault: Option<MountFault>) {
         MOUNT_FAULT.set(fault);
     }
+    pub(crate) fn allow_capacity_image(&self, device: u64) {
+        CAPACITY_IMAGE_DEVICE.set(Some(device));
+    }
 }
 impl Drop for MountProbe {
     fn drop(&mut self) {
         MOUNT_FAULT.set(self.previous);
+        CAPACITY_IMAGE_DEVICE.set(self.previous_capacity_device);
     }
+}
+
+pub(crate) fn capacity_image_device() -> Option<u64> {
+    CAPACITY_IMAGE_DEVICE.get()
 }
 
 pub(crate) fn mount_result() -> Option<io::Result<bool>> {

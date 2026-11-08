@@ -79,6 +79,9 @@ Default builds omit it; real-vault use and milestone acceptance remain gated.
 The [headless managed workflow](macos-managed-workflow.md) exercises this writer
 directly for creation, save, process termination, reopen and recovery on local APFS.
 Managed commits now flush each directory entry through the account home.
+[Capacity and admission evidence](macos-capacity-and-admission.md) adds real
+disk-full failure and explicit retry on an isolated APFS image, rejects nested
+mounts and recognized cloud roots, and verifies preservation of leftover files.
 The [split-phase authentication slice](session-authentication.md) now lets a core
 session revoke a queued/running verification and reject stale completion. Full
 session dispatch, host timers, drafts and platform adapters remain pending.

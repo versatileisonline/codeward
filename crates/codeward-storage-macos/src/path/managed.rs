@@ -1,16 +1,18 @@
 use super::*;
 
 const SUFFIX: &str = "Library/Application Support/Codeward/Vaults/vault.cw";
-pub(super) const DIRECTORY_COUNT: usize = 4;
+const DIRECTORY_COUNT: usize = 4;
 
 impl VaultPath {
     /// Prepare the current OS account's fixed managed working location.
     ///
     /// Uses the account database, never a UI path or HOME override. Missing
     /// fixed application-data directories are created privately and existing
-    /// entries are validated without repair. No vault file is created, copied,
-    /// deleted or declared ready. Synthetic inputs only until runtime storage
-    /// and persistence acceptance are complete. Initial nonsandboxed macOS only.
+    /// entries are validated without repair. The account home and managed tree
+    /// must share one local APFS device. Recognized cloud roots are refused.
+    /// Preparation leaves the vault file untouched. Synthetic inputs only until
+    /// runtime storage and persistence acceptance are complete. Initial
+    /// nonsandboxed macOS only.
     pub fn managed() -> Result<Self, NativeError> {
         let home = native::account_home().map_err(|_| NativeError::Io)?;
         Self::prepare_managed(&home, |_| {})
@@ -33,15 +35,21 @@ impl VaultPath {
             .len()
             .checked_sub(DIRECTORY_COUNT)
             .ok_or(NativeError::InvalidPath)?;
+        let home_index = start.checked_sub(1).ok_or(NativeError::InvalidPath)?;
         let private_start = names.len() - 2;
         let mut result = Self {
             root: File::open("/").map_err(|_| NativeError::Io)?,
             directories: Vec::new(),
             name,
-            managed: true,
+            managed_home: Some(home_index),
         };
+        let mut parent_is_library = false;
         for (index, name) in names.into_iter().enumerate() {
-            result.verify_chain()?;
+            if index == start {
+                result.verify()?;
+            } else {
+                result.verify_chain()?;
+            }
             let open = || {
                 native::open_at(
                     result.parent(),
@@ -66,6 +74,16 @@ impl VaultPath {
                 Err(error) => return Err(open_error(error)),
             };
             let identity = Identity::of(&file.metadata().map_err(|_| NativeError::Io)?);
+            if index < start {
+                if parent_is_library {
+                    for cloud in [c"CloudStorage", c"Mobile Documents"] {
+                        if named_directory_matches(result.parent(), cloud, identity)? {
+                            return Err(NativeError::Unsupported);
+                        }
+                    }
+                }
+                parent_is_library = named_directory_matches(result.parent(), c"Library", identity)?;
+            }
             result.directories.push(Directory {
                 file,
                 name,
@@ -77,6 +95,22 @@ impl VaultPath {
         }
         result.verify()?;
         Ok(result)
+    }
+}
+
+fn named_directory_matches(
+    parent: &File,
+    name: &CStr,
+    identity: Identity,
+) -> Result<bool, NativeError> {
+    // Let the mounted filesystem resolve spelling aliases before comparing.
+    match native::named_stat(parent, name) {
+        Ok(entry) => {
+            Ok(entry.st_mode & libc::S_IFMT == libc::S_IFDIR
+                && Identity::of_stat(&entry) == identity)
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(open_error(error)),
     }
 }
 
