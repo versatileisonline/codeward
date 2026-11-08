@@ -65,6 +65,10 @@ and platform matrix; focused local results do not substitute for that required g
 
 ## Remaining acceptance
 
+The [managed workflow](macos-managed-workflow.md) now uses this adapter directly
+to exercise acknowledged saves, termination, exclusion and recovery on local APFS.
+The headless harness supplies a disposable home to the managed resolver.
+
 An opt-in writer is not accepted native storage, a usable credential application,
 an OS-crash/power-loss guarantee or packaged support. Location/native persistence
 acceptance, full application sessions, Windows/Linux adapters and integrated

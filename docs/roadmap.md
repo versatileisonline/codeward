@@ -76,6 +76,9 @@ Runtime integration and native acceptance remain separate gates.
 The [shared experimental writer](macos-experimental-writer.md) now supplies the
 storage-trait implementation for explicit opt-in and reuses it in synthetic tests.
 Default builds omit it; real-vault use and milestone acceptance remain gated.
+The [headless managed workflow](macos-managed-workflow.md) exercises this writer
+directly for creation, save, process termination, reopen and recovery on local APFS.
+Managed commits now flush each directory entry through the account home.
 The [split-phase authentication slice](session-authentication.md) now lets a core
 session revoke a queued/running verification and reject stale completion. Full
 session dispatch, host timers, drafts and platform adapters remain pending.
