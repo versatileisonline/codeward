@@ -533,6 +533,19 @@ reacquisition/repetition. Exact/over-cap, per-step injected sync errors, ACLs,
 substitutions and same-lease contention are covered. This does not establish
 inside-syscall interruption, OS-crash/power-loss or native transaction acceptance.
 
+## Managed macOS commit workflow
+
+The [headless managed workflow](macos-managed-workflow.md) exercises the shared
+writer directly on a disposable Apple silicon APFS home. It covers initial
+creation, process termination before publication and after an acknowledged save,
+exclusive ownership, reopen, lock, paper recovery and reconciliation after a
+barrier refusal. The full recovered snapshot and preserved encrypted residue are
+checked. Replacement and barriers now compare bytes from one retained descriptor.
+The managed directory barriers run from `Vaults` through the account home.
+The locked/offline native crate suite and doctests passed locally on 2026-11-07,
+along with workspace formatting and all-feature/all-target Clippy with warnings
+denied. This evidence covers the tested synthetic configuration.
+
 ## Remaining work
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
@@ -593,10 +606,10 @@ doctests, native Clippy/formatting, concurrent readers and 14 child kills around
 publication. The namespace experiment above adds candidate barriers; neither
 experiment establishes complete persistence acceptance or the writable adapter.
 
-1. Complete macOS namespace acceptance and authoritative residue handling under
-   ADR-0003, then enable the experimental writer in an application only after its
-   admission gates are complete. Validate remaining ancestor/
-   location policy before real-vault support; implement/validate Windows/Linux separately.
+1. Review the bounded macOS application-termination evidence, supported-location
+   and preserve-all residue policy under ADR-0003/0006. Complete remaining storage
+   fault evidence before real-vault admission. Implement and validate Windows/Linux
+   separately.
 2. Complete application session/lifecycle orchestration, including dispatch of
    authentication and commit results, draft ownership and post-save refresh.
    Later UI/OS event adapters must enforce the accepted lock/redaction policy.

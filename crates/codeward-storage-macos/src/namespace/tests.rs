@@ -37,7 +37,7 @@ fn managed_ancestor_change_at_last_barrier_refuses_present_or_absent_success() {
                 .unwrap();
         }
         let lease = path.acquire().unwrap();
-        let count = if present { 4 } else { 2 };
+        let count = if present { 12 } else { 10 };
         let mut probe = Probe {
             hook: Some(Box::new(|index| {
                 if index == count {
@@ -58,12 +58,15 @@ fn managed_ancestor_change_at_last_barrier_refuses_present_or_absent_success() {
 #[derive(Default)]
 struct Probe<'a> {
     calls: Vec<Step>,
+    inodes: Vec<u64>,
     fail: Option<(usize, i32)>,
     hook: Option<Box<dyn FnMut(usize) + 'a>>,
 }
 impl Probe<'_> {
     fn run(&mut self, file: &File, full: bool) -> io::Result<()> {
-        self.calls.push((file.metadata()?.is_dir(), full));
+        let metadata = file.metadata()?;
+        self.calls.push((metadata.is_dir(), full));
+        self.inodes.push(metadata.ino());
         if let Some((index, code)) = self.fail
             && self.calls.len() == index
         {
@@ -79,6 +82,67 @@ impl Probe<'_> {
         }
         Ok(())
     }
+}
+
+#[test]
+fn managed_namespace_flushes_each_retained_directory_leaf_first_even_after_reopen() {
+    let dir = TestDir::new();
+    // A previous process can create part or all of the tree without committing.
+    drop(VaultPath::managed_for_test(&dir.0).unwrap());
+    let vault = dir.managed_vault();
+    let directories: Vec<_> = vault
+        .ancestors()
+        .skip(1)
+        .take(5)
+        .map(|path| fs::metadata(path).unwrap().ino())
+        .collect();
+    assert_eq!(
+        directories.last(),
+        Some(&fs::metadata(&dir.0).unwrap().ino())
+    );
+
+    let lease = VaultPath::managed_for_test(&dir.0)
+        .unwrap()
+        .acquire()
+        .unwrap();
+    let mut absent = Probe::default();
+    lease.namespace_with(None, &mut absent).unwrap();
+    let paired: Vec<_> = directories
+        .iter()
+        .flat_map(|&inode| [inode, inode])
+        .collect();
+    assert_eq!(absent.inodes, paired);
+    assert_eq!(absent.calls, [(true, false), (true, true)].repeat(5));
+
+    let bytes = fixture();
+    lease
+        .prepare_stage(&bytes)
+        .unwrap()
+        .publish_create()
+        .unwrap();
+    let file_inode = fs::metadata(vault).unwrap().ino();
+    let mut expected = vec![file_inode; 2];
+    expected.extend(paired);
+    for (index, error) in [(7, libc::ENOSPC), (12, libc::EIO)] {
+        let mut refused = Probe {
+            fail: Some((index, error)),
+            ..Probe::default()
+        };
+        assert_eq!(
+            lease.namespace_with(Some(&bytes), &mut refused),
+            Err(NativeError::SyncNamespace)
+        );
+        assert_eq!(refused.inodes, expected[..index]);
+        assert_eq!(
+            lease.read_current().unwrap().as_deref(),
+            Some(bytes.as_slice())
+        );
+    }
+    let mut present = Probe::default();
+    lease.namespace_with(Some(&bytes), &mut present).unwrap();
+    assert_eq!(present.inodes, expected);
+    assert_eq!(present.calls[..2], [(false, false), (false, true)]);
+    assert_eq!(present.calls[2..], absent.calls);
 }
 impl NamespaceIo for Probe<'_> {
     fn fsync(&mut self, file: &File) -> io::Result<()> {

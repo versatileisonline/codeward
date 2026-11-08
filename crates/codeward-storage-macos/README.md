@@ -37,8 +37,9 @@ revalidate identities/permissions and preserve uncertainty after native errors.
 Success means visibility only. Residue is never cleaned up or promoted on restart.
 
 `synchronize_namespace` checks expected complete encrypted bytes or absence and
-exercises strict file/parent fsync and F_FULLFSYNC barriers under the publication
-guard. It preserves errors/observed conflicts without fallback, rollback or cleanup.
+flushes the checked file descriptor under the publication guard. Managed paths
+require fsync and F_FULLFSYNC on the retained directories through the account home.
+It preserves errors and observed conflicts for reconciliation.
 This candidate sequence does not establish storage acceptance or acknowledge saves.
 
 A [default-off experimental adapter](../../docs/macos-experimental-writer.md)
@@ -52,6 +53,8 @@ fault controls are absent from runtime builds.
 Its [kernel write-failure cases](../../docs/macos-write-failures.md) now exercise
 zero/partial native writes in isolated children on managed synthetic homes, with
 no false commit or replay when the process file-size limit is restored.
+The [managed workflow](../../docs/macos-managed-workflow.md) tests this shared
+writer directly through create, save, process kill, reopen and recovery.
 
 The separate crate contains narrowly documented native calls through already
 locked libc 0.2.191. `codeward-core` remains unsafe-free. No new registry version or

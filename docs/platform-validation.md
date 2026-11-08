@@ -9,6 +9,9 @@ does not establish writable-adapter acceptance, persistence or packaged support.
 The [kernel write-failure experiment](macos-write-failures.md) adds actual
 child-local EFBIG/partial-progress cases on managed synthetic destinations; it
 does not substitute for capacity/quota, media-error or namespace acceptance.
+The [headless managed workflow](macos-managed-workflow.md) adds direct shared-writer
+evidence for creation, acknowledged save survival across application termination,
+writer exclusion and recovered access on the tested Apple silicon APFS system.
 
 [Rust CI evidence](continuous-integration.md) covers core tests/doctests and Clippy
 on hosted Ubuntu 24.04, Windows Server 2025 and macOS 26, with native foundation

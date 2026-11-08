@@ -70,28 +70,17 @@ impl PreparedStage {
                 .map_err(open_error)?;
             self.verify_stage(&stage)?;
 
-            // Hold the current descriptor through the bounded comparison and
-            // recheck its name, so an observed substitution/ACL change refuses.
-            let current = if expected.is_some() {
-                let file =
-                    native::open_at(lease.path().parent(), &lease.path().name, libc::O_RDONLY, 0)
-                        .map_err(open_error)?;
-                private_acl(&file)?;
-                let metadata = file.metadata().map_err(|_| NativeError::Io)?;
-                Some((file, metadata))
-            } else {
-                None
-            };
-            let actual = lease.read_current()?;
-            if actual.as_deref() != expected {
+            let current = lease.observe_current()?;
+            if current.as_ref().map(|file| file.bytes.as_slice()) != expected {
                 return Err(NativeError::Conflict);
-            }
-            if let Some((file, metadata)) = current {
-                private_acl(&file)?;
-                lease.match_named(&lease.path().name, &metadata)?;
             }
             self.verify_stage(&stage)?;
             lease.verify()?;
+            // Recheck the same object whose bytes matched the expected base.
+            if let Some(current) = current {
+                private_acl(&current.file)?;
+                lease.match_named(&lease.path().name, &current.metadata)?;
+            }
             Ok(stage)
         };
         let stage = before().map_err(PublicationError::NotPublished)?;

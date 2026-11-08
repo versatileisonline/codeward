@@ -24,6 +24,10 @@ Expected absence still requires both parent operations. Errors, including unsupp
 calls or interruption, have no downgrade or automatic retry. A visible matching
 file alone is never substituted for the barrier sequence.
 
+The later [managed workflow](macos-managed-workflow.md) compares the expected bytes
+on the descriptor it flushes and extends managed directory barriers through the
+account home. The file/parent experiment below describes the original sequence.
+
 Successful native calls and process-kill evidence are distinct from OS-crash or
 power-loss validation. Complete location/privacy policy, authoritative residue
 handling, transaction integration and platform acceptance remain outstanding.
