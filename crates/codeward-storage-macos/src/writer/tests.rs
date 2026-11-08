@@ -5,6 +5,8 @@ use std::{
     os::unix::fs::PermissionsExt,
 };
 
+mod workflow;
+
 fn lease(dir: &TestDir) -> ExperimentalWriterLease {
     ExperimentalStorage::from_path(VaultPath::resolve(&dir.vault()).unwrap())
         .acquire()
