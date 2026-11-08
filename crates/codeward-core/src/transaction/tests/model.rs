@@ -2,6 +2,8 @@ use std::sync::{Mutex, mpsc};
 
 use super::*;
 
+type Pause = (mpsc::Sender<()>, mpsc::Receiver<()>);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::transaction) enum Fault {
     Read,
@@ -33,7 +35,8 @@ pub(in crate::transaction) struct Disk {
     pub events: Vec<Event>,
     pub fault: Option<Fault>,
     pub held: bool,
-    pub stage_block: Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>,
+    pub stage_block: Option<Pause>,
+    pub barrier_block: Option<Pause>,
     staged: Option<Vec<u8>>,
 }
 
@@ -51,6 +54,7 @@ impl Model {
             fault: None,
             held: false,
             stage_block: None,
+            barrier_block: None,
             staged: None,
         })))
     }
@@ -171,6 +175,13 @@ impl WriterLease for Lease {
     }
 
     fn persist(&mut self) -> Result<(), StorageError> {
+        let block = self.0.0.lock().unwrap().barrier_block.take();
+        if let Some((entered, resume)) = block {
+            entered.send(()).unwrap();
+            resume
+                .recv_timeout(std::time::Duration::from_secs(10))
+                .unwrap();
+        }
         let mut disk = self.0.0.lock().unwrap();
         disk.events.push(Event::Barrier);
         if disk.fault == Some(Fault::Barrier) {

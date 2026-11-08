@@ -1,8 +1,9 @@
 # macOS capacity and managed-location evidence
 
-Milestone 2 evidence under [ADR-0003](adr/0003-committed-writes.md) and the proposed
-[ADR-0006](adr/0006-managed-working-location.md). The supported-location review is
-for the nonsandboxed prototype's fixed account-managed path on local writable APFS.
+Milestone 2 evidence under [ADR-0003](adr/0003-committed-writes.md) and the bounded
+macOS acceptance in [ADR-0006](adr/0006-managed-working-location.md). The location
+policy covers the nonsandboxed prototype's fixed account-managed path on local
+writable APFS.
 
 ## Location and leftover-file rules
 
@@ -61,5 +62,6 @@ python3 crates/codeward-storage-macos/tests/run_capacity_test.py
 
 This evidence covers capacity exhaustion during staging. Quota enforcement,
 media faults, physical power loss, and storage outside the declared location
-remain separate. The writer stays default-off and synthetic-only pending acceptance
-review. Host integration and Windows/Linux native storage remain Milestone 2 work.
+remain separate. The owner accepted the bounded policy on 2026-11-07. The writer
+stays default-off for synthetic development. Product integration and Windows/Linux
+native storage remain Milestone 2 work.

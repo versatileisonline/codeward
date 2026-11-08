@@ -37,9 +37,9 @@ OS locking or packaged application acceptance.
 
 The initial prototype uses a managed working location under the current OS account.
 Rust resolves its destination; arbitrary UI paths are not accepted. The location,
-missing-file and portable-copy boundaries are recorded in the implementation
-proposal [ADR-0006](adr/0006-managed-working-location.md). Directory preparation
-does not satisfy FR-01's committed-creation gate or add backup/restore features.
+missing-file and portable-copy boundaries are recorded in
+[ADR-0006](adr/0006-managed-working-location.md). The bounded macOS policy is accepted.
+FR-01 readiness still requires committed creation.
 
 | ID | Requirement | Acceptance evidence |
 | --- | --- | --- |

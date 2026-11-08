@@ -1,8 +1,11 @@
 # ADR-0006: Managed working vault and portable encrypted copies
 
-Status: Proposed implementation contract, 2026-11-05. The owner selected managed
-working storage and authorized its implementation after discussing alternatives;
-the concrete platform/behavior contract below is submitted for PR review.
+Status: Accepted for the bounded macOS storage policy, 2026-11-07. The owner
+accepted the managed location, application-termination and capacity evidence,
+and preserve-all leftover-file policy following [PR #28](https://github.com/versatileisonline/codeward/pull/28).
+Windows/Linux implementation details and future copy/reset workflows remain
+proposed. This decision covers the reviewed macOS scope. Product admission,
+packaging, wider durability claims and milestone advancement retain their gates.
 
 ## Context and decision
 
@@ -13,7 +16,7 @@ requiring users to manage filenames for ordinary use (FR-01/02, NFR-03/04/08/09)
 
 | Platform | Working file policy | Native status |
 | --- | --- | --- |
-| macOS, initial nonsandboxed desktop package | OS-account home + `Library/Application Support/Codeward/Vaults/vault.cw` | Directory preparation in the macOS experiment; runtime writer pending |
+| macOS, initial nonsandboxed desktop package | OS-account home + `Library/Application Support/Codeward/Vaults/vault.cw` | Bounded policy accepted; shared writer opt-in for synthetic development |
 | Windows | OS-resolved LocalAppData + `Codeward/Vaults/vault.cw` | Native resolution/admission pending |
 | Linux | Validated XDG_DATA_HOME, normally `~/.local/share`, + `codeward/vaults/vault.cw` | Native resolution/admission pending |
 
