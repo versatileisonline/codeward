@@ -1,6 +1,6 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-08. Authenticated vault operations now compose with
+Status: in progress, 2026-11-09. Authenticated vault operations now compose with
 session-bound mutation admission and a fault-injected committed-write model.
 The bounded macOS storage policy is accepted for synthetic use. Product storage
 admission and complete application workflows remain pending.
@@ -578,6 +578,11 @@ a suspend-gap check even when a wake notice is missed. The
 [live probes](headless-session-events.md#live-macos-probe) passed for real
 lock/unlock and sleep/wake on macOS 26.3.1. Each revoked synthetic enrollment
 and confirmed that paper-code access remained denied afterward.
+
+The [desktop-driven mode](headless-session-events.md#driving-the-control-loop-from-a-desktop-host)
+lets an outer macOS loop collect delivered revocations and schedule deadlines
+without nested event dispatch. Process-local tests cover the control boundary.
+Packaged delivery and redaction still need desktop host evidence.
 
 ## Remaining work
 
