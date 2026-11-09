@@ -21,6 +21,8 @@ mod macos {
 
     use std::{
         ffi::{CStr, c_char, c_void},
+        ptr,
+        sync::atomic::{AtomicBool, Ordering},
         time::Duration,
     };
 
@@ -42,6 +44,30 @@ mod macos {
         static NSWorkspaceDidWakeNotification: Object;
         static NSWorkspaceSessionDidResignActiveNotification: Object;
         static NSWorkspaceSessionDidBecomeActiveNotification: Object;
+    }
+
+    #[link(name = "CoreFoundation", kind = "framework")]
+    unsafe extern "C" {
+        static kCFRunLoopDefaultMode: Object;
+        fn CFRunLoopGetCurrent() -> Object;
+        fn CFRunLoopObserverCreate(
+            allocator: *const c_void,
+            activities: usize,
+            repeats: u8,
+            order: isize,
+            callback: extern "C" fn(Object, usize, *mut c_void),
+            context: *mut c_void,
+        ) -> Object;
+        fn CFRunLoopAddObserver(run_loop: Object, observer: Object, mode: Object);
+        fn CFRunLoopObserverInvalidate(observer: Object);
+        fn CFRunLoopRunInMode(mode: Object, seconds: f64, return_after_source: u8) -> i32;
+        fn CFRelease(object: Object);
+    }
+
+    static LOOP_ENTERED: AtomicBool = AtomicBool::new(false);
+
+    extern "C" fn record_loop_entry(_: Object, _: usize, _: *mut c_void) {
+        LOOP_ENTERED.store(true, Ordering::Relaxed);
     }
 
     fn post_workspace_notification(name: Object) {
@@ -132,8 +158,59 @@ mod macos {
         ));
         assert!(control.command(|host| Ok(host.is_locked())).unwrap());
         control.close();
+        desktop_drive(notifications[0], notifications[1]);
         println!(
-            "macOS main-thread registration, local notification delivery and control revocation passed"
+            "macOS main-thread registration, headless and desktop-driven notification revocation passed"
         );
+    }
+
+    fn desktop_drive(suspend: Object, resume: Object) {
+        let source = MacosEventSource::for_desktop_loop().unwrap();
+        let host = HeadlessVault::begin_create(Absent, CallerId(1)).unwrap();
+        let mut control = HeadlessControlLoop::new(host, source);
+        // SAFETY: use the live main run loop, kCFRunLoopEntry (1), and a callback
+        // with no borrowed context. The observer is invalidated and released below.
+        let observer = unsafe {
+            let observer =
+                CFRunLoopObserverCreate(ptr::null(), 1, 1, 0, record_loop_entry, ptr::null_mut());
+            assert!(!observer.is_null());
+            CFRunLoopAddObserver(CFRunLoopGetCurrent(), observer, kCFRunLoopDefaultMode);
+            observer
+        };
+
+        assert_eq!(
+            control.next_poll_in(Duration::from_secs(60)),
+            Duration::from_secs(1)
+        );
+        assert!(control.command(|host| host.recovery_code()).is_ok());
+        assert!(matches!(
+            control.command(|host| {
+                let code = host.recovery_code()?;
+                post_workspace_notification(suspend);
+                Ok(code)
+            }),
+            Err(ControlError::Revoked)
+        ));
+        post_workspace_notification(resume);
+        assert!(control.step(Duration::ZERO).unwrap().revoked);
+        assert!(control.command(|host| Ok(host.is_locked())).unwrap());
+        assert!(!LOOP_ENTERED.load(Ordering::Relaxed));
+
+        // SAFETY: drive the main run loop from outside the vault boundary.
+        unsafe {
+            CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.001, 0);
+            CFRunLoopObserverInvalidate(observer);
+            CFRelease(observer);
+        }
+        assert!(LOOP_ENTERED.load(Ordering::Relaxed));
+
+        control.command(|host| host.restart_enrollment()).unwrap();
+        let update = control.step(Duration::from_millis(1)).unwrap();
+        assert!(update.revoked && !update.source_available);
+        assert!(matches!(
+            control.command(|host| host.recovery_code()),
+            Err(ControlError::EventSourceUnavailable)
+        ));
+        control.close();
     }
 }

@@ -21,6 +21,7 @@ struct Source {
     wait_event: Option<SessionEvent>,
     wait_time: Option<Duration>,
     failed: bool,
+    poll_interval: Option<Duration>,
 }
 
 impl HeadlessEventSource for Source {
@@ -30,6 +31,10 @@ impl HeadlessEventSource for Source {
         } else {
             Ok(self.notice.take())
         }
+    }
+
+    fn max_poll_interval(&self) -> Duration {
+        self.poll_interval.unwrap_or(Duration::MAX)
     }
 
     fn wait(&mut self, timeout: Duration) -> Result<(), EventSourceError> {
@@ -67,6 +72,25 @@ fn headless_loop_waits_for_idle_expiry_without_commands_or_worker() {
     assert!(update.completion.is_none());
     assert!(control.source.wait_time.unwrap_or_default() <= Duration::from_millis(35));
     assert!(control.command(|host| Ok(host.is_locked())).unwrap());
+}
+
+#[test]
+fn external_driver_schedules_idle_revocation_without_waiting_in_the_source() {
+    let mut host = HeadlessVault::begin_create(Model::new(None), OWNER).unwrap();
+    let interval = Duration::from_secs(1);
+    let bound = Duration::from_secs(60);
+    let source = Source {
+        poll_interval: Some(interval),
+        ..Source::default()
+    };
+    host.set_deadline_for_test(Instant::now() + bound);
+    let mut control = HeadlessControlLoop::new(host, source);
+    assert_eq!(control.next_poll_in(bound), interval);
+    control.host.set_deadline_for_test(Instant::now());
+    assert_eq!(control.next_poll_in(bound), Duration::ZERO);
+    assert!(control.step(Duration::ZERO).unwrap().revoked);
+    assert!(control.source.wait_time.is_none());
+    assert_eq!(control.next_poll_in(bound), interval);
 }
 
 #[test]
@@ -198,6 +222,7 @@ fn headless_loop_source_failure_locks_but_drains_an_admitted_commit() {
         .command(|host| host.save(request(1, 1), &empty()))
         .unwrap();
     checkpoint.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert!(control.next_poll_in(Duration::from_secs(1)) <= WORKER_POLL);
     control.source.failed = true;
     let update = control.step(Duration::ZERO).unwrap();
     assert!(update.revoked && !update.source_available);

@@ -87,8 +87,10 @@ The owner accepted the bounded macOS storage policy on 2026-11-07. The
 authentication and commit results on the synthetic managed path.
 [Headless session events](headless-session-events.md) add idle deadline scheduling,
 macOS workspace observations and a suspend-gap check. Live lock/unlock and
-sleep/wake revoked synthetic headless enrollment on macOS 26.3.1. Desktop
-integration and packaged event validation remain pending.
+sleep/wake revoked synthetic headless enrollment on macOS 26.3.1.
+Desktop drivers can now schedule nonwaiting polls and consume delivered macOS
+events without pumping a nested run loop. Actual desktop integration and
+packaged event validation remain pending.
 The [split-phase authentication slice](session-authentication.md) now lets a core
 session revoke a queued/running verification and reject stale completion. Desktop
 event dispatch, drafts and other platform adapters remain pending.
