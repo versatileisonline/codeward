@@ -100,7 +100,7 @@ void cw_macos_events_close(void *opaque) {
     }
 }
 
-bool cw_macos_events_collect(void *opaque, uint32_t *events) {
+bool cw_macos_events_collect(void *opaque, bool pump, uint32_t *events) {
     @autoreleasepool {
         @try {
             CWSessionEvents *source = (__bridge CWSessionEvents *)opaque;
@@ -108,7 +108,7 @@ bool cw_macos_events_collect(void *opaque, uint32_t *events) {
             // so a continually busy native queue cannot delay revocation forever.
             for (unsigned attempt = 0; attempt < 32; attempt++) {
                 *events = atomic_exchange_explicit(&source->pending, 0, memory_order_acq_rel);
-                if (*events) return true;
+                if (*events || !pump) return true;
                 SInt32 status = CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
                 if (status == kCFRunLoopRunTimedOut) {
                     *events = atomic_exchange_explicit(&source->pending, 0, memory_order_acq_rel);

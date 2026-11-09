@@ -12,7 +12,7 @@ const GAP_RECHECK: Duration = Duration::from_secs(1);
 unsafe extern "C" {
     fn cw_macos_events_open() -> *mut c_void;
     fn cw_macos_events_close(source: *mut c_void);
-    fn cw_macos_events_collect(source: *mut c_void, events: *mut u32) -> bool;
+    fn cw_macos_events_collect(source: *mut c_void, pump: bool, events: *mut u32) -> bool;
     fn cw_macos_events_wait(seconds: f64) -> bool;
     fn mach_absolute_time() -> u64;
     fn mach_continuous_time() -> u64;
@@ -24,12 +24,24 @@ unsafe extern "C" {
 pub struct MacosEventSource {
     source: NonNull<c_void>,
     gap: SleepGap,
+    pump_run_loop: bool,
     _main_thread: PhantomData<Rc<()>>,
 }
 
 impl MacosEventSource {
-    /// Register observers on the main run loop before opening the vault.
+    /// Register observers for a headless driver that pumps the main run loop.
     pub fn new() -> Result<Self, EventSourceError> {
+        Self::open(true)
+    }
+
+    /// Register observers before opening the vault on a desktop-owned main
+    /// loop. The caller must drive native event delivery and schedule polls
+    /// without waiting inside the vault control loop.
+    pub fn for_desktop_loop() -> Result<Self, EventSourceError> {
+        Self::open(false)
+    }
+
+    fn open(pump_run_loop: bool) -> Result<Self, EventSourceError> {
         let gap = SleepGap::new(sample())?;
         // SAFETY: the bridge rejects non-main threads and returns an owned
         // opaque Objective-C object only after successful registration.
@@ -37,6 +49,7 @@ impl MacosEventSource {
         Ok(Self {
             source,
             gap,
+            pump_run_loop,
             _main_thread: PhantomData,
         })
     }
@@ -47,14 +60,23 @@ impl HeadlessEventSource for MacosEventSource {
         let mut events = 0;
         // SAFETY: self owns a live source on its registered thread. The bridge
         // writes at most one u32 to a valid stack out pointer.
-        if !unsafe { cw_macos_events_collect(self.source.as_ptr(), &mut events) } {
+        if !unsafe {
+            cw_macos_events_collect(self.source.as_ptr(), self.pump_run_loop, &mut events)
+        } {
             return Err(EventSourceError);
         }
         let gap = self.gap.observe(sample())?;
         Ok(observation(events).or(gap.then_some(SessionEvent::DetectedSuspendGap)))
     }
 
+    fn max_poll_interval(&self) -> Duration {
+        GAP_RECHECK
+    }
+
     fn wait(&mut self, timeout: Duration) -> Result<(), EventSourceError> {
+        if !self.pump_run_loop {
+            return Err(EventSourceError);
+        }
         // SAFETY: this non-Send source is driven on the thread that opened it.
         // Duration yields a finite, nonnegative interval.
         if unsafe { cw_macos_events_wait(wait_seconds(timeout)) } {

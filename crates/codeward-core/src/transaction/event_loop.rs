@@ -16,6 +16,12 @@ pub trait HeadlessEventSource {
     /// revoking events. Coalesce multiple notices into one revocation.
     fn take_revocation(&mut self) -> Result<Option<SessionEvent>, EventSourceError>;
 
+    /// Maximum interval between observations, including on a host-driven loop.
+    /// A source that requires no periodic checks can use the default.
+    fn max_poll_interval(&self) -> Duration {
+        Duration::MAX
+    }
+
     /// Service native events for at most the supplied relative timeout. An
     /// earlier or spurious wake is valid. This call must never refresh activity.
     fn wait(&mut self, timeout: Duration) -> Result<(), EventSourceError>;
@@ -92,6 +98,8 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
     }
 
     /// Collect ready events or wait once, capped by the nearest deadline.
+    /// An external driver can pass zero to skip waiting and schedule its next
+    /// tick using `next_poll_in`.
     /// Source failure revokes access and prevents future commands. Pending
     /// transaction outcomes can still be drained with nonblocking iterations.
     pub fn step(&mut self, max_wait: Duration) -> Result<ControlUpdate, HostError> {
@@ -103,19 +111,30 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
         {
             return Ok(update);
         }
-        let timeout = next_wait(
-            Instant::now(),
-            self.host.inactivity_deadline(),
-            self.host.has_pending_work(),
-            max_wait,
-        );
-        let failed = self.source.wait(timeout).is_err();
+        let failed = self.source.wait(self.next_poll_in(max_wait)).is_err();
         if failed {
             self.fail_source();
         }
         let mut update = self.collect()?;
         update.revoked |= failed;
         Ok(update)
+    }
+
+    /// Bound the delay until the next poll by the inactivity deadline, pending
+    /// worker work, and any periodic source checks. An external driver must
+    /// reschedule after commands and polls, and may poll earlier on native events.
+    pub fn next_poll_in(&self, max_wait: Duration) -> Duration {
+        let max_wait = if self.source_available {
+            max_wait.min(self.source.max_poll_interval())
+        } else {
+            max_wait
+        };
+        next_wait(
+            Instant::now(),
+            self.host.inactivity_deadline(),
+            self.host.has_pending_work(),
+            max_wait,
+        )
     }
 
     /// Revoke and release the control loop. Admitted writes retain their lease
