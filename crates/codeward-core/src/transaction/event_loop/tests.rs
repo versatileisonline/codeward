@@ -220,9 +220,9 @@ fn headless_loop_source_failure_locks_but_drains_an_admitted_commit() {
     let (resume, wait) = std::sync::mpsc::channel();
     model.0.lock().unwrap().barrier_block = Some((entered, wait));
     control
-        .command(|host| host.save(request(1, 1), &empty()))
+        .command(|host| host.save(request(1, 1), empty()))
         .unwrap();
-    checkpoint.recv_timeout(Duration::from_secs(5)).unwrap();
+    await_storage(&mut control, checkpoint);
     assert!(control.next_poll_in(Duration::from_secs(1)) <= WORKER_POLL);
     control.source.failed = true;
     let update = control.step(Duration::ZERO).unwrap();
@@ -242,6 +242,57 @@ fn headless_loop_source_failure_locks_but_drains_an_admitted_commit() {
     ));
 }
 
+fn await_storage(control: &mut HeadlessControlLoop<Lease, Source>, checkpoint: Receiver<()>) {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while checkpoint.try_recv() != Ok(()) {
+        assert!(Instant::now() < deadline, "storage was never reached");
+        let update = control.step(Duration::ZERO).unwrap();
+        assert!(!update.revoked && update.completion.is_none());
+        thread::sleep(Duration::from_millis(1));
+    }
+}
+
+#[test]
+fn suspend_cancels_blocked_enrollment_preparation_without_restoring_access() {
+    let model = Model::new(None);
+    let mut host = HeadlessVault::begin_create(model.clone(), OWNER).unwrap();
+    let paper = host.recovery_code().unwrap();
+    let (checkpoint, resume) = host.pause_preparation();
+    let mut control = HeadlessControlLoop::new(host, Source::default());
+    let request = request(1, 0);
+    control
+        .command(|host| host.create(request, "synthetic", "synthetic", &paper))
+        .unwrap();
+    checkpoint.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert_eq!(control.next_poll_in(Duration::from_secs(1)), WORKER_POLL);
+    assert!(!control.command(|host| Ok(host.is_locked())).unwrap());
+    assert!(control.command(|host| host.activity_reference()).is_ok());
+    assert!(matches!(
+        control.command(|host| host.recovery_code()),
+        Err(ControlError::Host(HostError::Transaction(
+            TransactionError::Busy
+        )))
+    ));
+    let events = model.events();
+    control.source.notice.set(Some(SessionEvent::Suspend));
+    assert!(control.step(Duration::ZERO).unwrap().revoked);
+    assert!(control.command(|host| Ok(host.is_locked())).unwrap());
+    resume.send(()).unwrap();
+    assert!(matches!(
+        wait_for_result(&mut control),
+        HostCompletion::PreparationFailed { request: id, error: TransactionError::Locked }
+            if id == request.id
+    ));
+    assert!(control.command(|host| Ok(host.is_locked())).unwrap());
+    assert_eq!(model.events(), events);
+    assert!(model.live().is_none());
+    control.command(|host| host.restart_enrollment()).unwrap();
+    assert_ne!(
+        *control.command(|host| host.recovery_code()).unwrap(),
+        *paper
+    );
+}
+
 #[test]
 fn headless_loop_expiry_revokes_while_staging_is_blocked() {
     let _test = crypto::MASTER_TESTS.lock().unwrap();
@@ -259,9 +310,9 @@ fn headless_loop_expiry_revokes_while_staging_is_blocked() {
     let (resume, wait) = std::sync::mpsc::channel();
     model.0.lock().unwrap().stage_block = Some((entered, wait));
     control
-        .command(|host| host.save(request(1, 1), &empty()))
+        .command(|host| host.save(request(1, 1), empty()))
         .unwrap();
-    checkpoint.recv_timeout(Duration::from_secs(5)).unwrap();
+    await_storage(&mut control, checkpoint);
     expire(&mut control);
     let update = control.step(Duration::ZERO).unwrap();
     assert!(update.revoked && update.completion.is_none());

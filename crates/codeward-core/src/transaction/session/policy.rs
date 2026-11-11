@@ -142,7 +142,7 @@ impl Session {
             return Err(TransactionError::Unauthorized);
         }
         self.poll_inactivity();
-        if self.access.is_none() && self.authentication.is_none() {
+        if self.is_locked() && self.authentication.is_none() {
             return Err(TransactionError::Locked);
         }
         Ok(ActivityRef {
@@ -178,7 +178,7 @@ impl Session {
         }
         self.poll_inactivity_at(now);
         if reference.generation != self.generation
-            || (self.access.is_none() && self.authentication.is_none())
+            || (self.is_locked() && self.authentication.is_none())
         {
             return Err(TransactionError::Locked);
         }

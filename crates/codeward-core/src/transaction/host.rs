@@ -8,10 +8,12 @@ use std::{
 
 use zeroize::Zeroizing;
 
-use super::*;
-use crate::{
-    credentials::CredentialSnapshot, recovery::RecoveryError, vault::MAX_MASTER_PASSWORD_BYTES,
+use super::session::{
+    check_password_bounds,
+    write::{OwnedWrite, PreparedWrite, WritePreparation, check_paper_bounds},
 };
+use super::*;
+use crate::credentials::CredentialSnapshot;
 
 /// Borrowed authentication input owned by the trusted caller.
 pub enum AccessProof<'a> {
@@ -51,11 +53,18 @@ impl From<TransactionError> for HostError {
 pub enum HostCompletion {
     /// The current authentication completed. Revoked results are discarded.
     Authentication(Result<(), TransactionError>),
-    /// A commit or reconciliation completed without granting access by itself.
+    /// Preparation was refused before an operation reference could be issued.
+    PreparationFailed {
+        /// Request whose preparation failed.
+        request: RequestId,
+        /// Controlled error, including lock before preparation finished.
+        error: TransactionError,
+    },
+    /// A commit, known duplicate or reconciliation returned a safe outcome.
     Transaction {
         /// Original operation reference, also usable for status lookup.
         operation: OperationRef,
-        /// Proven worker outcome, or the error from a reconciliation attempt.
+        /// Recorded worker outcome, or the error from a reconciliation attempt.
         outcome: Result<OperationStatus, TransactionError>,
         /// Snapshot adoption for a successful ordinary save. An error here does
         /// not undo or change the independent commit outcome.
@@ -70,8 +79,21 @@ struct FinishedWrite<L: WriterLease> {
     refresh: bool,
 }
 
+struct FinishedPreparation<L: WriterLease> {
+    worker: Committer<L>,
+    authorization: Option<WritePreparation>,
+    result: Result<PreparedWrite, TransactionError>,
+    request: RequestId,
+    refresh: bool,
+}
+
 enum Pending<L: WriterLease> {
     Authentication(Receiver<AuthenticationResult>),
+    Preparation(Receiver<FinishedPreparation<L>>),
+    Prepared {
+        operation: OperationRef,
+        refresh: bool,
+    },
     Write(Receiver<FinishedWrite<L>>),
 }
 
@@ -81,14 +103,16 @@ enum Pending<L: WriterLease> {
 ///
 /// Poll for worker results and schedule `inactivity_deadline` even when idle.
 /// The control loop supplies wakeups, trusted events and asynchronous opening.
-/// Direct constructors and candidate preparation are synchronous. The host
-/// accepts explicit save snapshots and holds no drafts.
+/// Direct constructors are synchronous. The host moves write preparation and
+/// commits to workers and holds no drafts.
 pub struct HeadlessVault<L: WriterLease + Send + 'static> {
     // Drop revokes access before releasing the worker or dropping its receiver.
     session: Session,
     caller: CallerId,
     pending: Option<Pending<L>>,
     worker: Option<Committer<L>>,
+    #[cfg(test)]
+    preparation_gate: Option<(mpsc::Sender<()>, Receiver<()>)>,
 }
 
 impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
@@ -113,6 +137,8 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
             caller,
             worker: Some(worker),
             pending: None,
+            #[cfg(test)]
+            preparation_gate: None,
         }
     }
 
@@ -146,43 +172,53 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         Ok(session.restart_enrollment(worker, caller)?)
     }
 
-    /// Confirm enrollment and dispatch creation. Only a committed result is ready.
+    /// Queue confirmation and creation. Poll for the result; only a committed
+    /// creation establishes readiness.
     pub fn create(
         &mut self,
         request: Request,
         password: &str,
         confirmation: &str,
         paper: &str,
-    ) -> Result<OperationRef, HostError> {
-        let (session, worker, caller) = self.idle()?;
-        let operation =
-            session.prepare_creation(worker, caller, request, password, confirmation, paper)?;
-        self.dispatch_prepared(operation, false)
+    ) -> Result<(), HostError> {
+        check_password_bounds(password, confirmation)?;
+        check_paper_bounds(paper)?;
+        self.dispatch_preparation(
+            request,
+            OwnedWrite::Creation {
+                password: own_secret(password)?,
+                confirmation: own_secret(confirmation)?,
+                paper: own_secret(paper)?,
+            },
+        )
     }
 
-    /// Dispatch an explicit content save. A duplicate completed request returns
-    /// its known reference without starting new work or emitting a new result.
+    /// Queue an explicit content save and transfer ownership of its snapshot.
+    /// Poll for the outcome. A duplicate reports its recorded status without replay.
     pub fn save(
         &mut self,
         request: Request,
-        snapshot: &CredentialSnapshot,
-    ) -> Result<OperationRef, HostError> {
-        let (session, worker, caller) = self.idle()?;
-        let operation = session.prepare_contents(worker, caller, request, snapshot)?;
-        self.dispatch_prepared(operation, true)
+        snapshot: CredentialSnapshot,
+    ) -> Result<(), HostError> {
+        self.dispatch_preparation(request, OwnedWrite::Contents(snapshot))
     }
 
-    /// Dispatch replacement of the master password from restricted recovery.
+    /// Queue replacement of the master password from restricted recovery.
+    /// Poll for the outcome before reporting recovery complete.
     pub fn replace_master_password(
         &mut self,
         request: Request,
         password: &str,
         confirmation: &str,
-    ) -> Result<OperationRef, HostError> {
-        let (session, worker, caller) = self.idle()?;
-        let operation =
-            session.prepare_recovery(worker, caller, request, password, confirmation)?;
-        self.dispatch_prepared(operation, false)
+    ) -> Result<(), HostError> {
+        check_password_bounds(password, confirmation)?;
+        self.dispatch_preparation(
+            request,
+            OwnedWrite::Recovery {
+                password: own_secret(password)?,
+                confirmation: own_secret(confirmation)?,
+            },
+        )
     }
 
     /// Reconcile the current uncertain operation using fresh proof. Successful
@@ -199,26 +235,15 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         }
         let (input, paper) = match proof {
             AccessProof::Master(password) => {
-                if password.is_empty() || password.len() > MAX_MASTER_PASSWORD_BYTES {
-                    return Err(TransactionError::Vault(VaultError::InvalidPassword).into());
-                }
+                check_password_bounds(password, password)?;
                 (password, false)
             }
             AccessProof::Paper(code) => {
-                if code.len() > 256 {
-                    return Err(TransactionError::Vault(VaultError::Recovery(
-                        RecoveryError::InvalidCode,
-                    ))
-                    .into());
-                }
+                check_paper_bounds(code)?;
                 (code, true)
             }
         };
-        let mut owned = Zeroizing::new(String::new());
-        owned
-            .try_reserve_exact(input.len())
-            .map_err(|_| TransactionError::AllocationFailed)?;
-        owned.push_str(input);
+        let owned = own_secret(input)?;
         self.dispatch_write(
             operation.clone(),
             false,
@@ -302,7 +327,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         revoked
     }
 
-    /// Revoke access without waiting for authentication or a storage call.
+    /// Revoke access without waiting for authentication, preparation or storage.
     pub fn lock(&mut self) {
         self.session.lock();
         self.discard_authentication();
@@ -314,7 +339,8 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         self.lock();
     }
 
-    /// Check expiry and consume at most one worker result without blocking on it.
+    /// Check expiry and advance one worker handoff without waiting. Keep polling
+    /// while `has_pending_work` is true, even if no completion is ready.
     pub fn poll(&mut self) -> Result<Option<HostCompletion>, HostError> {
         self.poll_deadline();
         let completion = match &self.pending {
@@ -326,6 +352,16 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
                     result,
                 ))
             }),
+            Some(Pending::Preparation(receiver)) => match receiver.try_recv() {
+                Ok(done) => return self.finish_preparation(done),
+                Err(error) => Err(error),
+            },
+            Some(Pending::Prepared { operation, refresh }) => {
+                let (operation, refresh) = (operation.clone(), *refresh);
+                self.pending = None;
+                self.dispatch_prepared(operation, refresh)?;
+                return Ok(None);
+            }
             Some(Pending::Write(receiver)) => receiver.try_recv().map(|done| {
                 let refresh = (done.refresh
                     && matches!(done.outcome, Ok(OperationStatus::Committed { .. })))
@@ -380,6 +416,14 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         self.session.set_deadline_for_test(deadline);
     }
 
+    #[cfg(test)]
+    pub(super) fn pause_preparation(&mut self) -> (Receiver<()>, mpsc::Sender<()>) {
+        let (entered, checkpoint) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        self.preparation_gate = Some((entered, wait));
+        (checkpoint, resume)
+    }
+
     fn discard_revoked_authentication(&mut self) {
         if self.session.inactivity_deadline().is_none() {
             self.discard_authentication();
@@ -401,30 +445,91 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         Ok((&mut self.session, worker, self.caller))
     }
 
+    fn dispatch_preparation(
+        &mut self,
+        request: Request,
+        input: OwnedWrite,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        let mut authorization = session.begin_preparation(worker, caller, &input)?;
+        let refresh = matches!(input, OwnedWrite::Contents(_));
+        let mut worker = self
+            .worker
+            .take()
+            .expect("preparation requires idle writer");
+        #[cfg(test)]
+        let gate = self.preparation_gate.take();
+        self.pending = Some(Pending::Preparation(self.spawn(move || {
+            #[cfg(test)]
+            if let Some((entered, wait)) = gate {
+                entered.send(()).unwrap();
+                wait.recv_timeout(std::time::Duration::from_secs(10))
+                    .unwrap();
+            }
+            let result = authorization.run(&mut worker, request, input);
+            let authorization = authorization.retain_if_current();
+            FinishedPreparation {
+                worker,
+                authorization,
+                result,
+                request: request.id,
+                refresh,
+            }
+        })?));
+        Ok(())
+    }
+
+    fn finish_preparation(
+        &mut self,
+        done: FinishedPreparation<L>,
+    ) -> Result<Option<HostCompletion>, HostError> {
+        self.poll_deadline();
+        let current = done.authorization.is_some_and(|authorization| {
+            self.session.finish_preparation(authorization, &done.result)
+        });
+        self.pending = None;
+        self.worker = Some(done.worker);
+        let error = match done.result {
+            Ok(PreparedWrite::New(operation)) => {
+                // Give the control loop another event check before any storage
+                // work. A canceled permit drains without touching storage.
+                self.pending = Some(Pending::Prepared {
+                    operation,
+                    refresh: done.refresh,
+                });
+                return Ok(None);
+            }
+            Ok(PreparedWrite::Known(operation)) if current => {
+                let outcome = self.status(&operation)?;
+                return Ok(Some(HostCompletion::Transaction {
+                    operation,
+                    outcome: Ok(outcome),
+                    refresh: None,
+                }));
+            }
+            Err(error) if current => error,
+            _ => TransactionError::Locked,
+        };
+        Ok(Some(HostCompletion::PreparationFailed {
+            request: done.request,
+            error,
+        }))
+    }
+
     fn dispatch_prepared(
         &mut self,
         operation: OperationRef,
         refresh: bool,
-    ) -> Result<OperationRef, HostError> {
-        let worker = self.worker.as_ref().expect("preparation retained writer");
-        if matches!(
-            worker.status(self.caller, &operation)?,
-            OperationStatus::Pending(_)
-        ) {
-            // Preparation may cross the deadline. Still drain the prepared
-            // operation so the worker clears its canceled active record.
-            self.poll_deadline();
-            self.dispatch_write(operation.clone(), refresh, |worker, _, _| {
-                loop {
-                    match worker.advance() {
-                        Some(OperationStatus::Pending(_)) => continue,
-                        Some(status) => return Ok(status),
-                        None => return Err(TransactionError::OutcomeUnknown),
-                    }
+    ) -> Result<(), HostError> {
+        self.dispatch_write(operation, refresh, |worker, _, _| {
+            loop {
+                match worker.advance() {
+                    Some(OperationStatus::Pending(_)) => continue,
+                    Some(status) => return Ok(status),
+                    None => return Err(TransactionError::OutcomeUnknown),
                 }
-            })?;
-        }
-        Ok(operation)
+            }
+        })
     }
 
     fn dispatch_write(
@@ -459,6 +564,15 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     ) -> Result<Receiver<T>, HostError> {
         spawn_worker(work).inspect_err(|_| self.lock())
     }
+}
+
+fn own_secret(input: &str) -> Result<Zeroizing<String>, TransactionError> {
+    let mut owned = Zeroizing::new(String::new());
+    owned
+        .try_reserve_exact(input.len())
+        .map_err(|_| TransactionError::AllocationFailed)?;
+    owned.push_str(input);
+    Ok(owned)
 }
 
 pub(super) fn spawn_worker<T: Send + 'static>(
