@@ -1,0 +1,15 @@
+{
+  "productName": "Codeward Synthetic Pilot",
+  "version": "0.1.0",
+  "identifier": "com.codeward.synthetic-pilot",
+  "build": { "frontendDist": "./desktop-assets" },
+  "app": {
+    "windows": [],
+    "withGlobalTauri": true,
+    "security": {
+      "capabilities": ["desktop-pilot"],
+      "csp": "default-src 'none'; script-src 'self'; connect-src ipc: http://ipc.localhost; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'"
+    }
+  },
+  "bundle": { "active": false }
+}

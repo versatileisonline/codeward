@@ -5,8 +5,23 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+desktop-pilot = ["dep:serde", "dep:tauri", "dep:tauri-build", "dep:tokio"]
+desktop-ipc-tests = ["desktop-pilot", "tauri/test"]
+
 [target.'cfg(target_os = "macos")'.dependencies]
 codeward-core = { path = "../codeward-core" }
+serde = { version = "=1.0.229", default-features = false, features = ["derive", "std"], optional = true }
+tauri = { version = "=2.12.5", default-features = false, features = ["custom-protocol", "wry"], optional = true }
+tokio = { version = "=1.54.1", default-features = false, features = ["sync", "time"], optional = true }
+
+[target.'cfg(target_os = "macos")'.build-dependencies]
+tauri-build = { version = "=2.7.4", default-features = false, features = ["config-json"], optional = true }
+
+[[bin]]
+name = "codeward-desktop-pilot"
+path = "src/desktop/main.rs"
+required-features = ["desktop-pilot"]
 
 [[test]]
 name = "native_events"
