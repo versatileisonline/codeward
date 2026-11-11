@@ -10,6 +10,7 @@ use zeroize::Zeroizing;
 
 use super::session::{
     check_password_bounds,
+    refresh::RefreshResult,
     write::{OwnedWrite, PreparedWrite, WritePreparation, check_paper_bounds},
 };
 use super::*;
@@ -95,6 +96,11 @@ enum Pending<L: WriterLease> {
         refresh: bool,
     },
     Write(Receiver<FinishedWrite<L>>),
+    Refresh {
+        operation: OperationRef,
+        revision: u64,
+        receiver: Option<Receiver<Result<RefreshResult, TransactionError>>>,
+    },
 }
 
 /// One headless vault opened under a trusted Rust caller. Keep it on the
@@ -113,6 +119,8 @@ pub struct HeadlessVault<L: WriterLease + Send + 'static> {
     worker: Option<Committer<L>>,
     #[cfg(test)]
     preparation_gate: Option<(mpsc::Sender<()>, Receiver<()>)>,
+    #[cfg(test)]
+    refresh_gate: Option<(mpsc::Sender<()>, Receiver<()>)>,
 }
 
 impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
@@ -139,6 +147,8 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
             pending: None,
             #[cfg(test)]
             preparation_gate: None,
+            #[cfg(test)]
+            refresh_gate: None,
         }
     }
 
@@ -162,7 +172,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     pub fn recovery_code(&mut self) -> Result<Zeroizing<String>, HostError> {
         self.poll_deadline();
         let code = self.session.recovery_code(self.caller);
-        self.discard_revoked_authentication();
+        self.discard_revoked_access_work();
         Ok(code?)
     }
 
@@ -300,7 +310,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     pub fn activity_reference(&mut self) -> Result<ActivityRef, HostError> {
         self.poll_deadline();
         let reference = self.session.activity_reference(self.caller);
-        self.discard_revoked_authentication();
+        self.discard_revoked_access_work();
         Ok(reference?)
     }
 
@@ -314,7 +324,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         let result = self
             .session
             .record_activity(self.caller, reference, activity);
-        self.discard_revoked_authentication();
+        self.discard_revoked_access_work();
         Ok(result?)
     }
 
@@ -322,7 +332,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     pub fn observe_event(&mut self, event: SessionEvent) -> bool {
         let revoked = self.session.observe_event(event);
         if revoked {
-            self.discard_authentication();
+            self.discard_revoked_access_work();
         }
         revoked
     }
@@ -330,7 +340,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     /// Revoke access without waiting for authentication, preparation or storage.
     pub fn lock(&mut self) {
         self.session.lock();
-        self.discard_authentication();
+        self.discard_revoked_access_work();
     }
 
     /// Revoke and close without joining an in-flight worker. An admitted commit retains
@@ -362,23 +372,31 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
                 self.dispatch_prepared(operation, refresh)?;
                 return Ok(None);
             }
-            Some(Pending::Write(receiver)) => receiver.try_recv().map(|done| {
-                let refresh = (done.refresh
-                    && matches!(done.outcome, Ok(OperationStatus::Committed { .. })))
-                .then(|| {
-                    self.session.refresh_committed_contents(
-                        &done.worker,
-                        self.caller,
-                        &done.operation,
-                    )
-                });
-                self.worker = Some(done.worker);
-                HostCompletion::Transaction {
-                    operation: done.operation,
-                    outcome: done.outcome,
-                    refresh,
-                }
-            }),
+            Some(Pending::Write(receiver)) => match receiver.try_recv() {
+                Ok(done) => return Ok(self.finish_write(done)),
+                Err(error) => Err(error),
+            },
+            Some(Pending::Refresh {
+                operation,
+                revision,
+                receiver,
+            }) => {
+                let result = match receiver {
+                    Some(receiver) => match receiver.try_recv() {
+                        Ok(result) => result,
+                        Err(TryRecvError::Empty) => return Ok(None),
+                        Err(TryRecvError::Disconnected) => Err(TransactionError::ReloadRequired),
+                    },
+                    None => Err(TransactionError::Locked),
+                };
+                let (operation, revision) = (operation.clone(), *revision);
+                let refresh = self.finish_refresh(&operation, result);
+                return Ok(Some(HostCompletion::Transaction {
+                    operation,
+                    outcome: Ok(OperationStatus::Committed { revision }),
+                    refresh: Some(refresh),
+                }));
+            }
             None => return Ok(None),
         };
         match completion {
@@ -397,7 +415,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
 
     fn poll_deadline(&mut self) {
         self.session.poll_inactivity();
-        self.discard_revoked_authentication();
+        self.discard_revoked_access_work();
     }
 
     pub(super) fn take_inactivity_revocation(&mut self) -> bool {
@@ -424,15 +442,100 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         (checkpoint, resume)
     }
 
-    fn discard_revoked_authentication(&mut self) {
+    #[cfg(test)]
+    pub(super) fn pause_refresh(&mut self) -> (Receiver<()>, mpsc::Sender<()>) {
+        let (entered, checkpoint) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        self.refresh_gate = Some((entered, wait));
+        (checkpoint, resume)
+    }
+
+    fn discard_revoked_access_work(&mut self) {
         if self.session.inactivity_deadline().is_none() {
-            self.discard_authentication();
+            match &mut self.pending {
+                Some(Pending::Authentication(_)) => self.pending = None,
+                Some(Pending::Refresh { receiver, .. }) => {
+                    // Drop any queued plaintext, but retain the proven commit.
+                    receiver.take();
+                }
+                _ => (),
+            }
         }
     }
 
-    fn discard_authentication(&mut self) {
-        if matches!(self.pending, Some(Pending::Authentication(_))) {
-            self.pending = None;
+    fn finish_write(&mut self, done: FinishedWrite<L>) -> Option<HostCompletion> {
+        let FinishedWrite {
+            worker,
+            operation,
+            outcome,
+            refresh,
+        } = done;
+        let job = if let Ok(OperationStatus::Committed { revision }) = outcome
+            && refresh
+        {
+            Some((
+                revision,
+                self.session.begin_refresh(&worker, self.caller, &operation),
+            ))
+        } else {
+            None
+        };
+        self.pending = None;
+        self.worker = Some(worker);
+
+        let refresh = match job {
+            Some((revision, Ok(Some(job)))) => {
+                #[cfg(test)]
+                let gate = self.refresh_gate.take();
+                match self.spawn(move || {
+                    #[cfg(test)]
+                    if let Some((entered, wait)) = gate {
+                        entered.send(()).unwrap();
+                        wait.recv_timeout(std::time::Duration::from_secs(10))
+                            .unwrap();
+                    }
+                    job.run()
+                }) {
+                    Ok(receiver) => {
+                        self.pending = Some(Pending::Refresh {
+                            operation,
+                            revision,
+                            receiver: Some(receiver),
+                        });
+                        return None;
+                    }
+                    Err(_) => Some(Err(TransactionError::ReloadRequired)),
+                }
+            }
+            Some((_, Ok(None))) => Some(Ok(())),
+            Some((_, Err(error))) => Some(Err(error)),
+            None => None,
+        };
+        Some(HostCompletion::Transaction {
+            operation,
+            outcome,
+            refresh,
+        })
+    }
+
+    fn finish_refresh(
+        &mut self,
+        operation: &OperationRef,
+        result: Result<RefreshResult, TransactionError>,
+    ) -> Result<(), TransactionError> {
+        self.pending = None;
+        match result {
+            Ok(result) => {
+                let worker = self.worker.as_ref().expect("refresh retains writer");
+                self.session
+                    .finish_refresh(worker, self.caller, operation, result)
+            }
+            Err(error) => {
+                if !self.session.is_locked() {
+                    self.lock();
+                }
+                Err(error)
+            }
         }
     }
 

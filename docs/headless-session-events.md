@@ -39,6 +39,10 @@ failure, create a fresh loop to retry.
 Write preparation runs on a worker as well. After receiving a fresh candidate,
 the control loop checks for revocation before another poll can start staging.
 Keep scheduling while work is pending, even when a poll returns no completion.
+After a confirmed save, the loop checks expiry and native events while a
+separate worker refreshes the session snapshot. Revocation discards the refresh
+result and preserves the committed write result. Refresh worker loss also
+reports revocation and leaves the committed status available.
 
 ## macOS source
 
@@ -133,8 +137,8 @@ both cycles. This exercise covered the volatile enrollment path in one logged-in
 session. The clock-gap fallback retains unit-test coverage.
 
 GUI redaction and desktop event-loop integration still require validation.
-Synchronous host constructors and postcommit snapshot refresh can delay native
-event collection. Desktop hosts can use the worker-backed opening path above.
+Synchronous host constructors can delay native event collection. Desktop
+hosts can use the worker-backed opening path above.
 An event first collected after a command may arrive after a write already
 crossed publication admission. The existing commit and reconciliation rules
 govern that write. Windows/Linux native events, drafts, IPC and packaging are

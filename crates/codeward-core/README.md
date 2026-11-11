@@ -69,10 +69,11 @@ Caller/opened-vault/generation scope gates preparation. A per-generation keyed
 intent digest supports duplicate-request matching without storing passwords.
 History holds at most 64 IDs and fails closed rather than evicting/replaying them.
 Lock releases owned access and cancels pending admission atomically; an admitted
-worker can finish while the session stays locked. After a content commit, the host
-can call `Session::refresh_committed_contents` with the current operation reference
-to continue editing in the same unlock. It authenticates and validates the exact
-committed snapshot with the session's data key. Explicit reload remains available
+worker can finish while the session stays locked. After a content commit,
+`HeadlessVault` refreshes the session on a worker. Direct transaction callers
+can use the synchronous `Session::refresh_committed_contents` with the current
+operation reference. Both authenticate and validate the exact committed
+snapshot with the session's data key. Explicit reload remains available
 and is required when the session cannot adopt a commit. See the
 [refresh contract](../../docs/milestone-2-progress.md#committed-content-refresh).
 

@@ -6,7 +6,7 @@ struct Record {
     intent: [u8; 32],
     permit: Arc<Permit>,
     status: OperationStatus,
-    candidate: Option<Vec<u8>>,
+    candidate: Option<Arc<Vec<u8>>>,
     target: Fingerprint,
 }
 
@@ -19,7 +19,7 @@ pub struct Committer<L: WriterLease> {
     lease: L,
     pub(super) scope: Arc<()>,
     pub(super) caller: CallerId,
-    base: Option<Vec<u8>>,
+    base: Option<Arc<Vec<u8>>>,
     pub(super) fingerprint: Option<Fingerprint>,
     records: Vec<Record>,
     active: Option<usize>,
@@ -83,7 +83,7 @@ impl<L: WriterLease> Committer<L> {
             lease,
             scope: Arc::new(()),
             caller,
-            base,
+            base: base.map(Arc::new),
             fingerprint,
             records: Vec::new(),
             active: None,
@@ -92,7 +92,15 @@ impl<L: WriterLease> Committer<L> {
     }
 
     pub(super) fn base_bytes(&self) -> Result<&[u8], TransactionError> {
-        self.base.as_deref().ok_or(TransactionError::ReloadRequired)
+        self.base
+            .as_ref()
+            .map(|bytes| bytes.as_slice())
+            .ok_or(TransactionError::ReloadRequired)
+    }
+
+    /// Share the exact immutable base with a decoder without moving the writer.
+    pub(super) fn shared_base(&self) -> Result<Arc<Vec<u8>>, TransactionError> {
+        self.base.clone().ok_or(TransactionError::ReloadRequired)
     }
 
     pub(super) fn check_idle(&self) -> Result<(), TransactionError> {
@@ -163,7 +171,7 @@ impl<L: WriterLease> Committer<L> {
             intent,
             permit,
             status: OperationStatus::Pending(Phase::Prepared),
-            candidate: Some(candidate.into_bytes()),
+            candidate: Some(Arc::new(candidate.into_bytes())),
             target,
         });
         Ok(reference)
@@ -331,8 +339,9 @@ impl<L: WriterLease> Committer<L> {
             return self.status(caller, reference);
         }
         let current = self.lease.read_current()?;
-        let is_candidate = current.as_deref() == self.records[i].candidate.as_deref();
-        let is_base = current.as_deref() == self.base.as_deref();
+        let is_candidate =
+            current.as_deref() == self.records[i].candidate.as_deref().map(Vec::as_slice);
+        let is_base = current.as_deref() == self.base.as_ref().map(|bytes| bytes.as_slice());
         if !is_candidate && !is_base {
             return Err(TransactionError::OutcomeUnknown);
         }

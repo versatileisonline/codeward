@@ -227,7 +227,14 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
     fn collect(&mut self) -> Result<ControlUpdate, HostError> {
         let mut revoked = self.synchronize();
         let (mut completion, opened) = match &mut self.vault {
-            VaultState::Open(host) => (host.poll()?, None),
+            VaultState::Open(host) => {
+                let was_locked = host.is_locked();
+                let completion = host.poll()?;
+                // A refresh worker can fail after a proven commit. The host
+                // returns the commit and locks access in the same poll.
+                revoked |= !was_locked && host.is_locked();
+                (completion, None)
+            }
             VaultState::Opening(receiver) => (
                 None,
                 match receiver.try_recv() {
@@ -239,8 +246,17 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
             VaultState::Closed => (None, None),
         };
         revoked |= self.synchronize();
-        if revoked && matches!(completion, Some(HostCompletion::Authentication(_))) {
-            completion = None;
+        if revoked {
+            match &mut completion {
+                Some(HostCompletion::Authentication(_)) => completion = None,
+                Some(HostCompletion::Transaction {
+                    refresh: Some(refresh @ Ok(())),
+                    ..
+                }) => {
+                    *refresh = Err(TransactionError::Locked);
+                }
+                _ => (),
+            }
         }
         let mut opening = None;
         if let Some(result) = opened {
