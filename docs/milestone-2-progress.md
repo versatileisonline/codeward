@@ -307,7 +307,7 @@ no full local workspace test repeat was performed.
 ## Committed content refresh
 
 The trusted Rust host can call
-[`Session::refresh_committed_contents`](../crates/codeward-core/src/transaction/session.rs)
+[`Session::refresh_committed_contents`](../crates/codeward-core/src/transaction/session/refresh.rs)
 after an ordinary content save under FR-02/03/05 and ADR-0003/0005. The operation
 reference must belong to the current caller, opened worker and session generation.
 The worker must be idle and its current revision must match the referenced
@@ -593,8 +593,12 @@ opening when a lock arrives before its reply.
 saves and password replacement now runs on a worker. Lock can revoke access
 while preparation is blocked, and a candidate waits for another event check
 before staging. Model tests cover cancellation, stale results, enrollment retry
-and request deduplication. Postcommit snapshot refresh still runs on the control
-thread.
+and request deduplication.
+
+[Post-save snapshot refresh](headless-vault-host.md#write-replies) also runs on
+a worker. It decodes the committed bytes without retaining the writer lease.
+The control loop continues processing revocation and reports the proven commit
+even when expiry, source failure or worker loss prevents refresh.
 
 ## Remaining work
 

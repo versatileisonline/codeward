@@ -26,16 +26,20 @@ shared writer and a disposable managed APFS home under the
   giving the host an event and expiry check at the handoff. The storage worker
   receives encrypted transaction state. Lock cancels before publication
   admission. An admitted write can commit while access stays locked.
-- On an ordinary confirmed save, the host attempts snapshot refresh in the
-  same generation. Refresh has its own result and cannot change the commit
-  outcome. Known duplicate requests retain their status without replay. Fresh
-  proof can reconcile an uncertain operation. A changed base after reconciliation
-  requires new authentication. Unknown or failed results never acknowledge a save.
-- Closing revokes access without joining an in-flight worker. The worker retains
-  exclusion until it returns or exits. An executing derivation cannot be
-  interrupted by lock. Its result cannot restore revoked access. Reopen checks
-  the actual named vault and starts a new request history. A lost worker fails
-  closed and its old status may be unavailable on reopen.
+- After an ordinary confirmed save, a separate worker authenticates and decodes
+  the exact committed snapshot. It borrows no session and holds no writer
+  lease. The control side adopts the result only in the same generation and
+  retains the committed status if refresh is canceled or fails. A lost refresh
+  worker revokes access and requires reauthentication while keeping the writer
+  and its request history.
+- Known duplicate requests retain their status without replay. Fresh proof can
+  reconcile an uncertain operation. A changed base after reconciliation requires
+  new authentication. Unknown or failed results never acknowledge a save.
+- Closing revokes access without joining workers. A worker that owns the lease
+  retains exclusion until it returns or exits. A derivation or decode may
+  finish after lock. Its result cannot restore revoked access. Reopen checks
+  the actual named vault and starts a new request history. A lost storage
+  worker fails closed and its old status may be unavailable on reopen.
 
 ## Write replies
 
@@ -46,6 +50,9 @@ controlled `PreparationFailed` with the request ID. A transaction completion
 carries the operation reference for status lookup and reconciliation. A duplicate
 reports its existing status and does not replay the write. Only a committed
 outcome establishes Saved, Ready or RecoveryComplete.
+An ordinary save completion includes a separate refresh result. Revocation
+can discard that work and report the proven commit while the refresh worker
+finishes. Refresh never extends the inactivity deadline.
 
 ## Event-loop boundary
 
@@ -57,10 +64,9 @@ any queued credential page and rechecks it before delivery.
 
 The control loop can open storage on a worker, including managed-path preparation,
 writer acquisition, and the baseline read. Its synchronous host constructors
-remain available for headless tests. Postcommit snapshot refresh still runs on
-the control thread. Draft ownership, close dialogs, packaged desktop event
-integration, IPC and UI remain pending. The macOS writer remains opt-in for
-synthetic development.
+remain available for headless tests. Draft ownership, close dialogs, packaged
+desktop event integration, IPC and UI remain pending. The macOS writer remains
+opt-in for synthetic development.
 
 ## Evidence
 
@@ -69,6 +75,9 @@ admission, post-save refresh and deduplication, uncertain reconciliation, close
 during a blocked barrier and loss of the writer. Preparation tests cover suspend
 during blocked enrollment, cancellation before staging, retry after
 reauthentication and preservation of enrollment after invalid confirmation.
+Refresh tests exercise expiry and source failure while decoding is blocked,
+revocation at the reply check, and worker loss after commit. They verify that
+the committed result survives and stale access stays revoked.
 The managed APFS integration test uses the host for creation, master unlock,
 save and refresh, close and reopen, restricted paper recovery, password
 replacement and a fresh master unlock. The focused host and managed APFS tests
