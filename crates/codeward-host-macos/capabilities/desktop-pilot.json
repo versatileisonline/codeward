@@ -1,0 +1,11 @@
+{
+  "identifier": "desktop-pilot",
+  "local": true,
+  "platforms": ["macOS"],
+  "webviews": ["main"],
+  "permissions": [
+    "allow-open-synthetic-session",
+    "allow-get-session-state",
+    "allow-lock-vault"
+  ]
+}

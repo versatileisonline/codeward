@@ -1,6 +1,16 @@
 use std::{env, path::PathBuf, process::Command};
 
 fn main() {
+    #[cfg(all(target_os = "macos", feature = "desktop-pilot"))]
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
+        tauri_build::AppManifest::new().commands(&[
+            "open_synthetic_session",
+            "get_session_state",
+            "lock_vault",
+        ]),
+    ))
+    .expect("build scoped Codeward desktop pilot");
+
     println!("cargo:rerun-if-changed=src/events.m");
     println!("cargo:rerun-if-env-changed=MACOSX_DEPLOYMENT_TARGET");
     println!("cargo:rerun-if-env-changed=SDKROOT");
