@@ -33,6 +33,11 @@ impl Scenario {
             Self::Sleep => (SessionEvent::Suspend, SessionEvent::Resume),
         }
     }
+
+    fn accepts_first(self, first: SessionEvent) -> bool {
+        first == self.events().0
+            || (matches!(self, Self::Sleep) && first == SessionEvent::OsSessionLocked)
+    }
 }
 
 pub(super) enum DesktopSource {
@@ -63,15 +68,30 @@ impl HeadlessEventSource for DesktopSource {
     }
 }
 
+#[derive(Default)]
 struct Observations {
     first: Option<SessionEvent>,
+    started: bool,
     returned: bool,
     coalesced: bool,
 }
 
+impl Observations {
+    fn record(&mut self, revocation: Option<SessionEvent>, start: bool, returned: bool) {
+        if self.first.is_none() {
+            self.first = revocation;
+        }
+        if !self.returned && returned && (self.started || start) {
+            self.returned = true;
+            self.coalesced = !self.started && start;
+        }
+        self.started |= start;
+    }
+}
+
 struct Recording {
     native: MacosEventSource,
-    expected_return: SessionEvent,
+    scenario: Scenario,
     observations: Observations,
 }
 
@@ -82,14 +102,12 @@ impl RecordedSource {
     fn collect(&self) -> Result<Option<SessionEvent>, EventSourceError> {
         let mut recording = self.0.borrow_mut();
         let batch = recording.native.take_observation()?;
-        let first_batch = recording.observations.first.is_none();
-        if first_batch {
-            recording.observations.first = batch.revocation;
-        }
-        if !recording.observations.returned && batch.includes(recording.expected_return) {
-            recording.observations.returned = true;
-            recording.observations.coalesced = first_batch;
-        }
+        let (start, returned) = recording.scenario.events();
+        recording.observations.record(
+            batch.revocation,
+            batch.includes(start),
+            batch.includes(returned),
+        );
         Ok(batch.revocation)
     }
 
@@ -115,12 +133,8 @@ impl Probe {
             scenario,
             source: RecordedSource(Rc::new(RefCell::new(Recording {
                 native,
-                expected_return: scenario.events().1,
-                observations: Observations {
-                    first: None,
-                    returned: false,
-                    coalesced: false,
-                },
+                scenario,
+                observations: Observations::default(),
             }))),
             expires: Instant::now() + WINDOW,
             armed: false,
@@ -168,9 +182,9 @@ impl Probe {
         if state == State::Unavailable {
             return Err("desktop source unavailable");
         }
-        let (expected, returned) = self.scenario.events();
+        let (start, returned) = self.scenario.events();
         if let Some(first) = self.source.first() {
-            if !self.armed || first != expected || state != State::Locked {
+            if !self.armed || !self.scenario.accepts_first(first) || state != State::Locked {
                 eprintln!("OBSERVED {first:?}");
                 return Err("unexpected first revocation");
             }
@@ -187,7 +201,7 @@ impl Probe {
             if self.cleared && recording.observations.returned {
                 let coalesced = recording.observations.coalesced;
                 println!(
-                    "PASS {:?}: {returned:?}; coalesced={coalesced}; synthetic fields cleared; session locked",
+                    "PASS {:?}: {start:?} and {returned:?}; first={first:?}; coalesced={coalesced}; synthetic fields cleared; session locked",
                     self.scenario
                 );
                 return Ok(true);
@@ -196,5 +210,34 @@ impl Probe {
             return Err("lock without the required native observation");
         }
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sleep_after_screen_lock_still_requires_both_sleep_notices() {
+        let mut seen = Observations::default();
+        seen.record(Some(SessionEvent::OsSessionLocked), false, false);
+        assert!(Scenario::Sleep.accepts_first(seen.first.unwrap()));
+        seen.record(Some(SessionEvent::Resume), false, true);
+        assert!(!seen.returned);
+        seen.record(Some(SessionEvent::Suspend), true, false);
+        assert!(!seen.returned);
+        seen.record(Some(SessionEvent::Resume), false, true);
+        assert!(seen.returned);
+        assert!(!seen.coalesced);
+        assert_eq!(seen.first, Some(SessionEvent::OsSessionLocked));
+    }
+
+    #[test]
+    fn coalesced_sleep_pair_does_not_infer_arrival_order() {
+        let mut seen = Observations::default();
+        seen.record(Some(SessionEvent::Suspend), true, true);
+        assert!(seen.returned && seen.coalesced);
+        assert!(!Scenario::Lock.accepts_first(SessionEvent::Suspend));
+        assert!(!Scenario::Sleep.accepts_first(SessionEvent::DetectedSuspendGap));
     }
 }

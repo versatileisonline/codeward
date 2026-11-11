@@ -99,13 +99,15 @@ The probe uses a separate local WebView and capability. The normal view has
 its original three commands. The probe view can read cached status and
 acknowledge the initial and redacted renderings. A pass requires that the
 WebView first report visible synthetic preview and draft values, the desktop
-loop lock on `OsSessionLocked` or `Suspend`, and the corresponding
-`Reconnected` or `Resume` notice be observed. The renderer must then report
-both fields emptied and hidden. Renderer polling does not drive the native
-loop. The probe logs only status and event names.
+loop revoke on `OsSessionLocked` or `Suspend`, and the matching lock or sleep
+pair be observed. Sleep can follow an automatic screen lock. In that case the
+probe keeps the session locked, requires both `Suspend` and `Resume`, and
+reports which event revoked access first. The renderer must report both fields
+emptied and hidden. Renderer polling does not drive the native loop. The probe
+logs only status and event names.
 
-When notices coalesce, the log identifies the batch and the control loop's
-selected revocation. A coalesced batch does not prove arrival order.
+When the start and return notices coalesce, the log identifies the batch.
+A coalesced batch does not prove arrival order.
 `Reconnected` does not uniquely identify the raw notification. The Mach
 gap fallback remains separately unit-tested. This local bundle has no
 distribution signing or notarization. The probe exercises synthetic DOM
