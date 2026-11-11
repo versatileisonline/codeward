@@ -34,8 +34,7 @@ The window denies external navigation and additional windows. Its policy
 allows bundled scripts and local IPC connections. The capability grants no
 plugin or core event permissions. The bundled page polls status and ignores
 older replies after a newer command. No secret-bearing replies cross this
-boundary. Packaged delivery, actual OS transitions with this window, and
-redaction of credential fields remain future validation.
+boundary.
 
 ## Pinned dependencies
 
@@ -76,3 +75,38 @@ before a repeated open. Tauri's mock runtime uses the generated ACL and
 bundled context to exercise permitted calls and refuse other views, nonlocal
 origins, nonempty payloads, and absent permissions. The existing native smoke
 exercises process-local macOS event delivery separately.
+
+### Packaged live probes
+
+Build an ad-hoc-signed local `.app` with the pinned toolchain and cached
+dependencies. The script prints its path and verifies the bundle signature.
+The WebView assets are embedded in the release executable.
+[Apple bundle layout](https://developer.apple.com/documentation/bundleresources/placing-content-in-a-bundle)
+
+```sh
+app=$(sh crates/codeward-host-macos/tests/package-desktop-pilot.sh)
+"$app/Contents/MacOS/codeward-desktop-pilot" --live-lock
+"$app/Contents/MacOS/codeward-desktop-pilot" --live-sleep
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
+```
+
+After `ARMED Lock`, the operator locks and unlocks the Mac. After
+`ARMED Sleep`, the operator sleeps and wakes it. Run each probe in a logged-in
+session. The probe exits after a verified `PASS`, a failure, or a 120-second
+awake timeout. An interrupted run needs to be repeated.
+
+The probe uses a separate local WebView and capability. The normal view has
+its original three commands. The probe view can read cached status and
+acknowledge the initial and redacted renderings. A pass requires that the
+WebView first report visible synthetic preview and draft values, the desktop
+loop lock on `OsSessionLocked` or `Suspend`, and the corresponding
+`Reconnected` or `Resume` notice be observed. The renderer must then report
+both fields emptied and hidden. Renderer polling does not drive the native
+loop. The probe logs only status and event names.
+
+When notices coalesce, the log identifies the batch and the control loop's
+selected revocation. A coalesced batch does not prove arrival order.
+`Reconnected` does not uniquely identify the raw notification. The Mach
+gap fallback remains separately unit-tested. This local bundle has no
+distribution signing or notarization. The probe exercises synthetic DOM
+redaction, with product credential fields and OS memory outside its evidence.
