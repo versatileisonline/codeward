@@ -5,10 +5,15 @@ if [ "$(uname -s)" != Darwin ]; then
     printf '%s\n' 'The desktop pilot package requires macOS.' >&2
     exit 1
 fi
+case "$(uname -m)" in
+    arm64) target=aarch64-apple-darwin ;;
+    x86_64) target=x86_64-apple-darwin ;;
+    *) printf '%s\n' 'Unsupported macOS build architecture.' >&2; exit 1 ;;
+esac
 
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/../../.." && pwd)
 cd "$root"
-cargo build --release --locked --offline --target-dir "$root/target" \
+cargo build --release --locked --offline --target "$target" --target-dir "$root/target" \
     -p codeward-host-macos --features desktop-pilot --bin codeward-desktop-pilot
 
 output=$(mktemp -d "$root/target/codeward-pilot.XXXXXX")
@@ -17,7 +22,7 @@ contents="$app/Contents"
 plist="$contents/Info.plist"
 config="$root/crates/codeward-host-macos/tauri.conf.json"
 mkdir -p "$contents/MacOS"
-install -m 755 "$root/target/release/codeward-desktop-pilot" "$contents/MacOS/"
+install -m 755 "$root/target/$target/release/codeward-desktop-pilot" "$contents/MacOS/"
 /usr/bin/plutil -create xml1 "$plist"
 /usr/bin/plutil -insert CFBundleIdentifier -string "$(/usr/bin/plutil -extract identifier raw "$config")" "$plist"
 /usr/bin/plutil -insert CFBundleName -string "$(/usr/bin/plutil -extract productName raw "$config")" "$plist"
