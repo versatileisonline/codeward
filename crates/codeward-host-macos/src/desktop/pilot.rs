@@ -62,6 +62,10 @@ impl<E: HeadlessEventSource> Pilot<E> {
         self.state
     }
 
+    pub(super) fn state(&self) -> State {
+        self.state
+    }
+
     pub(super) fn tick(&mut self) -> State {
         if let Some(control) = &mut self.control {
             match control.step(Duration::ZERO) {

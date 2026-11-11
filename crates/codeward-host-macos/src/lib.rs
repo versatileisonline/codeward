@@ -8,6 +8,31 @@ use std::{ffi::c_void, marker::PhantomData, ptr::NonNull, rc::Rc, time::Duration
 use codeward_core::transaction::{EventSourceError, HeadlessEventSource, SessionEvent};
 
 const GAP_RECHECK: Duration = Duration::from_secs(1);
+const NATIVE_EVENTS: [SessionEvent; 5] = [
+    SessionEvent::OsSessionLocked,
+    SessionEvent::SessionSwitchedAway,
+    SessionEvent::Suspend,
+    SessionEvent::Resume,
+    SessionEvent::Reconnected,
+];
+
+/// One collection of native notices and the revocation chosen for the control loop.
+/// Native notices can coalesce, so a collection does not establish arrival order.
+pub struct MacosObservation {
+    /// Revocation selected by the native priority rules or the Mach clock check.
+    pub revocation: Option<SessionEvent>,
+    bits: u32,
+}
+
+impl MacosObservation {
+    /// Whether this collection included the specified native notice.
+    pub fn includes(&self, event: SessionEvent) -> bool {
+        NATIVE_EVENTS
+            .iter()
+            .enumerate()
+            .any(|(bit, candidate)| *candidate == event && self.bits & (1 << bit) != 0)
+    }
+}
 
 unsafe extern "C" {
     fn cw_macos_events_open() -> *mut c_void;
@@ -53,10 +78,9 @@ impl MacosEventSource {
             _main_thread: PhantomData,
         })
     }
-}
-
-impl HeadlessEventSource for MacosEventSource {
-    fn take_revocation(&mut self) -> Result<Option<SessionEvent>, EventSourceError> {
+    /// Collect the same observations used by the control loop, retaining the
+    /// native batch for passive diagnostic evidence.
+    pub fn take_observation(&mut self) -> Result<MacosObservation, EventSourceError> {
         let mut events = 0;
         // SAFETY: self owns a live source on its registered thread. The bridge
         // writes at most one u32 to a valid stack out pointer.
@@ -66,7 +90,16 @@ impl HeadlessEventSource for MacosEventSource {
             return Err(EventSourceError);
         }
         let gap = self.gap.observe(sample())?;
-        Ok(observation(events).or(gap.then_some(SessionEvent::DetectedSuspendGap)))
+        Ok(MacosObservation {
+            revocation: observation(events).or(gap.then_some(SessionEvent::DetectedSuspendGap)),
+            bits: events,
+        })
+    }
+}
+
+impl HeadlessEventSource for MacosEventSource {
+    fn take_revocation(&mut self) -> Result<Option<SessionEvent>, EventSourceError> {
+        Ok(self.take_observation()?.revocation)
     }
 
     fn max_poll_interval(&self) -> Duration {
@@ -102,17 +135,11 @@ impl Drop for MacosEventSource {
 
 fn observation(bits: u32) -> Option<SessionEvent> {
     // Keep the bit assignments in sync with enum CWEvent in events.m.
-    [
-        SessionEvent::OsSessionLocked,
-        SessionEvent::SessionSwitchedAway,
-        SessionEvent::Suspend,
-        SessionEvent::Resume,
-        SessionEvent::Reconnected,
-    ]
-    .into_iter()
-    .enumerate()
-    .find(|(bit, _)| bits & (1 << bit) != 0)
-    .map(|(_, event)| event)
+    NATIVE_EVENTS
+        .into_iter()
+        .enumerate()
+        .find(|(bit, _)| bits & (1 << bit) != 0)
+        .map(|(_, event)| event)
 }
 
 fn sample() -> [u64; 3] {

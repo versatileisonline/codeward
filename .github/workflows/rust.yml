@@ -73,6 +73,9 @@ jobs:
         run: cargo check --workspace --no-default-features --locked --offline
       - name: Test workspace including experimental features and doctests
         run: cargo test --workspace --all-features --locked --offline
+      - name: Test synthetic desktop redaction
+        if: runner.os == 'macOS'
+        run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
       - name: Check all targets with Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings
 

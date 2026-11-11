@@ -7,6 +7,8 @@ fn main() {
             "open_synthetic_session",
             "get_session_state",
             "lock_vault",
+            "probe_visible",
+            "probe_cleared",
         ]),
     ))
     .expect("build scoped Codeward desktop pilot");

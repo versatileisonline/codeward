@@ -1,0 +1,11 @@
+{
+  "identifier": "session-probe",
+  "local": true,
+  "platforms": ["macOS"],
+  "webviews": ["session-probe"],
+  "permissions": [
+    "allow-get-session-state",
+    "allow-probe-visible",
+    "allow-probe-cleared"
+  ]
+}
