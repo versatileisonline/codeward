@@ -43,6 +43,22 @@ fn await_storage(host: &mut Host, checkpoint: Receiver<()>) {
     }
 }
 
+impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
+    pub(in crate::transaction) fn await_queued_refresh(&mut self) {
+        let Some(Pending::Refresh {
+            receiver: Some(receiver),
+            ..
+        }) = &mut self.pending
+        else {
+            panic!("expected a pending refresh");
+        };
+        let result = receiver.recv_timeout(Duration::from_secs(5)).unwrap();
+        let (sender, queued) = mpsc::sync_channel(1);
+        assert!(sender.send(result).is_ok());
+        *receiver = queued;
+    }
+}
+
 #[test]
 fn headless_host_discards_returned_authentication_on_lock() {
     let _test = crypto::MASTER_TESTS.lock().unwrap();

@@ -159,10 +159,15 @@ fn headless_loop_processes_wake_and_revokes_before_or_after_commands() {
 }
 
 fn wait_for_result(control: &mut HeadlessControlLoop<Lease, Source>) -> HostCompletion {
+    wait_for_completion_update(control).completion.unwrap()
+}
+
+fn wait_for_completion_update(control: &mut HeadlessControlLoop<Lease, Source>) -> ControlUpdate {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        if let Some(completion) = control.step(Duration::from_millis(5)).unwrap().completion {
-            return completion;
+        let update = control.step(Duration::from_millis(5)).unwrap();
+        if update.completion.is_some() {
+            return update;
         }
         assert!(Instant::now() < deadline);
         thread::sleep(Duration::from_millis(1));
@@ -250,6 +255,148 @@ fn await_storage(control: &mut HeadlessControlLoop<Lease, Source>, checkpoint: R
         assert!(!update.revoked && update.completion.is_none());
         thread::sleep(Duration::from_millis(1));
     }
+}
+
+#[test]
+fn lost_refresh_worker_reports_revocation_and_keeps_the_commit_and_writer() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let model = Model::new(Some(fixture()));
+    let host = HeadlessVault::open(model.clone(), OWNER).unwrap();
+    let mut control = HeadlessControlLoop::new(host, Source::default());
+    let unlock = |host: &mut HeadlessVault<Lease>| {
+        host.begin_authentication(AccessProof::Master("synthetic password"))
+    };
+    control.command(unlock).unwrap();
+    assert!(matches!(
+        wait_for_result(&mut control),
+        HostCompletion::Authentication(Ok(()))
+    ));
+
+    let (checkpoint, resume) = control.command(|host| Ok(host.pause_refresh())).unwrap();
+    control
+        .command(|host| host.save(request(1, 1), empty()))
+        .unwrap();
+    await_storage(&mut control, checkpoint);
+    // Disconnect the refresh worker after commit, before decoding.
+    drop(resume);
+    let update = wait_for_completion_update(&mut control);
+    assert!(update.revoked && update.source_available);
+    let Some(HostCompletion::Transaction {
+        operation,
+        outcome: Ok(OperationStatus::Committed { revision: 2 }),
+        refresh: Some(Err(TransactionError::ReloadRequired)),
+    }) = update.completion
+    else {
+        panic!("expected the proven commit with a refresh failure");
+    };
+    assert!(control.command(|host| Ok(host.is_locked())).unwrap());
+    assert_eq!(
+        control.command(|host| host.status(&operation)),
+        Ok(OperationStatus::Committed { revision: 2 })
+    );
+    assert!(matches!(
+        model.acquire(),
+        Err(StorageError::WriterUnavailable)
+    ));
+
+    control.command(unlock).unwrap();
+    assert!(matches!(
+        wait_for_result(&mut control),
+        HostCompletion::Authentication(Ok(()))
+    ));
+    let page = control
+        .command(|host| host.list_credentials(host.generation(), 10, None))
+        .unwrap();
+    assert_eq!(page.revision, 2);
+    assert!(page.summaries.is_empty());
+}
+
+#[test]
+fn revocation_during_blocked_refresh_reports_the_commit_without_waiting() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    for source_failure in [false, true] {
+        let model = Model::new(Some(fixture()));
+        let mut host = HeadlessVault::open(model.clone(), OWNER).unwrap();
+        let (checkpoint, resume) = host.pause_refresh();
+        let mut control = HeadlessControlLoop::new(host, Source::default());
+        control
+            .command(|host| host.begin_authentication(AccessProof::Master("synthetic password")))
+            .unwrap();
+        assert!(matches!(
+            wait_for_result(&mut control),
+            HostCompletion::Authentication(Ok(()))
+        ));
+        control
+            .command(|host| host.save(request(1, 1), empty()))
+            .unwrap();
+        await_storage(&mut control, checkpoint);
+        assert_eq!(control.next_poll_in(Duration::from_secs(1)), WORKER_POLL);
+        assert!(!control.command(|host| Ok(host.is_locked())).unwrap());
+
+        if source_failure {
+            control.source.failed = true;
+        } else {
+            expire(&mut control);
+        }
+        let update = control.step(Duration::ZERO).unwrap();
+        assert!(update.revoked);
+        assert_eq!(update.source_available, !source_failure);
+        assert!(matches!(
+            update.completion,
+            Some(HostCompletion::Transaction {
+                outcome: Ok(OperationStatus::Committed { revision: 2 }),
+                refresh: Some(Err(TransactionError::Locked)),
+                ..
+            })
+        ));
+        assert_ne!(model.live(), Some(fixture()));
+        assert_eq!(model.live(), model.0.lock().unwrap().durable);
+        assert!(control.step(Duration::ZERO).unwrap().completion.is_none());
+
+        // The refresh worker never held the writer lease.
+        control.close();
+        let reopened = HeadlessVault::open(model, OWNER).unwrap();
+        resume.send(()).unwrap();
+        reopened.close();
+    }
+}
+
+#[test]
+fn revocation_at_the_reply_check_retains_the_commit_and_revokes_refresh() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let host = HeadlessVault::open(Model::new(Some(fixture())), OWNER).unwrap();
+    let mut control = HeadlessControlLoop::new(host, Source::default());
+    control
+        .command(|host| host.begin_authentication(AccessProof::Master("synthetic password")))
+        .unwrap();
+    assert!(matches!(
+        wait_for_result(&mut control),
+        HostCompletion::Authentication(Ok(()))
+    ));
+    let (checkpoint, resume) = control.command(|host| Ok(host.pause_refresh())).unwrap();
+    control
+        .command(|host| host.save(request(1, 1), empty()))
+        .unwrap();
+    await_storage(&mut control, checkpoint);
+    resume.send(()).unwrap();
+    control
+        .command(|host| {
+            host.await_queued_refresh();
+            Ok(())
+        })
+        .unwrap();
+    control.source.notice_after_poll = Some(SessionEvent::Suspend);
+    let update = control.step(Duration::ZERO).unwrap();
+    assert!(update.revoked);
+    assert!(matches!(
+        update.completion,
+        Some(HostCompletion::Transaction {
+            outcome: Ok(OperationStatus::Committed { revision: 2 }),
+            refresh: Some(Err(TransactionError::Locked)),
+            ..
+        })
+    ));
+    assert!(control.command(|host| Ok(host.is_locked())).unwrap());
 }
 
 #[test]

@@ -16,6 +16,7 @@ enum Access {
 mod authentication;
 mod listing;
 mod policy;
+pub(super) mod refresh;
 #[cfg(test)]
 mod tests;
 pub(super) mod write;
@@ -41,7 +42,8 @@ pub struct Session {
     access: Option<Access>,
     intent_key: Option<SecretKey>,
     permit: Option<Arc<Permit>>,
-    preparation: Option<Arc<Permit>>,
+    // Preparation and refresh transfer access to one revocable worker at a time.
+    worker_access: Option<Arc<Permit>>,
     authentication: Option<Arc<Attempt>>,
     authentication_job: Weak<()>,
     inactivity: Inactivity,
@@ -66,7 +68,7 @@ impl Session {
             },
             access,
             permit: None,
-            preparation: None,
+            worker_access: None,
             authentication: None,
             authentication_job: Weak::new(),
             inactivity,
@@ -122,7 +124,7 @@ impl Session {
         if let Some(attempt) = self.authentication.take() {
             attempt.cancel();
         }
-        if let Some(permit) = self.preparation.take() {
+        if let Some(permit) = self.worker_access.take() {
             permit.cancel();
         }
         if let Some(permit) = self.permit.take() {
@@ -137,11 +139,11 @@ impl Session {
         }
     }
 
-    /// Whether this admission context has revoked access. Preparation retains
-    /// the current generation while a worker temporarily owns its access state.
+    /// Whether this admission context has revoked access. The current generation
+    /// remains active while a worker temporarily owns its access state.
     /// Hosts must poll inactivity before composing a session-state reply.
     pub fn is_locked(&self) -> bool {
-        self.access.is_none() && self.preparation.is_none()
+        self.access.is_none() && self.worker_access.is_none()
     }
 
     /// Explicitly authenticate the worker's known committed base in a fresh
@@ -210,58 +212,13 @@ impl Session {
             return Err(TransactionError::Unauthorized);
         }
         self.poll_inactivity();
-        if self.preparation.is_some() {
+        if self.worker_access.is_some() {
             return Err(TransactionError::Busy);
         }
         match self.access.as_ref() {
             Some(Access::Enrollment(access)) => Ok(access.recovery_code()?),
             _ => Err(TransactionError::Locked),
         }
-    }
-
-    /// Refresh ordinary access after this generation's content commit. The trusted
-    /// host calls this with the returned operation reference once storage resolves.
-    /// Reuses the current data key without refreshing inactivity or returning
-    /// credentials. Repeating the refresh of the current commit is harmless.
-    pub fn refresh_committed_contents<L: WriterLease>(
-        &mut self,
-        worker: &Committer<L>,
-        caller: CallerId,
-        reference: &OperationRef,
-    ) -> Result<(), TransactionError> {
-        self.check_scope(worker, caller)?;
-        if reference.caller != caller || !Arc::ptr_eq(&self.scope, &reference.scope) {
-            return Err(TransactionError::Unauthorized);
-        }
-        self.poll_inactivity();
-        let Some(Access::Master(access)) = self.access.as_mut() else {
-            return Err(TransactionError::Locked);
-        };
-        if reference.generation != self.generation {
-            return Err(TransactionError::Locked);
-        }
-        worker.check_idle()?;
-        let Some(committed) = worker.fingerprint else {
-            return Err(TransactionError::ReloadRequired);
-        };
-        // Only this generation's master access can have submitted this operation.
-        // The worker advances the revision only for a barrier-completed commit.
-        let status = OperationStatus::Committed {
-            revision: committed.revision,
-        };
-        if worker.status(caller, reference)? != status {
-            return Err(TransactionError::ReloadRequired);
-        }
-        if self.source == Some(committed) {
-            return Ok(());
-        }
-        let result = access.refresh_contents(worker.base_bytes()?);
-        if self.poll_inactivity() {
-            return Err(TransactionError::Locked);
-        }
-        result?;
-        self.source = Some(committed);
-        Ok(())
     }
 
     fn check_scope<L: WriterLease>(

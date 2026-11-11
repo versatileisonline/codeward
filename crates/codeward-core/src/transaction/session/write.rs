@@ -255,7 +255,7 @@ impl Session {
         input.validate(access)?;
         let intent_key = self.intent_key.take().ok_or(TransactionError::Locked)?;
         let permit = Arc::new(Permit::new());
-        self.preparation = Some(permit.clone());
+        self.worker_access = Some(permit.clone());
         Ok(WritePreparation {
             access: self.access.take().expect("authorized access"),
             intent_key,
@@ -271,13 +271,13 @@ impl Session {
         result: &Result<PreparedWrite, TransactionError>,
     ) -> bool {
         if !self
-            .preparation
+            .worker_access
             .as_ref()
             .is_some_and(|current| Arc::ptr_eq(current, &preparation.permit))
         {
             return false;
         }
-        self.preparation = None;
+        self.worker_access = None;
         self.access = Some(preparation.access);
         self.intent_key = Some(preparation.intent_key);
         if matches!(result, Ok(PreparedWrite::New(_))) {
