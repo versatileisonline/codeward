@@ -1,13 +1,13 @@
-use std::{cell::Cell, rc::Rc, thread};
+use std::{cell::Cell, rc::Rc, sync::mpsc, thread};
 
 use super::*;
 use crate::{
     crypto,
     transaction::{
-        AccessProof, CallerId, OperationStatus,
+        AccessProof, CallerId, OperationStatus, StorageError,
         tests::{
             empty, fixture,
-            model::{Lease, Model},
+            model::{Event, Fault, Lease, Model},
             request,
         },
     },
@@ -22,6 +22,7 @@ struct Source {
     wait_time: Option<Duration>,
     failed: bool,
     poll_interval: Option<Duration>,
+    notice_after_poll: Option<SessionEvent>,
 }
 
 impl HeadlessEventSource for Source {
@@ -29,7 +30,7 @@ impl HeadlessEventSource for Source {
         if self.failed {
             Err(EventSourceError)
         } else {
-            Ok(self.notice.take())
+            Ok(self.notice.replace(self.notice_after_poll.take()))
         }
     }
 
@@ -86,7 +87,7 @@ fn external_driver_schedules_idle_revocation_without_waiting_in_the_source() {
     host.set_deadline_for_test(Instant::now() + bound);
     let mut control = HeadlessControlLoop::new(host, source);
     assert_eq!(control.next_poll_in(bound), interval);
-    control.host.set_deadline_for_test(Instant::now());
+    expire(&mut control);
     assert_eq!(control.next_poll_in(bound), Duration::ZERO);
     assert!(control.step(Duration::ZERO).unwrap().revoked);
     assert!(control.source.wait_time.is_none());
@@ -261,7 +262,7 @@ fn headless_loop_expiry_revokes_while_staging_is_blocked() {
         .command(|host| host.save(request(1, 1), &empty()))
         .unwrap();
     checkpoint.recv_timeout(Duration::from_secs(5)).unwrap();
-    control.host.set_deadline_for_test(Instant::now());
+    expire(&mut control);
     let update = control.step(Duration::ZERO).unwrap();
     assert!(update.revoked && update.completion.is_none());
     resume.send(()).unwrap();
@@ -274,4 +275,191 @@ fn headless_loop_expiry_revokes_while_staging_is_blocked() {
         }
     ));
     assert_eq!(model.live(), Some(fixture()));
+}
+
+fn expire(control: &mut HeadlessControlLoop<Lease, Source>) {
+    let VaultState::Open(host) = &mut control.vault else {
+        panic!("expected open vault");
+    };
+    host.set_deadline_for_test(Instant::now());
+}
+
+fn wait_for_opening(control: &mut HeadlessControlLoop<Lease, Source>) -> Result<(), HostError> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let update = control.step(WORKER_POLL).unwrap();
+        assert!(!update.revoked);
+        if let Some(result) = update.opening {
+            return result;
+        }
+        assert!(Instant::now() < deadline);
+    }
+}
+
+#[test]
+fn opening_loads_the_existing_vault_locked_and_retains_exclusion() {
+    let model = Model::new(Some(fixture()));
+    let storage = model.clone();
+    let control_thread = thread::current().id();
+    let mut control = HeadlessControlLoop::begin_open(
+        Source::default(),
+        OWNER,
+        VaultOpenMode::Existing,
+        move || {
+            assert_ne!(thread::current().id(), control_thread);
+            Ok(storage)
+        },
+    )
+    .unwrap();
+    wait_for_opening(&mut control).unwrap();
+    assert!(control.command(|host| Ok(host.is_locked())).unwrap());
+    assert!(matches!(
+        model.clone().acquire(),
+        Err(StorageError::WriterUnavailable)
+    ));
+    assert_eq!(model.events(), [Event::Read]);
+    control.close();
+    assert!(model.acquire().is_ok());
+}
+
+#[test]
+fn enrollment_stays_volatile_and_does_not_overwrite_existing_storage() {
+    let model = Model::new(None);
+    let mut control =
+        HeadlessControlLoop::begin_open(Source::default(), OWNER, VaultOpenMode::Enrollment, {
+            let model = model.clone();
+            move || Ok(model)
+        })
+        .unwrap();
+    wait_for_opening(&mut control).unwrap();
+    assert!(control.command(|host| host.recovery_code()).is_ok());
+    assert_eq!(model.events(), [Event::Read]);
+    assert_eq!(model.live(), None);
+    control.close();
+
+    let mut control = HeadlessControlLoop::begin_open(
+        Source::default(),
+        OWNER,
+        VaultOpenMode::Enrollment,
+        || Ok(Model::new(Some(fixture()))),
+    )
+    .unwrap();
+    assert_eq!(
+        wait_for_opening(&mut control),
+        Err(TransactionError::ReloadRequired.into())
+    );
+}
+
+#[test]
+fn opening_errors_release_the_writer_and_leave_commands_disabled() {
+    let model = Model::new(Some(fixture()));
+    model.fault(Fault::Read);
+    let storage = model.clone();
+    let mut control = HeadlessControlLoop::begin_open(
+        Source::default(),
+        OWNER,
+        VaultOpenMode::Existing,
+        move || Ok(storage),
+    )
+    .unwrap();
+    assert_eq!(
+        wait_for_opening(&mut control),
+        Err(TransactionError::from(StorageError::Read).into())
+    );
+    assert!(matches!(
+        control.command::<()>(|_| panic!("failed opening has no vault")),
+        Err(ControlError::Host(HostError::Transaction(
+            TransactionError::Locked
+        )))
+    ));
+    assert!(control.step(Duration::ZERO).unwrap().opening.is_none());
+    assert!(model.acquire().is_ok());
+}
+
+#[test]
+fn opening_observes_revocation_during_a_blocked_read() {
+    for source_failure in [false, true] {
+        let model = Model::new(None);
+        let (entered, checkpoint) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        model.0.lock().unwrap().read_block = Some((entered, wait));
+        let storage = model.clone();
+        let mut control = HeadlessControlLoop::begin_open(
+            Source::default(),
+            OWNER,
+            VaultOpenMode::Enrollment,
+            move || Ok(storage),
+        )
+        .unwrap();
+        checkpoint.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_eq!(control.next_poll_in(Duration::from_secs(1)), WORKER_POLL);
+        assert!(matches!(
+            control.command::<()>(|_| panic!("opening has no vault yet")),
+            Err(ControlError::Host(HostError::Transaction(
+                TransactionError::Busy
+            )))
+        ));
+        if source_failure {
+            control.source.failed = true;
+        } else {
+            control.source.notice.set(Some(SessionEvent::Suspend));
+        }
+        let update = control.step(Duration::ZERO).unwrap();
+        assert!(update.revoked && update.opening.is_none());
+        assert_eq!(update.source_available, !source_failure);
+        assert!(matches!(
+            model.clone().acquire(),
+            Err(StorageError::WriterUnavailable)
+        ));
+        resume.send(()).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while model.0.lock().unwrap().held {
+            assert!(Instant::now() < deadline);
+            thread::sleep(Duration::from_millis(1));
+        }
+        assert!(control.step(Duration::ZERO).unwrap().opening.is_none());
+        assert!(model.acquire().is_ok());
+    }
+}
+
+#[test]
+fn revocation_at_the_reply_check_discards_a_completed_opening() {
+    let model = Model::new(None);
+    let host = HeadlessVault::begin_create(model.clone(), OWNER).unwrap();
+    let (sender, receiver) = mpsc::sync_channel(1);
+    sender.send(Ok(Box::new(host))).unwrap();
+    let mut control = HeadlessControlLoop {
+        vault: VaultState::Opening(receiver),
+        source: Source {
+            notice_after_poll: Some(SessionEvent::OsSessionLocked),
+            ..Source::default()
+        },
+        source_available: true,
+    };
+    let update = control.step(Duration::ZERO).unwrap();
+    assert!(update.revoked && update.opening.is_none());
+    assert!(matches!(control.vault, VaultState::Closed));
+    assert!(model.acquire().is_ok());
+}
+
+#[test]
+fn manual_lock_and_close_drop_queued_openings() {
+    for close in [false, true] {
+        let model = Model::new(None);
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let mut control = HeadlessControlLoop {
+            vault: VaultState::Opening(receiver),
+            source: Source::default(),
+            source_available: true,
+        };
+        let host = HeadlessVault::begin_create(model.clone(), OWNER).unwrap();
+        sender.send(Ok(Box::new(host))).unwrap();
+        if close {
+            control.close();
+        } else {
+            control.lock();
+            assert!(control.step(Duration::ZERO).unwrap().opening.is_none());
+        }
+        assert!(model.acquire().is_ok());
+    }
 }

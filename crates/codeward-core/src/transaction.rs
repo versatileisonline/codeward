@@ -24,6 +24,7 @@ mod storage;
 mod worker;
 pub use event_loop::{
     ControlError, ControlUpdate, EventSourceError, HeadlessControlLoop, HeadlessEventSource,
+    VaultOpenMode,
 };
 pub use host::{AccessProof, HeadlessVault, HostCompletion, HostError};
 pub use session::{
