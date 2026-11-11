@@ -600,6 +600,11 @@ a worker. It decodes the committed bytes without retaining the writer lease.
 The control loop continues processing revocation and reports the proven commit
 even when expiry, source failure or worker loss prevents refresh.
 
+The opt-in [macOS desktop pilot](macos-desktop-pilot.md) drives this loop from
+Tauri and exposes only scoped synthetic-session status and lock controls.
+The mock runtime exercises the generated permissions. Packaged WebView and
+secret-redaction evidence are pending.
+
 ## Remaining work
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
@@ -662,8 +667,8 @@ experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Implement and validate Windows/Linux native storage. The bounded macOS policy
    is accepted. Quota and media-fault evidence and product admission remain separate.
-2. Integrate the headless control loop with the desktop host and verify packaged
-   event delivery and redaction. Draft ownership and close interactions remain pending.
+2. Extend the bounded desktop pilot to the declared desktop workflow and verify
+   packaged event delivery and redaction. Draft ownership and close interactions remain pending.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 
