@@ -35,6 +35,7 @@ pub(in crate::transaction) struct Disk {
     pub events: Vec<Event>,
     pub fault: Option<Fault>,
     pub held: bool,
+    pub read_block: Option<Pause>,
     pub stage_block: Option<Pause>,
     pub barrier_block: Option<Pause>,
     staged: Option<Vec<u8>>,
@@ -53,6 +54,7 @@ impl Model {
             events: Vec::new(),
             fault: None,
             held: false,
+            read_block: None,
             stage_block: None,
             barrier_block: None,
             staged: None,
@@ -95,6 +97,13 @@ impl Drop for Lease {
 
 impl WriterLease for Lease {
     fn read_current(&mut self) -> Result<Option<Vec<u8>>, StorageError> {
+        let block = self.0.0.lock().unwrap().read_block.take();
+        if let Some((entered, resume)) = block {
+            entered.send(()).unwrap();
+            resume
+                .recv_timeout(std::time::Duration::from_secs(10))
+                .unwrap();
+        }
         let mut disk = self.0.0.lock().unwrap();
         disk.events.push(Event::Read);
         if disk.fault == Some(Fault::Read) {

@@ -23,6 +23,20 @@ the same control thread. Route one trusted operation at a time through `command`
   save can commit through lock, expiry, or event-source failure. An obsolete
   authentication completion cannot restore access.
 
+### Opening storage without blocking event delivery
+
+Call `HeadlessControlLoop::begin_open` with the connected source and a trusted
+storage factory. The worker resolves storage, acquires exclusion and reads the
+baseline. Until `ControlUpdate::opening` reports success, vault commands are
+unavailable. Existing vaults open locked. Enrollment is volatile and only a
+subsequent committed creation establishes readiness.
+
+Lock, close, or source failure cancels delivery, including a result queued
+before the final event check. A blocked storage call can finish later. Its
+lease is released when the undeliverable result drops. After cancellation or
+failure, create a fresh loop to retry. Candidate preparation after opening
+still runs on the control thread.
+
 ## macOS source
 
 [`MacosEventSource`](../crates/codeward-host-macos/src/lib.rs) registers on the OS
@@ -52,10 +66,12 @@ scheduler and synchronous control work. [Apple Mach clock semantics](https://dev
 
 Core tests cover idle expiry, wait bounds, revocation before and after commands,
 expiry observed inside a command, stale authentication, and draining an admitted
-save after source failure. macOS tests cover clock brackets, native wait bounds
-and mappings. A main-thread smoke test registers the real bridge and posts
-workspace notifications within its own process, then verifies they revoke an
-enrollment through the control loop. It does not lock or suspend the machine.
+save after source failure. They also cover cancellation during a blocked open,
+late result suppression, lease release and a failed baseline read. macOS tests
+cover clock brackets, native wait bounds and mappings. A main-thread smoke test
+registers the real bridge and posts workspace notifications within its own
+process, then verifies they revoke an enrollment through the control loop.
+It does not lock or suspend the machine.
 
 ### Driving the control loop from a desktop host
 

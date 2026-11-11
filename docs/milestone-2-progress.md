@@ -584,6 +584,12 @@ lets an outer macOS loop collect delivered revocations and schedule deadlines
 without nested event dispatch. Process-local tests cover the control boundary.
 Packaged delivery and redaction still need desktop host evidence.
 
+The [nonblocking storage open](headless-session-events.md#opening-storage-without-blocking-event-delivery)
+moves managed-path preparation, writer acquisition and baseline reads to a worker.
+Model tests cover revocation while a read is blocked and suppression of a completed
+opening when a lock arrives before its reply. Write candidate preparation remains
+on the control thread.
+
 ## Remaining work
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage

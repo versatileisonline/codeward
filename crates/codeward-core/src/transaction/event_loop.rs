@@ -1,8 +1,14 @@
 //! Deadline scheduling and trusted event ordering for the headless host.
 
-use std::time::{Duration, Instant};
+use std::{
+    sync::mpsc::{Receiver, TryRecvError},
+    time::{Duration, Instant},
+};
 
-use super::{HeadlessVault, HostCompletion, HostError, SessionEvent, WriterLease};
+use super::{
+    CallerId, HeadlessVault, HostCompletion, HostError, SessionEvent, Storage, TransactionError,
+    WriterLease, host::spawn_worker,
+};
 
 const WORKER_POLL: Duration = Duration::from_millis(20);
 
@@ -59,8 +65,26 @@ pub struct ControlUpdate {
     pub revoked: bool,
     /// Whether the source can still be used for commands and waits.
     pub source_available: bool,
+    /// Result of opening a vault or starting enrollment. Enrollment remains
+    /// volatile. Revoked openings do not report a result.
+    pub opening: Option<Result<(), HostError>>,
     /// A current authentication result or independent transaction outcome.
     pub completion: Option<HostCompletion>,
+}
+
+/// Which storage state a trusted caller intends to open.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum VaultOpenMode {
+    /// Read an existing vault and leave it locked.
+    Existing,
+    /// Start volatile enrollment only if the destination is absent.
+    Enrollment,
+}
+
+enum VaultState<L: WriterLease + Send + 'static> {
+    Opening(Receiver<Result<Box<HeadlessVault<L>>, HostError>>),
+    Open(Box<HeadlessVault<L>>),
+    Closed,
 }
 
 /// Drives a vault and event source together on one control thread. The caller
@@ -68,7 +92,7 @@ pub struct ControlUpdate {
 /// While a worker is active, result polling is capped at 20 ms intervals. Idle
 /// waits use the core's current monotonic deadline and the caller's wait bound.
 pub struct HeadlessControlLoop<L: WriterLease + Send + 'static, E: HeadlessEventSource> {
-    host: HeadlessVault<L>,
+    vault: VaultState<L>,
     source: E,
     source_available: bool,
 }
@@ -77,10 +101,40 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
     /// Bind a connected event source to the headless vault.
     pub fn new(host: HeadlessVault<L>, source: E) -> Self {
         Self {
-            host,
+            vault: VaultState::Open(Box::new(host)),
             source,
             source_available: true,
         }
+    }
+
+    /// Start opening on a worker. The factory resolves storage on that worker,
+    /// and may return a controlled error before acquisition. Drive this loop
+    /// immediately to keep checking native events and receive the opening result.
+    /// Close or revocation discards late results and releases their leases when
+    /// the worker returns. To retry an opening, construct a new loop.
+    pub fn begin_open<S: Storage<Lease = L>>(
+        source: E,
+        caller: CallerId,
+        mode: VaultOpenMode,
+        storage: impl FnOnce() -> Result<S, TransactionError> + Send + 'static,
+    ) -> Result<Self, ControlError> {
+        let mut control = Self {
+            vault: VaultState::Closed,
+            source,
+            source_available: true,
+        };
+        control.check_command()?;
+        let receiver = spawn_worker(move || {
+            let storage = storage()?;
+            match mode {
+                VaultOpenMode::Existing => HeadlessVault::open(storage, caller),
+                VaultOpenMode::Enrollment => HeadlessVault::begin_create(storage, caller),
+            }
+            .map(Box::new)
+        })
+        .map_err(ControlError::Host)?;
+        control.vault = VaultState::Opening(receiver);
+        Ok(control)
     }
 
     /// Run one trusted host command with native events and expiry checked before
@@ -92,7 +146,11 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
         command: impl FnOnce(&mut HeadlessVault<L>) -> Result<T, HostError>,
     ) -> Result<T, ControlError> {
         self.check_command()?;
-        let result = command(&mut self.host);
+        let result = match &mut self.vault {
+            VaultState::Open(host) => command(host),
+            VaultState::Opening(_) => Err(TransactionError::Busy.into()),
+            VaultState::Closed => Err(TransactionError::Locked.into()),
+        };
         self.check_command()?;
         result.map_err(ControlError::Host)
     }
@@ -106,6 +164,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
         let update = self.collect()?;
         if update.revoked
             || !update.source_available
+            || update.opening.is_some()
             || update.completion.is_some()
             || max_wait.is_zero()
         {
@@ -129,18 +188,29 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
         } else {
             max_wait
         };
-        next_wait(
-            Instant::now(),
-            self.host.inactivity_deadline(),
-            self.host.has_pending_work(),
-            max_wait,
-        )
+        let (deadline, pending) = match &self.vault {
+            VaultState::Open(host) => (host.inactivity_deadline(), host.has_pending_work()),
+            VaultState::Opening(_) => (None, true),
+            VaultState::Closed => (None, false),
+        };
+        next_wait(Instant::now(), deadline, pending, max_wait)
     }
 
-    /// Revoke and release the control loop. Admitted writes retain their lease
-    /// until the worker exits, as with `HeadlessVault::close`.
+    /// Revoke and release the control loop without waiting for workers.
+    /// An opening or admitted write can hold its lease until the worker exits.
     pub fn close(self) {
-        self.host.close();
+        if let VaultState::Open(host) = self.vault {
+            (*host).close();
+        }
+    }
+
+    /// Revoke access or cancel an in-flight opening immediately.
+    pub fn lock(&mut self) {
+        match &mut self.vault {
+            VaultState::Open(host) => host.lock(),
+            VaultState::Opening(_) => self.vault = VaultState::Closed,
+            VaultState::Closed => (),
+        }
     }
 
     fn check_command(&mut self) -> Result<(), ControlError> {
@@ -156,14 +226,42 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
 
     fn collect(&mut self) -> Result<ControlUpdate, HostError> {
         let mut revoked = self.synchronize();
-        let mut completion = self.host.poll()?;
+        let (mut completion, opened) = match &mut self.vault {
+            VaultState::Open(host) => (host.poll()?, None),
+            VaultState::Opening(receiver) => (
+                None,
+                match receiver.try_recv() {
+                    Ok(result) => Some(result),
+                    Err(TryRecvError::Disconnected) => Some(Err(HostError::WorkerUnavailable)),
+                    Err(TryRecvError::Empty) => None,
+                },
+            ),
+            VaultState::Closed => (None, None),
+        };
         revoked |= self.synchronize();
         if revoked && matches!(completion, Some(HostCompletion::Authentication(_))) {
             completion = None;
         }
+        let mut opening = None;
+        if let Some(result) = opened {
+            self.vault = VaultState::Closed;
+            if !revoked {
+                match result {
+                    Ok(mut host) => {
+                        revoked = host.take_inactivity_revocation();
+                        if !revoked {
+                            self.vault = VaultState::Open(host);
+                            opening = Some(Ok(()));
+                        }
+                    }
+                    Err(error) => opening = Some(Err(error)),
+                }
+            }
+        }
         Ok(ControlUpdate {
             revoked,
             source_available: self.source_available,
+            opening,
             completion,
         })
     }
@@ -173,8 +271,13 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
         if self.source_available {
             match self.source.take_revocation() {
                 Ok(Some(event)) => {
-                    if !self.host.observe_event(event) {
+                    if matches!(
+                        event,
+                        SessionEvent::FocusLost | SessionEvent::BackgroundProgress
+                    ) {
                         self.fail_source();
+                    } else {
+                        self.lock();
                     }
                     revoked = true;
                 }
@@ -185,12 +288,15 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
                 }
             }
         }
-        self.host.take_inactivity_revocation() || revoked
+        if let VaultState::Open(host) = &mut self.vault {
+            revoked |= host.take_inactivity_revocation();
+        }
+        revoked
     }
 
     fn fail_source(&mut self) {
         self.source_available = false;
-        self.host.lock();
+        self.lock();
     }
 }
 

@@ -38,11 +38,13 @@ The macOS source supplies platform observations. Reading state or draining
 results does not extend the deadline. The caller retains the original scope of
 any queued credential page and rechecks it before delivery.
 
-Opening storage and candidate preparation are synchronous. Creation and password
-replacement still perform their preparation KDF on the invoking thread. Before
-dispatch, expiry can cancel the prepared candidate without skipping worker cleanup.
-Draft ownership, close dialogs, desktop event integration, IPC and UI remain
-separate. The macOS writer remains opt-in for synthetic development.
+The control loop can open storage on a worker, including managed-path preparation,
+writer acquisition, and the baseline read. Its synchronous host constructors
+remain available for headless tests. Candidate preparation is still synchronous.
+Creation and password replacement perform their preparation KDF on the invoking
+thread. Before dispatch, expiry can cancel the prepared candidate without skipping
+worker cleanup. Draft ownership, close dialogs, packaged desktop event integration,
+IPC and UI remain pending. The macOS writer remains opt-in for synthetic development.
 
 ## Evidence
 

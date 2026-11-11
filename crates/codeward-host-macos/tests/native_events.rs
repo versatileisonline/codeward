@@ -23,12 +23,13 @@ mod macos {
         ffi::{CStr, c_char, c_void},
         ptr,
         sync::atomic::{AtomicBool, Ordering},
-        time::Duration,
+        thread,
+        time::{Duration, Instant},
     };
 
     use codeward_core::transaction::{
         CallerId, ControlError, HeadlessControlLoop, HeadlessEventSource, HeadlessVault,
-        PublishError, PublishMode, SessionEvent, Storage, StorageError, WriterLease,
+        PublishError, PublishMode, SessionEvent, Storage, StorageError, VaultOpenMode, WriterLease,
     };
     use codeward_host_macos::MacosEventSource;
 
@@ -166,8 +167,11 @@ mod macos {
 
     fn desktop_drive(suspend: Object, resume: Object) {
         let source = MacosEventSource::for_desktop_loop().unwrap();
-        let host = HeadlessVault::begin_create(Absent, CallerId(1)).unwrap();
-        let mut control = HeadlessControlLoop::new(host, source);
+        let mut control =
+            HeadlessControlLoop::begin_open(source, CallerId(1), VaultOpenMode::Enrollment, || {
+                Ok(Absent)
+            })
+            .unwrap();
         // SAFETY: use the live main run loop, kCFRunLoopEntry (1), and a callback
         // with no borrowed context. The observer is invalidated and released below.
         let observer = unsafe {
@@ -178,6 +182,17 @@ mod macos {
             observer
         };
 
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let update = control.step(Duration::ZERO).unwrap();
+            assert!(!update.revoked && update.source_available);
+            if let Some(opening) = update.opening {
+                opening.unwrap();
+                break;
+            }
+            assert!(Instant::now() < deadline);
+            thread::sleep(Duration::from_millis(1));
+        }
         assert_eq!(
             control.next_poll_in(Duration::from_secs(60)),
             Duration::from_secs(1)

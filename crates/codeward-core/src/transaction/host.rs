@@ -80,9 +80,9 @@ enum Pending<L: WriterLease> {
 /// access while authentication or storage is blocked.
 ///
 /// Poll for worker results and schedule `inactivity_deadline` even when idle.
-/// The control loop supplies wakeups and trusted events. Open and candidate
-/// preparation are synchronous. The host accepts explicit save snapshots and
-/// holds no drafts.
+/// The control loop supplies wakeups, trusted events and asynchronous opening.
+/// Direct constructors and candidate preparation are synchronous. The host
+/// accepts explicit save snapshots and holds no drafts.
 pub struct HeadlessVault<L: WriterLease + Send + 'static> {
     // Drop revokes access before releasing the worker or dropping its receiver.
     session: Session,
@@ -457,18 +457,20 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         &mut self,
         work: impl FnOnce() -> T + Send + 'static,
     ) -> Result<Receiver<T>, HostError> {
-        let (sender, receiver) = mpsc::sync_channel(1);
-        if thread::Builder::new()
-            .spawn(move || {
-                let _ = sender.send(work());
-            })
-            .is_err()
-        {
-            self.lock();
-            return Err(HostError::WorkerUnavailable);
-        }
-        Ok(receiver)
+        spawn_worker(work).inspect_err(|_| self.lock())
     }
+}
+
+pub(super) fn spawn_worker<T: Send + 'static>(
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Result<Receiver<T>, HostError> {
+    let (sender, receiver) = mpsc::sync_channel(1);
+    thread::Builder::new()
+        .spawn(move || {
+            let _ = sender.send(work());
+        })
+        .map_err(|_| HostError::WorkerUnavailable)?;
+    Ok(receiver)
 }
 
 #[cfg(test)]
