@@ -587,8 +587,14 @@ Packaged delivery and redaction still need desktop host evidence.
 The [nonblocking storage open](headless-session-events.md#opening-storage-without-blocking-event-delivery)
 moves managed-path preparation, writer acquisition and baseline reads to a worker.
 Model tests cover revocation while a read is blocked and suppression of a completed
-opening when a lock arrives before its reply. Write candidate preparation remains
-on the control thread.
+opening when a lock arrives before its reply.
+
+[Write preparation](headless-vault-host.md#write-replies) for creation, content
+saves and password replacement now runs on a worker. Lock can revoke access
+while preparation is blocked, and a candidate waits for another event check
+before staging. Model tests cover cancellation, stale results, enrollment retry
+and request deduplication. Postcommit snapshot refresh still runs on the control
+thread.
 
 ## Remaining work
 

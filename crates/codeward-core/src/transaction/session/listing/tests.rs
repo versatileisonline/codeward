@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    credentials::{Credential, CredentialInput},
+    credentials::{Credential, CredentialInput, CredentialSnapshot},
     crypto,
     transaction::tests::{
         complete, empty, fixture,

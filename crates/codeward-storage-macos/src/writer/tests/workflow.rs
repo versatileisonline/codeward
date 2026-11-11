@@ -280,7 +280,7 @@ fn managed_headless_host_creates_saves_closes_and_recovers() {
         HostCompletion::Authentication(Ok(()))
     ));
     let generation = host.generation();
-    host.save(request(1), &snapshot()).unwrap();
+    host.save(request(1), snapshot()).unwrap();
     assert!(matches!(
         completion(&mut host),
         HostCompletion::Transaction {

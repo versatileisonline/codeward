@@ -34,8 +34,11 @@ subsequent committed creation establishes readiness.
 Lock, close, or source failure cancels delivery, including a result queued
 before the final event check. A blocked storage call can finish later. Its
 lease is released when the undeliverable result drops. After cancellation or
-failure, create a fresh loop to retry. Candidate preparation after opening
-still runs on the control thread.
+failure, create a fresh loop to retry.
+
+Write preparation runs on a worker as well. After receiving a fresh candidate,
+the control loop checks for revocation before another poll can start staging.
+Keep scheduling while work is pending, even when a poll returns no completion.
 
 ## macOS source
 
@@ -130,7 +133,8 @@ both cycles. This exercise covered the volatile enrollment path in one logged-in
 session. The clock-gap fallback retains unit-test coverage.
 
 GUI redaction and desktop event-loop integration still require validation.
-Synchronous open and candidate preparation can delay native event collection.
+Synchronous host constructors and postcommit snapshot refresh can delay native
+event collection. Desktop hosts can use the worker-backed opening path above.
 An event first collected after a command may arrive after a write already
 crossed publication admission. The existing commit and reconciliation rules
 govern that write. Windows/Linux native events, drafts, IPC and packaging are
