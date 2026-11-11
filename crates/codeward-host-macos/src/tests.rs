@@ -43,3 +43,16 @@ fn screen_and_workspace_observations_are_revocation_only() {
     ));
     assert!(observation(0).is_none());
 }
+
+#[test]
+fn a_coalesced_native_return_preserves_the_selected_revocation() {
+    let bits = 4 | 8;
+    let batch = MacosObservation {
+        revocation: observation(bits),
+        bits,
+    };
+    assert_eq!(batch.revocation, Some(SessionEvent::Suspend));
+    assert!(batch.includes(SessionEvent::Suspend));
+    assert!(batch.includes(SessionEvent::Resume));
+    assert!(!batch.includes(SessionEvent::DetectedSuspendGap));
+}

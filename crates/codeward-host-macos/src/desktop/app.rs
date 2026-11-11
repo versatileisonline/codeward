@@ -1,6 +1,5 @@
 use std::{cell::RefCell, time::Instant};
 
-use codeward_host_macos::MacosEventSource;
 use serde::Serialize;
 use tauri::{
     AppHandle, RunEvent, Runtime, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
@@ -10,9 +9,13 @@ use tauri::{
 };
 use tokio::sync::{oneshot, watch};
 
-use super::pilot::{Pilot, State};
+use super::{
+    pilot::{Pilot, State},
+    probe::{DesktopSource, PROBE_PAGE, Probe, Scenario},
+};
 
 const MAIN_VIEW: &str = "main";
+const PROBE_VIEW: &str = "session-probe";
 const ASSET: &str = "index.html";
 
 thread_local! {
@@ -20,7 +23,8 @@ thread_local! {
 }
 
 struct Desktop {
-    pilot: Pilot<MacosEventSource>,
+    pilot: Pilot<DesktopSource>,
+    probe: Option<Probe>,
     deadline: watch::Sender<Option<Instant>>,
 }
 
@@ -32,13 +36,14 @@ enum CommandError {
     Unavailable,
 }
 
-fn local_page(url: &Url) -> bool {
+fn local_page(url: &Url, page: &str) -> bool {
     url.scheme() == "tauri"
         && url.host_str() == Some("localhost")
         && url.username().is_empty()
         && url.password().is_none()
         && url.port().is_none()
-        && matches!(url.path(), "" | "/" | "/index.html")
+        && (url.path().strip_prefix('/') == Some(page)
+            || (page == ASSET && matches!(url.path(), "" | "/")))
         && url.query().is_none()
         && url.fragment().is_none()
 }
@@ -47,9 +52,22 @@ fn check_command<R: Runtime>(
     window: &WebviewWindow<R>,
     request: &Request<'_>,
 ) -> Result<(), CommandError> {
-    if window.label() != MAIN_VIEW
-        || window.as_ref().window().label() != MAIN_VIEW
-        || !window.url().is_ok_and(|url| local_page(&url))
+    let probe = DESKTOP
+        .with(|state| {
+            state
+                .try_borrow()
+                .ok()
+                .and_then(|state| state.as_ref().map(|desktop| desktop.probe.is_some()))
+        })
+        .ok_or(CommandError::Unavailable)?;
+    let (label, page) = if probe {
+        (PROBE_VIEW, PROBE_PAGE)
+    } else {
+        (MAIN_VIEW, ASSET)
+    };
+    if window.label() != label
+        || window.as_ref().window().label() != label
+        || !window.url().is_ok_and(|url| local_page(&url, page))
     {
         return Err(CommandError::Unauthorized);
     }
@@ -63,17 +81,42 @@ fn check_command<R: Runtime>(
     Ok(())
 }
 
-fn with_pilot(
-    action: impl FnOnce(&mut Pilot<MacosEventSource>) -> State,
-) -> Result<State, CommandError> {
+impl Desktop {
+    fn reschedule(&self) {
+        let deadline = match (
+            self.pilot.next_tick(),
+            self.probe.as_ref().map(Probe::next_tick),
+        ) {
+            (Some(pilot), Some(probe)) => Some(pilot.min(probe)),
+            (pilot, probe) => pilot.or(probe),
+        };
+        self.deadline.send_replace(deadline);
+    }
+
+    fn tick(&mut self) -> Result<bool, &'static str> {
+        let state = self.pilot.tick();
+        let result = self
+            .probe
+            .as_mut()
+            .map_or(Ok(false), |probe| probe.advance(state));
+        if !matches!(result, Ok(false)) {
+            self.probe.take();
+        }
+        result
+    }
+}
+
+fn with_desktop<T>(
+    action: impl FnOnce(&mut Desktop) -> Result<T, CommandError>,
+) -> Result<T, CommandError> {
     DESKTOP.with(|state| {
         let mut state = state
             .try_borrow_mut()
             .map_err(|_| CommandError::Unavailable)?;
         let desktop = state.as_mut().ok_or(CommandError::Unavailable)?;
-        let result = action(&mut desktop.pilot);
-        desktop.deadline.send_replace(desktop.pilot.next_tick());
-        Ok(result)
+        let result = action(desktop);
+        desktop.reschedule();
+        result
     })
 }
 
@@ -83,7 +126,12 @@ fn open_synthetic_session<R: Runtime>(
     request: Request<'_>,
 ) -> Result<State, CommandError> {
     check_command(&window, &request)?;
-    with_pilot(|pilot| pilot.open(|| MacosEventSource::for_desktop_loop().ok()))
+    with_desktop(|desktop| {
+        if desktop.probe.is_some() {
+            return Err(CommandError::Unauthorized);
+        }
+        Ok(desktop.pilot.open(DesktopSource::normal))
+    })
 }
 
 #[tauri::command]
@@ -92,7 +140,17 @@ fn get_session_state<R: Runtime>(
     request: Request<'_>,
 ) -> Result<State, CommandError> {
     check_command(&window, &request)?;
-    with_pilot(Pilot::tick)
+    // Probe renderer reads must not drive or reschedule the native loop.
+    let cached = DESKTOP.with(|state| {
+        state.try_borrow().ok().and_then(|state| {
+            let desktop = state.as_ref()?;
+            desktop.probe.as_ref().map(|_| desktop.pilot.state())
+        })
+    });
+    if let Some(state) = cached {
+        return Ok(state);
+    }
+    with_desktop(|desktop| Ok(desktop.pilot.tick()))
 }
 
 #[tauri::command]
@@ -101,7 +159,44 @@ fn lock_vault<R: Runtime>(
     request: Request<'_>,
 ) -> Result<State, CommandError> {
     check_command(&window, &request)?;
-    with_pilot(Pilot::lock)
+    with_desktop(|desktop| {
+        if desktop.probe.is_some() {
+            return Err(CommandError::Unauthorized);
+        }
+        Ok(desktop.pilot.lock())
+    })
+}
+
+#[tauri::command]
+fn probe_visible<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<(), CommandError> {
+    check_command(&window, &request)?;
+    with_desktop(|desktop| {
+        let probe = desktop.probe.as_mut().ok_or(CommandError::Unauthorized)?;
+        if probe.arm(desktop.pilot.tick()) {
+            Ok(())
+        } else {
+            Err(CommandError::Unavailable)
+        }
+    })
+}
+
+#[tauri::command]
+fn probe_cleared<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<(), CommandError> {
+    check_command(&window, &request)?;
+    with_desktop(|desktop| {
+        let probe = desktop.probe.as_mut().ok_or(CommandError::Unauthorized)?;
+        if probe.acknowledge_clear(desktop.pilot.state()) {
+            Ok(())
+        } else {
+            Err(CommandError::Unavailable)
+        }
+    })
 }
 
 async fn schedule(app: AppHandle, mut deadlines: watch::Receiver<Option<Instant>>) {
@@ -120,9 +215,17 @@ async fn schedule(app: AppHandle, mut deadlines: watch::Receiver<Option<Instant>
         }
         // Acknowledge the main-thread poll before queueing another wakeup.
         let (finished, polled) = oneshot::channel();
+        let main = app.clone();
         if app
             .run_on_main_thread(move || {
-                let _ = with_pilot(Pilot::tick);
+                match with_desktop(|desktop| Ok(desktop.tick())) {
+                    Ok(Ok(true)) => main.exit(0),
+                    Ok(Err(reason)) => {
+                        eprintln!("FAIL {reason}");
+                        main.exit(1);
+                    }
+                    _ => (),
+                }
                 let _ = finished.send(());
             })
             .is_err()
@@ -137,24 +240,40 @@ fn context<R: Runtime>() -> tauri::Context<R> {
     tauri::generate_context!()
 }
 
-pub(super) fn run() -> tauri::Result<()> {
+pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
+    let (label, page) = if scenario.is_some() {
+        (PROBE_VIEW, PROBE_PAGE)
+    } else {
+        (MAIN_VIEW, ASSET)
+    };
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             open_synthetic_session,
             get_session_state,
-            lock_vault
+            lock_vault,
+            probe_visible,
+            probe_cleared
         ])
-        .setup(|app| {
+        .setup(move |app| {
             let (deadline, receiver) = watch::channel(None);
-            DESKTOP.with(|state| {
-                *state.borrow_mut() = Some(Desktop {
-                    pilot: Pilot::new(),
-                    deadline,
-                })
-            });
-            WebviewWindowBuilder::new(app, MAIN_VIEW, WebviewUrl::App(ASSET.into()))
+            let probe = scenario
+                .map(Probe::new)
+                .transpose()
+                .map_err(std::io::Error::other)?;
+            let mut pilot = Pilot::new();
+            if let Some(probe) = &probe {
+                pilot.open(|| Some(probe.source()));
+            }
+            let desktop = Desktop {
+                pilot,
+                probe,
+                deadline,
+            };
+            desktop.reschedule();
+            DESKTOP.with(|state| *state.borrow_mut() = Some(desktop));
+            WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
                 .title("Codeward Synthetic Pilot")
-                .on_navigation(local_page)
+                .on_navigation(move |url| local_page(url, page))
                 .on_new_window(|_, _| NewWindowResponse::Deny)
                 .disable_drag_drop_handler()
                 .incognito(true)
@@ -164,12 +283,19 @@ pub(super) fn run() -> tauri::Result<()> {
             Ok(())
         })
         .build(context())?;
-    app.run(|_, event| match event {
+    app.run(move |app, event| match event {
+        RunEvent::ExitRequested {
+            code: None, api, ..
+        } if scenario.is_some() => {
+            api.prevent_exit();
+            eprintln!("FAIL probe interrupted before completion");
+            app.exit(1);
+        }
         RunEvent::WindowEvent {
-            label,
+            label: closed,
             event: WindowEvent::Destroyed,
             ..
-        } if label == MAIN_VIEW => {
+        } if closed == label && scenario.is_none() => {
             DESKTOP.with(|state| {
                 state.take();
             });
@@ -221,14 +347,16 @@ mod tests {
     #[test]
     fn generated_acl_and_command_checks_confine_pilot_ipc() {
         let context = context::<MockRuntime>();
-        for asset in [ASSET, "pilot.js"] {
+        for asset in [ASSET, "pilot.js", PROBE_PAGE, "probe.js"] {
             assert!(context.assets().get(&asset.into()).is_some());
         }
         let app = mock_builder()
             .invoke_handler(tauri::generate_handler![
                 open_synthetic_session,
                 get_session_state,
-                lock_vault
+                lock_vault,
+                probe_visible,
+                probe_cleared
             ])
             .build(context)
             .unwrap();
@@ -238,10 +366,14 @@ mod tests {
         let other = WebviewWindowBuilder::new(&app, "other", WebviewUrl::App(ASSET.into()))
             .build()
             .unwrap();
+        let probe = WebviewWindowBuilder::new(&app, PROBE_VIEW, WebviewUrl::App(PROBE_PAGE.into()))
+            .build()
+            .unwrap();
         let (deadline, _receiver) = watch::channel(None);
         DESKTOP.with(|state| {
             *state.borrow_mut() = Some(Desktop {
                 pilot: Pilot::new(),
+                probe: None,
                 deadline,
             })
         });
@@ -275,6 +407,24 @@ mod tests {
                     .contains("not allowed")
             );
         }
+        for command in ["probe_visible", "probe_cleared"] {
+            assert!(
+                invoke(&main, command, LOCAL, vec![])
+                    .unwrap_err()
+                    .contains("not allowed")
+            );
+        }
+        for command in ["open_synthetic_session", "lock_vault"] {
+            assert!(
+                invoke(&probe, command, LOCAL, vec![])
+                    .unwrap_err()
+                    .contains("not allowed")
+            );
+        }
+        assert_eq!(
+            invoke(&probe, "get_session_state", LOCAL, vec![]),
+            Err("unauthorized".into())
+        );
         assert!(invoke(&main, "plugin:app|version", LOCAL, vec![]).is_err());
         assert!(invoke(&main, "save_credential", LOCAL, vec![]).is_err());
         assert!(invoke(&main, "open_synthetic_session", LOCAL, vec![]).is_ok());
@@ -296,8 +446,16 @@ mod tests {
             "tauri://localhost/",
             "tauri://localhost/index.html",
         ] {
-            assert!(local_page(&allowed.parse().unwrap()));
+            assert!(local_page(&allowed.parse().unwrap(), ASSET));
         }
+        assert!(local_page(
+            &"tauri://localhost/probe.html".parse().unwrap(),
+            PROBE_PAGE
+        ));
+        assert!(!local_page(
+            &"tauri://localhost/probe.html".parse().unwrap(),
+            ASSET
+        ));
         for denied in [
             "https://localhost/",
             "tauri://localhost.example.test/",
@@ -306,7 +464,7 @@ mod tests {
             "tauri://localhost/index.html#state",
             "tauri://user@localhost/",
         ] {
-            assert!(!local_page(&denied.parse().unwrap()));
+            assert!(!local_page(&denied.parse().unwrap(), ASSET));
         }
     }
 }
