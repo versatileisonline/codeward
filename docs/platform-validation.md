@@ -56,7 +56,8 @@ native directory-preparation entry and a
 [default-off experimental writer](macos-experimental-writer.md) for synthetic
 development. The [Linux experiment](linux-storage-foundation.md#managed-location-experiment)
 resolves and prepares the fixed managed location for synthetic reads on ext4.
-Windows managed resolution and accepted production writers remain pending. Do not infer real-vault or packaged support from those experiments.
+Windows managed resolution and accepted production writers remain pending.
+Do not infer real-vault or packaged support from those experiments.
 
 Support only regular files in user-controlled local directories on the declared
 filesystems. Reject symlink/reparse-point vault paths and hard-linked vault files;
