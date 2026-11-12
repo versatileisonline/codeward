@@ -113,3 +113,52 @@ pub(super) fn mount_allowed(line: &[u8], id: u64) -> Option<bool> {
         .any(|option| option == b"rw");
     Some(writable && nodev && ext4 && super_writable)
 }
+
+pub(super) fn create_private_directory(parent: &File, name: &CStr) -> io::Result<()> {
+    // SAFETY: The directory descriptor is live and name is a NUL-terminated component.
+    if unsafe { libc::mkdirat(parent.as_raw_fd(), name.as_ptr(), 0o700) } == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
+pub(super) fn account_home(owner: u32) -> Result<std::path::PathBuf, NativeError> {
+    use std::os::unix::ffi::OsStrExt;
+
+    const MAX_BUFFER: usize = 1024 * 1024;
+    let mut buffer = vec![0; 4096];
+    let mut account = MaybeUninit::<libc::passwd>::uninit();
+    loop {
+        let mut result = std::ptr::null_mut();
+        // SAFETY: account and result are writable, and buffer is initialized and
+        // live for the specified length and for the subsequent home lookup.
+        let status = unsafe {
+            libc::getpwuid_r(
+                owner,
+                account.as_mut_ptr(),
+                buffer.as_mut_ptr(),
+                buffer.len(),
+                &mut result,
+            )
+        };
+        if status == libc::ERANGE && buffer.len() < MAX_BUFFER {
+            buffer.resize(buffer.len() * 2, 0);
+            continue;
+        }
+        if status != 0 || result.is_null() {
+            return Err(NativeError::Io);
+        }
+        // SAFETY: Successful getpwuid_r populated the account and its string
+        // pointers refer to NUL-terminated entries in the still-live buffer.
+        let account = unsafe { account.assume_init() };
+        if account.pw_uid != owner || account.pw_dir.is_null() {
+            return Err(NativeError::InvalidPath);
+        }
+        // SAFETY: pw_dir is nonnull and references the live getpwuid_r buffer.
+        let path = unsafe { CStr::from_ptr(account.pw_dir) };
+        return Ok(std::path::PathBuf::from(std::ffi::OsStr::from_bytes(
+            path.to_bytes(),
+        )));
+    }
+}

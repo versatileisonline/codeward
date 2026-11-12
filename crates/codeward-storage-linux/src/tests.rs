@@ -8,6 +8,7 @@ use std::{
 };
 
 use super::*;
+use std::path::PathBuf;
 
 const FIXTURE: &str = "CODEWARD_LINUX_EXT4_FIXTURE";
 const CHILD: &str = "CODEWARD_LINUX_LEASE_CHILD";
@@ -241,4 +242,130 @@ fn ext4_refuses_default_acl_without_creating_companion() {
         Some(NativeError::Permissions)
     );
     assert!(!fixture.0.join(COMPANION.to_str().unwrap()).exists());
+}
+
+#[test]
+fn managed_data_home_uses_absolute_xdg_or_account_home() {
+    use std::ffi::OsStr;
+    let home = || Ok(PathBuf::from("/account"));
+    assert_eq!(
+        managed::data_root(Some(OsStr::new("/data")), || panic!("account lookup")).unwrap(),
+        (PathBuf::from("/data"), false)
+    );
+    for xdg in [None, Some(OsStr::new("")), Some(OsStr::new("relative"))] {
+        assert_eq!(
+            managed::data_root(xdg, home).unwrap(),
+            (home().unwrap(), true)
+        );
+    }
+    assert_eq!(
+        managed::data_root(Some(OsStr::new("/data/../other")), home),
+        Err(NativeError::InvalidPath)
+    );
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_managed_location_prepares_and_reopens_fixed_names() {
+    let fixture = Fixture::new();
+    let home = &fixture.0;
+    let location = managed::Location::prepare(home, true, test_owner()).unwrap();
+    let expected = home.join(".local/share/codeward/vaults");
+    assert!(expected.is_dir());
+    for path in [expected.as_path(), expected.parent().unwrap()] {
+        assert_eq!(fs::metadata(path).unwrap().mode() & 0o7777, 0o700);
+    }
+    assert!(!expected.join("vault.cw").exists());
+    let lease = ReadLease::acquire(location).unwrap();
+    assert_eq!(lease.read_current().unwrap(), None);
+    let vault = expected.join("vault.cw");
+    File::create_new(&vault).unwrap();
+    fs::set_permissions(&vault, fs::Permissions::from_mode(0o600)).unwrap();
+    fs::write(&vault, b"existing synthetic bytes").unwrap();
+    drop(lease);
+    let location = managed::Location::prepare(home, true, test_owner()).unwrap();
+    let lease = ReadLease::acquire(location).unwrap();
+    assert_eq!(
+        lease.read_current().unwrap().unwrap(),
+        b"existing synthetic bytes"
+    );
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_managed_location_refuses_collision_and_revalidates_ancestors() {
+    let fixture = Fixture::new();
+    let home = &fixture.0;
+    let app = home.join("codeward");
+    let outside = home.join("outside");
+    fs::DirBuilder::new().mode(0o700).create(&outside).unwrap();
+    symlink(&outside, &app).unwrap();
+    assert_eq!(
+        managed::Location::prepare(home, false, test_owner()).err(),
+        Some(NativeError::Unsupported)
+    );
+    assert!(!outside.join("vaults").exists());
+    fs::remove_file(&app).unwrap();
+    fs::DirBuilder::new().mode(0o755).create(&app).unwrap();
+    fs::set_permissions(&app, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(
+        managed::Location::prepare(home, false, test_owner()).err(),
+        Some(NativeError::Permissions)
+    );
+    assert_eq!(fs::metadata(&app).unwrap().mode() & 0o7777, 0o755);
+    assert!(!app.join("vaults").exists());
+    fs::set_permissions(&app, fs::Permissions::from_mode(0o700)).unwrap();
+    let lease =
+        ReadLease::acquire(managed::Location::prepare(home, false, test_owner()).unwrap()).unwrap();
+    fs::set_permissions(&app, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+    fs::set_permissions(&app, fs::Permissions::from_mode(0o700)).unwrap();
+    fs::rename(&app, home.join("former-codeward")).unwrap();
+    fs::DirBuilder::new().mode(0o700).create(&app).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::Conflict));
+}
+
+fn test_owner() -> u32 {
+    // SAFETY: geteuid has no arguments or preconditions.
+    unsafe { libc::geteuid() }
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_managed_public_entry_uses_xdg_in_separate_process() {
+    let fixture = Fixture::new();
+    let result = Command::new(env::current_exe().unwrap())
+        .args(["--exact", "tests::managed_xdg_child", "--ignored"])
+        .env("XDG_DATA_HOME", &fixture.0)
+        .env("HOME", "/unused-account-home")
+        .status()
+        .unwrap();
+    assert!(result.success());
+    let vaults = fixture.0.join("codeward/vaults");
+    assert!(vaults.join(COMPANION.to_str().unwrap()).is_file());
+    assert!(!vaults.join("vault.cw").exists());
+}
+
+#[test]
+#[ignore = "subprocess of ext4_managed_public_entry_uses_xdg_in_separate_process"]
+fn managed_xdg_child() {
+    let lease = ReadLease::acquire_managed_synthetic().unwrap();
+    assert_eq!(lease.read_current().unwrap(), None);
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_competing_managed_preparations_preserve_the_same_directory() {
+    let fixture = Fixture::new();
+    let (first, second) = std::thread::scope(|scope| {
+        let first = scope.spawn(|| managed::Location::prepare(&fixture.0, true, test_owner()));
+        let second = managed::Location::prepare(&fixture.0, true, test_owner());
+        (first.join().unwrap().unwrap(), second.unwrap())
+    });
+    let first = ReadLease::acquire(first).unwrap();
+    assert_eq!(
+        ReadLease::acquire(second).err(),
+        Some(NativeError::WriterUnavailable)
+    );
+    assert_eq!(first.read_current().unwrap(), None);
 }

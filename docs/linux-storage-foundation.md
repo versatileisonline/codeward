@@ -46,8 +46,38 @@ entries, default ACL refusal, directory/companion/vault substitutions and
 cross-process exclusion.
 The standard test run also checks the mount record parser and invalid paths.
 
-The app does not use this experiment. Managed XDG location resolution, removable
-and sync-location admission, staging, publication, barriers and fault evidence
-remain open. The advisory lease coordinates cooperating processes. Observed
+The app does not use this experiment. Removable and sync-location admission,
+staging, publication, barriers and fault evidence remain open.
+The advisory lease coordinates cooperating processes. Observed
 metadata comparisons do not give a snapshot guarantee against arbitrary
 same-user writers. The experiment does not implement saves or recovery.
+
+## Managed location experiment
+
+`ReadLease::acquire_managed_synthetic()` resolves the fixed
+`codeward/vaults/vault.cw` destination without accepting a path argument.
+It uses an existing absolute `XDG_DATA_HOME` directory. An unset, empty or
+relative value selects `.local/share` under the effective account's home,
+resolved with `getpwuid_r`. The fallback does not consult `HOME`. Ambiguous
+absolute paths are refused. A missing explicit XDG base must be prepared by
+the caller's environment. The experiment can create the fixed fallback
+components under an existing account home. See the [XDG Base Directory
+Specification](https://specifications.freedesktop.org/basedir/latest/) and
+[Linux account lookup](https://man7.org/linux/man-pages/man3/getpwuid.3.html).
+
+Preparation walks trusted directories without following symlinks and requires
+a writable ext4 nodev mount at the selected base. Descendants stay on that
+mount. The base and managed descendants must be effective-user-owned. The app
+directories require mode 0700, and the base and managed descendants refuse
+POSIX default ACLs. Missing directories use descriptor-relative creation with
+restrictive modes. Existing entries are left in place when checks fail.
+Before acquiring the companion and around reads, the lease reopens the
+directory chain and checks mount and retained directory identities. Vault and
+companion validation use the same read path as the fixture entry.
+
+The Ubuntu ext4 tests cover a fresh default tree, idempotent reopening,
+concurrent preparation, an existing synthetic vault, collision refusal,
+ancestor permission changes and substitutions, and the public XDG entry in a
+child process.
+Managed resolution is synthetic-only. Removable and sync-location policy,
+staging, committed writes and application integration remain open.

@@ -9,11 +9,12 @@ use std::{
     fs::{File, Metadata, TryLockError},
     io::{self, Read},
     os::unix::{ffi::OsStrExt, fs::MetadataExt},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
+mod managed;
 mod native;
 #[cfg(test)]
 mod tests;
@@ -24,7 +25,7 @@ const VAULT: &CStr = c"vault.cw";
 /// Fixed diagnostic categories with no path or OS error text.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NativeError {
-    /// The synthetic parent path is not absolute or contains ambiguous components.
+    /// The path is not absolute or contains ambiguous components.
     InvalidPath,
     /// The filesystem, mount, link or entry type is unsupported.
     Unsupported,
@@ -51,11 +52,8 @@ impl Error for NativeError {}
 
 /// Retains advisory writer exclusion for a synthetic vault on Linux.
 pub struct ReadLease {
-    path: PathBuf,
-    parent: File,
+    location: managed::Location,
     companion: File,
-    mount: u64,
-    owner: u32,
 }
 
 impl ReadLease {
@@ -66,18 +64,30 @@ impl ReadLease {
     pub fn acquire_synthetic(path: &Path) -> Result<Self, NativeError> {
         // SAFETY: geteuid has no pointer arguments or preconditions.
         let owner = unsafe { libc::geteuid() };
-        let parent = open_parent(path, owner)?;
-        let mount = native::mount_id(&parent)?;
-        native::verify_mount(mount)?;
+        Self::acquire(managed::Location::fixture(path, owner)?)
+    }
+
+    /// Prepare the fixed per-account Linux location and acquire a synthetic read lease.
+    ///
+    /// Uses an existing absolute XDG data directory or the OS account home for the
+    /// default path. The admitted location must be on a writable ext4 nodev mount.
+    pub fn acquire_managed_synthetic() -> Result<Self, NativeError> {
+        Self::acquire(managed::Location::managed()?)
+    }
+
+    fn acquire(location: managed::Location) -> Result<Self, NativeError> {
+        location.verify()?;
+        let parent = location.parent();
+        let owner = location.owner;
         let companion = match native::open_at(
-            &parent,
+            parent,
             COMPANION,
             libc::O_RDWR | libc::O_CREAT | libc::O_EXCL,
             true,
         ) {
             Ok(file) => file,
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-                open_regular(&parent, COMPANION, libc::O_RDWR, owner)?
+                open_regular(parent, COMPANION, libc::O_RDWR, owner)?
                     .ok_or(NativeError::Conflict)?
             }
             Err(error) => return Err(open_error(error)),
@@ -91,11 +101,8 @@ impl ReadLease {
             Err(TryLockError::Error(_)) => return Err(NativeError::Io),
         }
         let lease = Self {
-            path: path.to_owned(),
-            parent,
+            location,
             companion,
-            mount,
-            owner,
         };
         lease.verify()?;
         Ok(lease)
@@ -110,17 +117,22 @@ impl ReadLease {
 
     fn read_with(&self, after_open: impl FnOnce()) -> Result<Option<Vec<u8>>, NativeError> {
         self.verify()?;
-        let mut file = match open_regular(&self.parent, VAULT, libc::O_RDONLY, self.owner)? {
+        let mut file = match open_regular(
+            self.location.parent(),
+            VAULT,
+            libc::O_RDONLY,
+            self.location.owner,
+        )? {
             Some(file) => file,
             None => {
                 self.verify()?;
-                return match named_metadata(&self.parent, VAULT) {
+                return match named_metadata(self.location.parent(), VAULT) {
                     Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
                     _ => Err(NativeError::Conflict),
                 };
             }
         };
-        let before = validate_regular(&file, self.owner)?;
+        let before = validate_regular(&file, self.location.owner)?;
         if same_inode(&before, &metadata(&self.companion)?) {
             return Err(NativeError::Conflict);
         }
@@ -132,7 +144,7 @@ impl ReadLease {
         }
         native::refuse_acl(&file, c"system.posix_acl_access")?;
         self.verify()?;
-        let named = named_metadata(&self.parent, VAULT).map_err(changed)?;
+        let named = named_metadata(self.location.parent(), VAULT).map_err(changed)?;
         if !same_observation(&after, &named) {
             return Err(NativeError::Conflict);
         }
@@ -140,15 +152,9 @@ impl ReadLease {
     }
 
     fn verify(&self) -> Result<(), NativeError> {
-        let current = open_parent(&self.path, self.owner)?;
-        if native::mount_id(&current)? != self.mount
-            || !same_inode(&metadata(&self.parent)?, &metadata(&current)?)
-        {
-            return Err(NativeError::Conflict);
-        }
-        native::verify_mount(self.mount)?;
-        let companion = validate_regular(&self.companion, self.owner)?;
-        let named = named_metadata(&self.parent, COMPANION).map_err(changed)?;
+        self.location.verify()?;
+        let companion = validate_regular(&self.companion, self.location.owner)?;
+        let named = named_metadata(self.location.parent(), COMPANION).map_err(changed)?;
         if !same_observation(&companion, &named) {
             return Err(NativeError::Conflict);
         }
@@ -159,7 +165,7 @@ impl ReadLease {
     }
 }
 
-fn open_parent(path: &Path, owner: u32) -> Result<File, NativeError> {
+fn validate_path(path: &Path) -> Result<&[u8], NativeError> {
     let path = path.as_os_str().as_bytes();
     let path = path.strip_prefix(b"/").ok_or(NativeError::InvalidPath)?;
     let segments = path.split(|&byte| byte == b'/');
@@ -169,14 +175,19 @@ fn open_parent(path: &Path, owner: u32) -> Result<File, NativeError> {
     {
         return Err(NativeError::InvalidPath);
     }
+    Ok(path)
+}
+
+fn open_path(path: &Path, owner: u32, private: bool) -> Result<File, NativeError> {
+    let path = validate_path(path)?;
     let mut parent = File::open("/").map_err(|_| NativeError::Io)?;
     validate_directory(&parent, owner, false)?;
-    let mut segments = segments.peekable();
+    let mut segments = path.split(|&byte| byte == b'/').peekable();
     while let Some(segment) = segments.next() {
         let segment = CString::new(segment).map_err(|_| NativeError::InvalidPath)?;
         parent = native::open_at(&parent, &segment, libc::O_RDONLY | libc::O_DIRECTORY, false)
             .map_err(open_error)?;
-        validate_directory(&parent, owner, segments.peek().is_none())?;
+        validate_directory(&parent, owner, private && segments.peek().is_none())?;
     }
     Ok(parent)
 }

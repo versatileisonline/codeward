@@ -54,8 +54,10 @@ per-platform paths and backup/portability contract are in
 [ADR-0006](adr/0006-managed-working-location.md). macOS now has a parameterless
 native directory-preparation entry and a
 [default-off experimental writer](macos-experimental-writer.md) for synthetic
-development. Windows/Linux managed resolution and accepted production writers
-remain pending. Do not infer real-vault or packaged support from those experiments.
+development. The [Linux experiment](linux-storage-foundation.md#managed-location-experiment)
+resolves and prepares the fixed managed location for synthetic reads on ext4.
+Windows managed resolution and accepted production writers remain pending.
+Do not infer real-vault or packaged support from those experiments.
 
 Support only regular files in user-controlled local directories on the declared
 filesystems. Reject symlink/reparse-point vault paths and hard-linked vault files;

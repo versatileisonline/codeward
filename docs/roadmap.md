@@ -66,9 +66,10 @@ blocked from real-vault use until platform-specific evidence exists.
 ## Current Milestone 2 slice
 
 The [Linux storage foundation](linux-storage-foundation.md) implements bounded
-reads and writer exclusion for synthetic data on ext4. Linux managed resolution
-and committed writes, Windows native persistence and integrated acceptance are
-still required for the declared core and persistence scope.
+reads and writer exclusion for synthetic data on ext4. The
+[managed location experiment](linux-storage-foundation.md#managed-location-experiment)
+resolves and admits the fixed location for those reads. Linux committed writes,
+Windows native persistence and integrated acceptance remain pending.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict

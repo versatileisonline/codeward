@@ -86,7 +86,8 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$fixture"
           sudo chmod 0700 "$fixture"
           findmnt --target "$fixture" --output FSTYPE,OPTIONS
-          CODEWARD_LINUX_EXT4_FIXTURE="$fixture" cargo test -p codeward-storage-linux --locked --offline -- ext4_ --ignored
+          # An unrelated test's fork can retain the companion lock until exec.
+          CODEWARD_LINUX_EXT4_FIXTURE="$fixture" cargo test -p codeward-storage-linux --locked --offline -- ext4_ --ignored --test-threads=1
       - name: Test synthetic desktop redaction
         if: runner.os == 'macOS'
         run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
