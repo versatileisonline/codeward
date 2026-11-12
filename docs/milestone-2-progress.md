@@ -602,8 +602,18 @@ even when expiry, source failure or worker loss prevents refresh.
 
 The opt-in [macOS desktop pilot](macos-desktop-pilot.md) drives this loop from
 Tauri and exposes only scoped synthetic-session status and lock controls.
-The mock runtime exercises the generated permissions. Packaged WebView and
-secret-redaction evidence are pending.
+The mock runtime exercises the generated permissions. The
+[packaged probes](macos-desktop-pilot.md) exercised native lock/unlock and
+sleep/wake, redaction of synthetic WebView fields and continued session
+revocation on Apple silicon macOS 26.3.1.
+
+## Linux storage foundation
+
+The [Linux foundation](linux-storage-foundation.md) adds bounded reads and an
+exclusive companion lease for synthetic files on ext4. Hosted Ubuntu tests use
+a disposable ext4 image and separate processes to exercise exclusion. Managed
+location resolution, publication, persistence barriers and native fault coverage
+for writes remain pending.
 
 ## Remaining work
 
@@ -667,8 +677,9 @@ experiment establishes complete persistence acceptance or the writable adapter.
 
 1. Implement and validate Windows/Linux native storage. The bounded macOS policy
    is accepted. Quota and media-fault evidence and product admission remain separate.
-2. Extend the bounded desktop pilot to the declared desktop workflow and verify
-   packaged event delivery and redaction. Draft ownership and close interactions remain pending.
+2. Extend desktop coverage beyond the synthetic macOS pilot. Draft ownership,
+   close interactions, Linux/Windows events and integrated credential redaction
+   remain pending under the desktop workflow.
 3. Demonstrate full Milestone 2 acceptance with real process interruptions,
    conflicting writers and native storage faults using synthetic data.
 
