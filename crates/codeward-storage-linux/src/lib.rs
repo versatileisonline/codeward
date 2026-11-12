@@ -126,10 +126,14 @@ impl ReadLease {
         }
         after_open();
         let bytes = read_bounded(&mut file, before.len())?;
-        let after = validate_regular(&file, self.owner)?;
+        let after = metadata(&file)?;
+        if !same_observation(&before, &after) {
+            return Err(NativeError::Conflict);
+        }
+        native::refuse_acl(&file, c"system.posix_acl_access")?;
         self.verify()?;
         let named = named_metadata(&self.parent, VAULT).map_err(changed)?;
-        if !same_observation(&before, &after) || !same_observation(&after, &named) {
+        if !same_observation(&after, &named) {
             return Err(NativeError::Conflict);
         }
         Ok(Some(bytes))
