@@ -17,8 +17,10 @@ kernel disk-full run on an isolated APFS image, a managed-subtree mount crossing
 refusal and direct writer checks for leftover files.
 
 [Rust CI evidence](continuous-integration.md) covers core tests/doctests and Clippy
-on hosted Ubuntu 24.04, Windows Server 2025 and macOS 26, with native foundation
-tests on macOS only. These runners do not establish the desktop matrix below.
+on hosted Ubuntu 24.04, Windows Server 2025 and macOS 26. The
+[Linux storage foundation](linux-storage-foundation.md) adds synthetic read and
+exclusion checks on a dedicated ext4 image in the Ubuntu job. These runners do
+not establish the desktop matrix below.
 
 ## Bounded starting matrix
 

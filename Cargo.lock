@@ -420,6 +420,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "codeward-storage-linux"
+version = "0.1.0"
+dependencies = [
+ "codeward-core",
+ "libc",
+]
+
+[[package]]
 name = "codeward-storage-macos"
 version = "0.1.0"
 dependencies = [
