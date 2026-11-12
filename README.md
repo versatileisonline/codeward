@@ -1,20 +1,29 @@
 # Codeward
 
-Local password manager targeting macOS, Windows, and Linux desktops.
+Codeward is an offline desktop password manager in development for a small
+private friends-and-family prototype. It uses a local encrypted vault and a
+handwritten recovery secret for an intact vault. The planned app requires no
+account or telemetry. The accepted design uses a Rust core with a Tauri host
+and React/TypeScript UI, and targets macOS, Windows and Linux.
 
-The initial version will run offline, store credentials in a local encrypted vault,
-and support a handwritten offline recovery secret for an intact vault. No account
-or telemetry is required. Milestone 1's design was accepted and Milestone 2 implementation
-was authorized on 2026-10-29. Rust owns the core; Tauri hosts a React/TypeScript UI.
-The planned application installs and opens in its own window. The exact vault
-format, save contract and initial validation matrix are specified; actual runtime
-support remains unverified. The initial audience is a small private friends/family
-prototype. The Rust core now prepares and authenticates encrypted vaults in memory,
-validates credential snapshots and prepares content/recovery-password changes.
-Session-bound transaction admission and the committed-write protocol now have
-fault-injected model tests. A synthetic macOS foundation adds bounded reads and
-native writer exclusion. Committed file storage, full application sessions and
-the desktop interface remain unimplemented; Milestone 2 is still in progress.
+## Current status
+
+Milestone 2 is in progress. The Rust core implements vault authentication,
+credential validation, session locking and the commit protocol. Platform
+evidence so far uses synthetic data:
+
+- macOS has a default-off writer tested for create, save, process termination
+  and reopen on managed APFS storage. A separate packaged pilot exercised
+  lock, sleep and redaction of synthetic WebView fields.
+  See the [managed workflow](docs/macos-managed-workflow.md) and
+  [desktop pilot](docs/macos-desktop-pilot.md#packaged-live-probes).
+- Linux has bounded reads and writer exclusion tested on a disposable ext4
+  filesystem. See the [Linux storage foundation](docs/linux-storage-foundation.md).
+- Windows runs the shared core checks in CI. Native Windows persistence is
+  pending. See the [platform validation plan](docs/platform-validation.md).
+
+The credential-management UI and distribution packages are future work. Use
+synthetic data for development and testing.
 
 ## Project foundation
 
@@ -47,15 +56,15 @@ the desktop interface remain unimplemented; Milestone 2 is still in progress.
 - Newly generated passwords and edits that have not been committed are excluded
   from persistence guarantees.
 
-Rust, Tauri and React/TypeScript are selected. Crypto selections are RustCrypto
-Argon2id for master-password derivation, HKDF-SHA256 for the generated recovery
-secret, and XChaCha20-Poly1305 for contents/key slots. The selected format uses a binary
-envelope with an encrypted JSON snapshot, a starting Argon2id profile and a 16 MiB
-file limit in [ADR-0002](docs/adr/0002-vault-security-and-format.md). The accepted
+The vault uses RustCrypto Argon2id for master-password derivation, HKDF-SHA256
+for the generated recovery secret, and XChaCha20-Poly1305 for contents and key
+slots. The format uses a binary envelope with an encrypted JSON snapshot, a
+starting Argon2id profile and a 16 MiB file limit in [ADR-0002](docs/adr/0002-vault-security-and-format.md). The accepted
 [format specification](docs/vault-format-v1.md) defines exact bytes and recovery
 encoding; [ADR-0003](docs/adr/0003-committed-writes.md) defines save semantics.
-Exact dependency/security review and native persistence evidence precede use.
-Browser integration, online recovery, sync, and automated backups remain future options.
+Real-vault use requires dependency and security review and native persistence
+evidence. Browser integration, online recovery, sync, and automated backups
+remain future options.
 
 ## Working on the core
 
@@ -70,4 +79,4 @@ the [JSON review](docs/json-dependency-review.md) covers the credential codec.
 and initial single-host timing measurement. The synthetic
 [vault round-trip example](crates/codeward-core/examples/vault_round_trip.rs) exercises
 creation, content updates and recovery preparation without file writes or secret
-output. The transaction model is not native storage/durability evidence. Use synthetic data.
+output.

@@ -40,13 +40,13 @@ Success means visibility only. Residue is never cleaned up or promoted on restar
 flushes the checked file descriptor under the publication guard. Managed paths
 require fsync and F_FULLFSYNC on the retained directories through the account home.
 It preserves errors and observed conflicts for reconciliation.
-This candidate sequence does not establish storage acceptance or acknowledge saves.
+The namespace call supplies the barriers. The core owns save acknowledgement.
 
 A [default-off experimental adapter](../../docs/macos-experimental-writer.md)
 implements the core storage traits behind `experimental-writer`. Its only public
 constructor is `ExperimentalStorage::managed()`. It retains the actual native lease
 and stage, uses bounded fallible encrypted copies and invalidates failed observations.
-The feature is for synthetic development; real-vault/storage acceptance is pending.
+The feature is for synthetic development. Real-vault use remains pending.
 A private `cfg(test)` fault/event wrapper delegates to that same implementation for
 creation, changes, recovery, uncertainty and residue tests. Arbitrary test paths and
 fault controls are absent from runtime builds.
@@ -66,21 +66,14 @@ dependency feature is introduced; the writer uses an explicit local opt-in featu
 This crate exports no implementation on non-macOS
 targets and does not establish Windows/Linux compatibility.
 
-Default builds omit the writable core adapter. Namespace acceptance,
-cloud-location policy and complete storage acceptance remain outstanding. Use
-synthetic inputs only. See the [foundation](../../docs/macos-storage-foundation.md)
-and [staging](../../docs/macos-staging.md) and
-[publication](../../docs/macos-publication.md) and
-[namespace evidence and limitations](../../docs/macos-namespace.md).
-The [core/native experiment](../../docs/macos-transaction-experiment.md) records
-the additional integration evidence and remaining acceptance boundaries.
-The [ACL admission evidence](../../docs/macos-acl-admission.md) records the shared
-read/exclusion checks and remaining location-policy limits.
-The [mount-policy evidence](../../docs/macos-location-admission.md) records repeated
-filesystem checks; cloud-location admission remains incomplete.
-The [managed-location evidence](../../docs/macos-managed-location.md) and
-[working/copy policy](../../docs/adr/0006-managed-working-location.md) distinguish
-native preparation from backup, portability workflows and runtime acceptance.
+The owner accepted the bounded macOS storage policy for the managed location,
+application-termination and disk-full evidence, and preservation of leftover
+files. The policy covers the tested APFS setup and refuses recognized cloud roots.
+Arbitrarily configured sync tools, broader crash durability and real-vault
+admission remain outside the accepted scope. See
+[ADR-0006](../../docs/adr/0006-managed-working-location.md) and the
+[capacity and admission evidence](../../docs/macos-capacity-and-admission.md).
+Use synthetic inputs only.
 
 From the workspace root, using the configured toolchain homes:
 
