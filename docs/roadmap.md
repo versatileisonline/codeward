@@ -21,6 +21,34 @@ Recovery metadata belongs in the Milestone 1 design and Milestone 2 coherent
 persistence contract, even though its user workflow arrives in Milestone 3. Do not
 design a vault requiring an incompatible recovery retrofit.
 
+## Path to desktop integration
+
+1. **Milestone 2 — Vault core and persistence.** Resolve and validate the managed
+   Linux vault location first. Then implement Linux committed writes, Windows
+   native persistence and the integrated acceptance tests for the storage gate.
+2. **Milestone 3 — Offline recovery.** After Milestone 2 acceptance, verify paper
+   enrollment and confirmation, recovery with an intact vault and committed
+   master-password replacement. Exercise invalid codes and interrupted access
+   changes, and verify that a paper code cannot restore a missing vault.
+3. **Milestone 4 — Desktop prototype.** After Milestone 3 acceptance, begin with
+   the local Apple silicon demo described below.
+
+Each milestone requires explicit acceptance before the next begins.
+
+### Local Apple silicon demo
+
+The first Milestone 4 slice connects setup, paper-code confirmation, saving a
+sample credential, locking, reopening and recovering access in one bundled
+window. Use synthetic data in a dedicated test vault. Verify that the UI shows
+a save only after a confirmed commit and clears sensitive fields on lock, even
+when an earlier reply arrives late. Drafts, ordinary close behavior and
+credential redaction follow the [UI/core contract](ui-core-contract.md) and
+[session policy](adr/0005-session-and-drafts.md).
+
+The existing [macOS session pilot](macos-desktop-pilot.md) provides synthetic
+lock and sleep evidence. Milestone 4 acceptance still requires validation on
+the declared macOS, Windows and Linux targets.
+
 ## Milestone 1 acceptance and Milestone 2 entry
 
 The complete handoff was approved on 2026-10-29 and Milestone 2 implementation
@@ -93,12 +121,11 @@ authentication and commit results on the synthetic managed path.
 [Headless session events](headless-session-events.md) add idle deadline scheduling,
 macOS workspace observations and a suspend-gap check. Live lock/unlock and
 sleep/wake revoked synthetic headless enrollment on macOS 26.3.1.
-Desktop drivers can now schedule nonwaiting polls and consume delivered macOS
-events without pumping a nested run loop. Actual desktop integration and
-packaged event validation remain pending.
+The packaged [macOS session pilot](macos-desktop-pilot.md#packaged-live-probes)
+exercised lock, sleep and redaction of synthetic fields. Credential workflow
+integration begins in Milestone 4.
 The [split-phase authentication slice](session-authentication.md) now lets a core
-session revoke a queued/running verification and reject stale completion. Desktop
-event dispatch, drafts and other platform adapters remain pending.
+session revoke a queued/running verification and reject stale completion.
 The [core inactivity/event policy](session-inactivity.md) now checks the accepted
 five-minute deadline, scoped interaction and security observations through session
 revocation. The headless control loop drives that policy for the macOS source.

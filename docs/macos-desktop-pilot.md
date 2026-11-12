@@ -7,6 +7,11 @@ adapter can only observe an absent destination. It exposes no credential or
 paper-code display, vault paths, or persistent writes. It exercises FR-02 and
 the control-loop and permission foundations of NFR-09 under ADR-0001/0005.
 
+This window provides synthetic session-event evidence for Milestone 2.
+The [local Apple silicon credential demo](roadmap.md#local-apple-silicon-demo)
+is the first UI integration slice in Milestone 4, after persistence and offline
+recovery are accepted.
+
 ## Main-thread driver
 
 The desktop window owns a `MacosEventSource::for_desktop_loop` and
