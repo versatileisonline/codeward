@@ -582,7 +582,6 @@ and confirmed that paper-code access remained denied afterward.
 The [desktop-driven mode](headless-session-events.md#driving-the-control-loop-from-a-desktop-host)
 lets an outer macOS loop collect delivered revocations and schedule deadlines
 without nested event dispatch. Process-local tests cover the control boundary.
-Packaged delivery and redaction still need desktop host evidence.
 
 The [nonblocking storage open](headless-session-events.md#opening-storage-without-blocking-event-delivery)
 moves managed-path preparation, writer acquisition and baseline reads to a worker.
@@ -617,6 +616,22 @@ prepares and revalidates the fixed location for synthetic reads. Linux staging,
 publication, persistence barriers and native write fault coverage remain pending.
 
 ## Remaining work
+
+1. Resolve and validate the managed Linux vault location under
+   [ADR-0006](adr/0006-managed-working-location.md).
+2. Implement and verify committed writes on Linux, then implement and validate
+   Windows native persistence. The bounded macOS storage policy is accepted.
+3. Demonstrate the Milestone 2 gate with synthetic vaults, including malformed
+   input, competing writers, real process interruptions and native storage
+   failures. Confirm that save acknowledgement follows the required barriers.
+
+Offline recovery acceptance follows in Milestone 3. Draft handling, close
+interactions, Linux and Windows desktop events, and integrated credential
+redaction belong to [Milestone 4](roadmap.md#path-to-desktop-integration).
+Real-vault admission, production save guarantees, OS-crash and power-loss
+evidence, and distribution package validation remain outstanding.
+
+## Earlier macOS storage evidence
 
 A [shared macOS writer](macos-experimental-writer.md) now implements the core storage
 traits for explicit experimental feature opt-in; default runtime builds omit it.
@@ -675,15 +690,3 @@ state. Focused local evidence includes 36 native test functions, two compile-fai
 doctests, native Clippy/formatting, concurrent readers and 14 child kills around
 publication. The namespace experiment above adds candidate barriers; neither
 experiment establishes complete persistence acceptance or the writable adapter.
-
-1. Implement and validate Windows/Linux native storage. The bounded macOS policy
-   is accepted. Quota and media-fault evidence and product admission remain separate.
-2. Extend desktop coverage beyond the synthetic macOS pilot. Draft ownership,
-   close interactions, Linux/Windows events and integrated credential redaction
-   remain pending under the desktop workflow.
-3. Demonstrate full Milestone 2 acceptance with real process interruptions,
-   conflicting writers and native storage faults using synthetic data.
-
-There is no credential store ready for use, accepted production writer/save guarantee,
-complete application/OS session implementation, native committed recovery or desktop UI.
-OS-crash/power-loss evidence and packaged support remain outstanding.
