@@ -73,6 +73,20 @@ jobs:
         run: cargo check --workspace --no-default-features --locked --offline
       - name: Test workspace including experimental features and doctests
         run: cargo test --workspace --all-features --locked --offline
+      - name: Test synthetic Linux storage on ext4
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          image=$(mktemp "$RUNNER_TEMP/codeward-ext4.XXXXXX")
+          fixture=$(sudo mktemp -d /mnt/codeward-ext4.XXXXXX)
+          trap 'if mountpoint -q "$fixture"; then sudo umount "$fixture"; fi; sudo rmdir "$fixture"; rm -f "$image"' EXIT
+          truncate -s 64M "$image"
+          mkfs.ext4 -q -F "$image"
+          sudo mount -o loop,nodev,nosuid,noexec "$image" "$fixture"
+          sudo chown "$(id -u):$(id -g)" "$fixture"
+          sudo chmod 0700 "$fixture"
+          findmnt --target "$fixture" --output FSTYPE,OPTIONS
+          CODEWARD_LINUX_EXT4_FIXTURE="$fixture" cargo test -p codeward-storage-linux --locked --offline -- ext4_ --ignored
       - name: Test synthetic desktop redaction
         if: runner.os == 'macOS'
         run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs

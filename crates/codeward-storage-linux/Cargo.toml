@@ -1,0 +1,10 @@
+[package]
+name = "codeward-storage-linux"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+codeward-core = { path = "../codeward-core" }
+libc = { version = "=0.2.191", default-features = false }

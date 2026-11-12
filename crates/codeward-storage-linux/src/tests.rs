@@ -1,0 +1,244 @@
+use std::{
+    env,
+    fs::{self, OpenOptions},
+    io::Write,
+    os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt, symlink},
+    process::Command,
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
+use super::*;
+
+const FIXTURE: &str = "CODEWARD_LINUX_EXT4_FIXTURE";
+const CHILD: &str = "CODEWARD_LINUX_LEASE_CHILD";
+
+struct Fixture(PathBuf);
+
+impl Fixture {
+    fn new() -> Self {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let root = PathBuf::from(env::var_os(FIXTURE).expect("private writable ext4 nodev mount"));
+        let path = root.join(format!(
+            "{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed),
+        ));
+        fs::DirBuilder::new().mode(0o700).create(&path).unwrap();
+        Self(path)
+    }
+
+    fn put(&self, name: &str, bytes: &[u8]) -> File {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(self.0.join(name))
+            .unwrap();
+        file.write_all(bytes).unwrap();
+        file
+    }
+}
+
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        fs::remove_dir_all(&self.0).unwrap();
+    }
+}
+
+#[test]
+fn mount_type_and_options_are_checked_by_mount_id() {
+    let ext4 = b"42 1 7:0 / /path\\040with\\040spaces rw,nodev shared:1 - ext4 /dev/loop0 rw";
+    assert_eq!(native::mount_allowed(ext4, 42), Some(true));
+    assert_eq!(native::mount_allowed(ext4, 41), None);
+    for line in [
+        &b"42 1 7:0 / /path rw,nodev - ext3 /dev/loop0 rw"[..],
+        b"42 1 7:0 / /path rw - ext4 /dev/loop0 rw",
+        b"42 1 7:0 / /path ro,nodev - ext4 /dev/loop0 rw",
+        b"42 1 7:0 / /path rw,nodev - ext4 /dev/loop0 ro",
+    ] {
+        assert_eq!(native::mount_allowed(line, 42), Some(false));
+    }
+}
+
+#[test]
+fn invalid_path_spellings_are_rejected() {
+    for path in [
+        "relative",
+        "/",
+        "/./example",
+        "/../example",
+        "//example",
+        "/\0",
+    ] {
+        assert_eq!(
+            ReadLease::acquire_synthetic(Path::new(path)).err(),
+            Some(NativeError::InvalidPath)
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_reads_and_enforces_file_cap() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    assert_eq!(lease.read_current().unwrap(), None);
+    let file = fixture.put("vault.cw", b"synthetic bytes");
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"synthetic bytes");
+    file.set_len(MAX_FILE_LENGTH as u64).unwrap();
+    assert_eq!(
+        lease.read_current().unwrap().unwrap().len(),
+        MAX_FILE_LENGTH
+    );
+    file.set_len(MAX_FILE_LENGTH as u64 + 1).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::TooLarge));
+    assert_eq!(file.metadata().unwrap().len(), MAX_FILE_LENGTH as u64 + 1);
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_refuses_link_special_and_public_entries() {
+    let fixture = Fixture::new();
+    let vault = fixture.0.join("vault.cw");
+    let other = fixture.0.join("other");
+    fixture.put("other", b"preserve");
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    symlink(&other, &vault).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::Unsupported));
+    fs::remove_file(&vault).unwrap();
+    fs::hard_link(&other, &vault).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::Unsupported));
+    fs::remove_file(&vault).unwrap();
+    assert!(
+        Command::new("mkfifo")
+            .arg(&vault)
+            .status()
+            .unwrap()
+            .success()
+    );
+    assert_eq!(lease.read_current(), Err(NativeError::Unsupported));
+    fs::remove_file(&vault).unwrap();
+    fixture.put("vault.cw", b"public");
+    fs::set_permissions(&vault, fs::Permissions::from_mode(0o644)).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+    assert_eq!(fs::read(&other).unwrap(), b"preserve");
+
+    let alias = fixture.0.join("alias");
+    symlink(&fixture.0, &alias).unwrap();
+    assert_eq!(
+        ReadLease::acquire_synthetic(&alias).err(),
+        Some(NativeError::Unsupported)
+    );
+    let lock = fixture.0.join(COMPANION.to_str().unwrap());
+    fs::rename(&lock, fixture.0.join("former-lock")).unwrap();
+    symlink(&other, &lock).unwrap();
+    assert_eq!(
+        ReadLease::acquire_synthetic(&fixture.0).err(),
+        Some(NativeError::Unsupported)
+    );
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_rejects_observed_changes_during_read() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    let mut file = fixture.put("vault.cw", b"first");
+    assert_eq!(
+        lease.read_with(|| file.write_all(b" growth").unwrap()),
+        Err(NativeError::Conflict)
+    );
+    fixture.put("replacement", b"whole second");
+    assert_eq!(
+        lease.read_with(|| {
+            fs::rename(fixture.0.join("replacement"), fixture.0.join("vault.cw")).unwrap();
+        }),
+        Err(NativeError::Conflict)
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"whole second");
+
+    let lock = fixture.0.join(COMPANION.to_str().unwrap());
+    assert_eq!(
+        lease.read_with(|| {
+            fs::rename(&lock, fixture.0.join("old-lock")).unwrap();
+            fixture.put(COMPANION.to_str().unwrap(), b"");
+        }),
+        Err(NativeError::Conflict)
+    );
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_refuses_substituted_parent() {
+    let fixture = Fixture::new();
+    let path = fixture.0.join("parent");
+    fs::DirBuilder::new().mode(0o700).create(&path).unwrap();
+    let lease = ReadLease::acquire_synthetic(&path).unwrap();
+    fs::rename(&path, fixture.0.join("moved")).unwrap();
+    fs::DirBuilder::new().mode(0o700).create(&path).unwrap();
+    assert_eq!(lease.read_current(), Err(NativeError::Conflict));
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_exclusion_survives_independent_opens() {
+    let fixture = Fixture::new();
+    let mut child = Command::new(env::current_exe().unwrap());
+    child.args(["--exact", "tests::lease_child", "--ignored"]);
+    child.env(CHILD, &fixture.0);
+
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    assert_eq!(
+        ReadLease::acquire_synthetic(&fixture.0).err(),
+        Some(NativeError::WriterUnavailable)
+    );
+    assert!(
+        child
+            .env("CODEWARD_EXPECT_LOCKED", "1")
+            .status()
+            .unwrap()
+            .success()
+    );
+    drop(lease);
+    assert!(
+        child
+            .env_remove("CODEWARD_EXPECT_LOCKED")
+            .status()
+            .unwrap()
+            .success()
+    );
+}
+
+#[test]
+#[ignore = "subprocess of ext4_exclusion_survives_independent_opens"]
+fn lease_child() {
+    let path = PathBuf::from(env::var_os(CHILD).expect("subprocess fixture path"));
+    let lease = ReadLease::acquire_synthetic(&path);
+    if env::var_os("CODEWARD_EXPECT_LOCKED").is_some() {
+        assert_eq!(lease.err(), Some(NativeError::WriterUnavailable));
+    } else {
+        assert_eq!(lease.unwrap().read_current().unwrap(), None);
+    }
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_refuses_default_acl_without_creating_companion() {
+    let fixture = Fixture::new();
+    let status = Command::new("python3")
+        .arg("-c")
+        .arg(
+            "import os, struct, sys\n\
+             acl = struct.pack('<IHHIHHIHHI', 2, 1, 7, 0xffffffff, 4, 0, 0xffffffff, 32, 0, 0xffffffff)\n\
+             os.setxattr(sys.argv[1], 'system.posix_acl_default', acl)",
+        )
+        .arg(&fixture.0)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    assert_eq!(
+        ReadLease::acquire_synthetic(&fixture.0).err(),
+        Some(NativeError::Permissions)
+    );
+    assert!(!fixture.0.join(COMPANION.to_str().unwrap()).exists());
+}
