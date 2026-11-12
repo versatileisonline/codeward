@@ -26,7 +26,7 @@ Root:
 - [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
-- [linux-storage-foundation.md](docs/linux-storage-foundation.md): Synthetic ext4 reads and exclusion.
+- [linux-storage-foundation.md](docs/linux-storage-foundation.md): Synthetic ext4 reads, exclusion and managed location.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
 - [macos-staging.md](docs/macos-staging.md): Synthetic encrypted staging, native API/ACL review, file synchronization and failure evidence.
 - [macos-publication.md](docs/macos-publication.md): Synthetic atomic creation/replacement, stale-base checks, uncertainty and process-kill evidence.
@@ -99,6 +99,7 @@ Root:
 `crates/codeward-storage-linux/`:
 
 - [src/lib.rs](crates/codeward-storage-linux/src/lib.rs): Synthetic native reads and companion lease.
+- [src/managed.rs](crates/codeward-storage-linux/src/managed.rs): Managed location preparation and revalidation.
 - [src/native.rs](crates/codeward-storage-linux/src/native.rs): Linux descriptor, mount and ACL checks.
 - [src/tests.rs](crates/codeward-storage-linux/src/tests.rs): Mount parser and native ext4 regressions.
 
