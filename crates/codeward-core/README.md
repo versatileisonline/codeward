@@ -9,9 +9,9 @@ are recorded; there are no runtime services.
 
 `UnauthenticatedEnvelope::parse` borrows already-read bytes without allocating,
 rejects unsupported profiles and malformed lengths, and returns only encrypted
-bytes/public metadata. A future file reader must cap reads before allocating its
-input. Passing this parser does not authenticate a vault or validate decrypted JSON.
-The deliberately named type cannot authorize credential exposure.
+bytes/public metadata. Native readers enforce the input cap before allocating.
+A parsed envelope still requires authentication and credential schema validation
+before the session can authorize access.
 
 `HeaderParts` supplies shared fixed-header encoding; `EnvelopeParts::encode`
 assembles an in-memory envelope from public metadata and
@@ -57,9 +57,11 @@ layer adds the bounded admission/session-generation behavior below.
 `transaction` separates a secret-owning `Session` from an encrypted-only
 `Committer` with a retained exclusive `WriterLease`. The trusted `Storage`
 adapter must acquire stable writer exclusion and implement restrictive staging,
-atomic create/replace and persistence barriers. The macOS crate now supplies a
-[default-off experiment](../../docs/macos-experimental-writer.md) for synthetic
-development; no production native adapter is accepted.
+atomic create/replace and persistence barriers. The default-off macOS writer
+implements these traits for synthetic development. See the
+[writer experiment](../../docs/macos-experimental-writer.md). The
+[Linux experiment](../../docs/linux-storage-foundation.md) covers bounded reads
+and writer exclusion on ext4.
 The worker checks the complete authenticated base's SHA-256, vault ID and revision
 before publication admission. Only final barriers advance the committed revision.
 Ambiguous publication/barrier failure blocks mutations until fresh authentication,
@@ -94,7 +96,9 @@ expired authentication. Only current caller/vault/generation activity refreshes 
 completion/storage progress does not. Trusted security events revoke immediately,
 including resume without a prior suspend event. Hosts must schedule idle polls,
 deliver validated OS observations and poll before reporting session-state snapshots.
-No platform suspend detector, UI redaction or complete auto-lock support is claimed.
+The [macOS host](../../docs/headless-session-events.md) provides native events
+and suspend-gap detection. Its [packaged pilot](../../docs/macos-desktop-pilot.md#packaged-live-probes)
+exercised lock, sleep and synthetic field redaction.
 
 [`open_locked` and split-phase authentication](../../docs/session-authentication.md)
 let the control side revoke a session while a separate Rust worker authenticates.
@@ -125,8 +129,6 @@ The optional synthetic timing example runs with
 Run `cargo run --locked --offline --example vault_round_trip` for a synthetic
 in-memory creation/edit/lock/recovery demonstration. It prints no secret values.
 
-The separate [macOS foundation](../codeward-storage-macos/README.md) experiments
-with handle-rooted bounded reads and OS writer exclusion using synthetic data.
-No native writer, durability adapter, complete application session
-implementation or desktop UI exists yet. Never use these fixtures or this
-incomplete library for real credentials.
+Use synthetic data for examples, native experiments and development. See the
+[workspace status](../../README.md#current-status) for application and platform
+progress.
