@@ -97,6 +97,14 @@ impl Location {
             .map_or(&self.anchor, |child| &child.directory)
     }
 
+    pub(super) fn directories_from_leaf(&self) -> impl Iterator<Item = &File> {
+        self.children
+            .iter()
+            .rev()
+            .map(|child| &child.directory)
+            .chain([&self.anchor])
+    }
+
     pub(super) fn verify(&self) -> Result<(), NativeError> {
         let mut current = open_path(&self.anchor_path, self.owner, self.private_anchor)?;
         if native::mount_id(&current)? != self.mount

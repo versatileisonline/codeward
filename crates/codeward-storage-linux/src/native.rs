@@ -186,3 +186,27 @@ pub(super) fn close_checked(file: File) -> io::Result<()> {
     }
     Ok(())
 }
+
+pub(super) fn publish_at(
+    parent: &File,
+    stage: &CStr,
+    destination: &CStr,
+    create: bool,
+) -> io::Result<()> {
+    let flags = if create { libc::RENAME_NOREPLACE } else { 0 };
+    // SAFETY: Both names are live NUL-terminated components of the retained
+    // directory. renameat2 borrows the descriptors and does not consume them.
+    let result = unsafe {
+        libc::renameat2(
+            parent.as_raw_fd(),
+            stage.as_ptr(),
+            parent.as_raw_fd(),
+            destination.as_ptr(),
+            flags,
+        )
+    };
+    if result != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}

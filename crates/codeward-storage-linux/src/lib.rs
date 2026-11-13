@@ -10,14 +10,16 @@ use std::{
     io::{self, Read},
     os::unix::{ffi::OsStrExt, fs::MetadataExt},
     path::Path,
+    sync::Mutex,
 };
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
 mod managed;
+mod namespace;
 mod native;
 mod staging;
-pub use staging::PreparedStage;
+pub use staging::{PreparedStage, PublicationError};
 #[cfg(test)]
 mod tests;
 
@@ -53,6 +55,8 @@ pub enum NativeError {
     SyncStage,
     /// Explicitly closing the stage writer failed.
     CloseStage,
+    /// Synchronizing the observed file or directory chain failed.
+    SyncNamespace,
 }
 
 impl fmt::Display for NativeError {
@@ -66,6 +70,7 @@ impl Error for NativeError {}
 pub struct ReadLease {
     location: managed::Location,
     companion: File,
+    publication: Mutex<()>,
 }
 
 impl ReadLease {
@@ -115,6 +120,7 @@ impl ReadLease {
         let lease = Self {
             location,
             companion,
+            publication: Mutex::new(()),
         };
         lease.verify()?;
         Ok(lease)
@@ -124,10 +130,20 @@ impl ReadLease {
     ///
     /// The bytes are unauthenticated and still require core validation.
     pub fn read_current(&self) -> Result<Option<Vec<u8>>, NativeError> {
-        self.read_with(|| {})
+        Ok(self.observe_current(|| {})?.map(|observed| observed.bytes))
     }
 
+    #[cfg(test)]
     fn read_with(&self, after_open: impl FnOnce()) -> Result<Option<Vec<u8>>, NativeError> {
+        Ok(self
+            .observe_current(after_open)?
+            .map(|observed| observed.bytes))
+    }
+
+    fn observe_current(
+        &self,
+        after_open: impl FnOnce(),
+    ) -> Result<Option<ObservedFile>, NativeError> {
         self.verify()?;
         let mut file = match open_regular(
             self.location.parent(),
@@ -160,7 +176,40 @@ impl ReadLease {
         if !same_observation(&after, &named) {
             return Err(NativeError::Conflict);
         }
-        Ok(Some(bytes))
+        Ok(Some(ObservedFile {
+            file,
+            stamp: after,
+            bytes,
+        }))
+    }
+
+    fn expect_current(&self, expected: Option<&[u8]>) -> Result<Option<ObservedFile>, NativeError> {
+        if expected.is_some_and(|bytes| bytes.len() > MAX_FILE_LENGTH) {
+            return Err(NativeError::TooLarge);
+        }
+        let observed = self.observe_current(|| {})?;
+        if observed.as_ref().map(|current| current.bytes.as_slice()) != expected {
+            return Err(NativeError::Conflict);
+        }
+        Ok(observed)
+    }
+
+    fn verify_current(&self, observed: Option<&ObservedFile>) -> Result<(), NativeError> {
+        self.verify()?;
+        let named = named_metadata(self.location.parent(), VAULT);
+        match (observed, named) {
+            (Some(current), Ok(named)) => {
+                let actual = validate_regular(&current.file, self.location.owner)?;
+                if same_observation(&current.stamp, &actual) && same_observation(&actual, &named) {
+                    Ok(())
+                } else {
+                    Err(NativeError::Conflict)
+                }
+            }
+            (None, Err(error)) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            (_, Err(error)) => Err(changed(error)),
+            (None, Ok(_)) => Err(NativeError::Conflict),
+        }
     }
 
     fn verify(&self) -> Result<(), NativeError> {
@@ -175,6 +224,12 @@ impl ReadLease {
         }
         Ok(())
     }
+}
+
+struct ObservedFile {
+    file: File,
+    stamp: Metadata,
+    bytes: Vec<u8>,
 }
 
 fn validate_path(path: &Path) -> Result<&[u8], NativeError> {

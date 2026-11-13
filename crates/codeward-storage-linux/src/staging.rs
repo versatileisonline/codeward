@@ -10,12 +10,15 @@ use crate::{
     same_observation, validate_regular,
 };
 
+mod publication;
+pub use publication::PublicationError;
+
 const ATTEMPTS: usize = 8;
 
 /// A completed synthetic encrypted stage tied to its writer lease.
 ///
 /// The private file remains in place when the marker is dropped. A stage
-/// establishes neither publication nor a committed revision.
+/// is ready for an explicit publication attempt.
 pub struct PreparedStage<'lease> {
     lease: &'lease ReadLease,
     name: CString,
