@@ -196,6 +196,7 @@ fn kill_writer(home: &Path, phase: &str) {
         sync::mpsc,
         time::Duration,
     };
+    let contender_storage = storage(home);
     let mut child = Command::new(env::current_exe().unwrap())
         .args([
             "--exact",
@@ -221,7 +222,7 @@ fn kill_writer(home: &Path, phase: &str) {
     let ready = receive.recv_timeout(Duration::from_secs(45));
     let contender = ready
         .is_ok()
-        .then(|| Committer::open_locked(storage(home), OWNER).err());
+        .then(|| Committer::open_locked(contender_storage, OWNER).err());
     let killed = child.kill();
     let exit = child.wait().unwrap();
     reader.join().unwrap();
