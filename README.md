@@ -22,7 +22,8 @@ evidence so far uses synthetic data:
 - Windows runs the shared core checks in CI. Native Windows persistence is
   pending. See the [platform validation plan](docs/platform-validation.md).
 
-The next Linux storage step is atomic publication and namespace barriers.
+The next Linux storage step is to connect and verify committed writes through
+the core transaction protocol.
 Desktop UI integration starts in Milestone 4, after persistence and offline
 recovery are accepted. See the [milestone sequence](docs/roadmap.md#path-to-desktop-integration).
 Use synthetic data for development and testing.

@@ -47,7 +47,7 @@ cross-process exclusion.
 The standard test run also checks the mount record parser and invalid paths.
 
 The app does not use this experiment. Removable and sync-location admission,
-publication, namespace barriers and write fault evidence remain open.
+integrated committed-write validation and write fault evidence remain open.
 The advisory lease coordinates cooperating processes. Observed
 metadata comparisons do not give a snapshot guarantee against arbitrary
 same-user writers. The experiment does not implement saves or recovery.
@@ -95,6 +95,33 @@ an identity-only descriptor.
 
 Preparation leaves the named vault untouched. Partial and completed stages
 are preserved for inspection. File synchronization provides no evidence of
-namespace persistence. Atomic publication and save acknowledgement are
-follow-up work. The existing Ubuntu ext4 suite covers private stage creation,
+namespace persistence. The publication and namespace operations below remain separate from core
+save acknowledgement. The existing Ubuntu ext4 suite covers private stage creation,
 oversized input, stage substitution and a partial-write failure.
+
+## Atomic publication and namespace experiment
+
+A prepared stage can be consumed to create an absent vault with
+`renameat2(RENAME_NOREPLACE)` or replace a byte-for-byte matching current
+vault with `renameat2`. The operations revalidate the lease, candidate and
+expected base before rename. After rename they verify the destination names
+the candidate. Pre-rename refusals preserve the previous vault. Rename errors
+and failed postchecks leave the outcome unknown, with no automatic retry,
+rollback or cleanup. A shared lease serializes publication and namespace
+checks with a nonblocking guard. External writers that ignore the companion
+lock can still race the checks.
+
+Namespace synchronization takes the complete expected bytes or expected
+absence. It checks and synchronizes the same observed file descriptor when
+present, then synchronizes the retained directories from leaf through the
+validated anchor. It revalidates the expected observation throughout.
+See [Linux rename semantics](https://man7.org/linux/man-pages/man2/rename.2.html)
+and [file and directory synchronization](https://man7.org/linux/man-pages/man2/fsync.2.html).
+
+The ext4 tests exercise no-overwrite creation, stale replacement, a racing
+creator, an injected lost rename reply, same-lease contention, expected absence,
+directory sync order and an injected directory sync failure. These APIs are
+synthetic experiments. The core still needs to compose publication and
+synchronization through the transaction protocol and verify acknowledgement,
+reconciliation and process interruption. OS-crash and power-loss guarantees
+require separate evidence.
