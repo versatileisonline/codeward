@@ -46,11 +46,12 @@ entries, default ACL refusal, directory/companion/vault substitutions and
 cross-process exclusion.
 The standard test run also checks the mount record parser and invalid paths.
 
-The app does not use this experiment. Removable and sync-location admission,
-integrated committed-write validation and write fault evidence remain open.
+The app does not use this experiment. Removable and sync-location admission
+and broader write fault evidence remain open.
 The advisory lease coordinates cooperating processes. Observed
 metadata comparisons do not give a snapshot guarantee against arbitrary
-same-user writers. The experiment does not implement saves or recovery.
+same-user writers. The core transaction experiment below exercises synthetic
+saves and reconciliation.
 
 ## Managed location experiment
 
@@ -79,8 +80,8 @@ The Ubuntu ext4 tests cover a fresh default tree, idempotent reopening,
 concurrent preparation, an existing synthetic vault, collision refusal,
 ancestor permission changes and substitutions, and the public XDG entry in a
 child process.
-Managed resolution is synthetic-only. Removable and sync-location policy,
-committed writes and application integration remain open.
+Managed resolution is synthetic-only. Removable and sync-location policy and
+application integration remain open.
 
 ## Encrypted staging experiment
 
@@ -90,8 +91,8 @@ creation and uses Linux `getrandom` for a 128-bit sibling name. Exclusive
 creation refuses collisions, with at most eight attempts. The stage must be
 a private single-link regular file with no POSIX access ACL. Preparation
 checks the complete write, file synchronization and explicit close, then
-rechecks the lease and named stage. The marker borrows the lease and retains
-an identity-only descriptor.
+rechecks the lease and named stage. The marker owns an identity-only descriptor
+and retains a share of the writer lease.
 
 Preparation leaves the named vault untouched. Partial and completed stages
 are preserved for inspection. File synchronization provides no evidence of
@@ -121,7 +122,25 @@ and [file and directory synchronization](https://man7.org/linux/man-pages/man2/f
 The ext4 tests exercise no-overwrite creation, stale replacement, a racing
 creator, an injected lost rename reply, same-lease contention, expected absence,
 directory sync order and an injected directory sync failure. These APIs are
-synthetic experiments. The core still needs to compose publication and
-synchronization through the transaction protocol and verify acknowledgement,
-reconciliation and process interruption. OS-crash and power-loss guarantees
-require separate evidence.
+synthetic experiments. The transaction experiment below composes them through
+the core. OS-crash and power-loss guarantees require separate evidence.
+
+## Core transaction experiment
+
+The default-off `experimental-writer` feature exposes
+`ExperimentalStorage::managed()` for synthetic development. The adapter uses
+the existing managed resolver and implements the core's storage traits.
+An owned stage retains the same companion lock as the lease. The transaction
+owner keeps its lease across publication, barriers and reconciliation.
+Reads select the actual named vault or confirmed absence. Publication consumes
+the stage and its expected observation. Failed barriers invalidate that
+observation, so reconciliation must read the actual destination again.
+The core owns authentication, revision advancement and save acknowledgement.
+
+The ext4 workflow exercises a native admission failure after rename, rejects
+invalid paper authentication, and reconciles the actual candidate while the
+session stays locked. Child processes are killed after staging and after a
+confirmed content commit. The workflow checks the old vault and residue,
+writer exclusion while the child is alive, and the updated authenticated
+snapshot after reopening. These are synthetic application-termination cases.
+Product location admission and broader durability evidence remain open.

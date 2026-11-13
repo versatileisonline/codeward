@@ -617,14 +617,15 @@ prepares and revalidates the fixed location for synthetic reads.
 prepares private synchronized candidates under the existing lease.
 [Synthetic publication and namespace operations](linux-storage-foundation.md#atomic-publication-and-namespace-experiment)
 exercise atomic create and replace and checked file and directory synchronization.
-Core integration and committed-write validation remain pending.
+The [opt-in transaction adapter](linux-storage-foundation.md#core-transaction-experiment)
+connects these operations to core commits and reconciliation for synthetic data.
 
 ## Remaining work
 
-1. Integrate Linux publication and namespace synchronization with the core
-   transaction protocol and verify committed writes.
-2. Implement and validate Windows native persistence. The bounded macOS
+1. Implement and validate Windows native persistence. The bounded macOS
    storage policy is accepted.
+2. Review the Linux location policy and close remaining native fault-evidence
+   gaps for the declared Linux target.
 3. Demonstrate the Milestone 2 gate with synthetic vaults, including malformed
    input, competing writers, real process interruptions and native storage
    failures. Confirm that save acknowledgement follows the required barriers.

@@ -68,12 +68,14 @@ blocked from real-vault use until platform-specific evidence exists.
 The [Linux storage foundation](linux-storage-foundation.md) implements bounded
 reads and writer exclusion for synthetic data on ext4. The
 [managed location experiment](linux-storage-foundation.md#managed-location-experiment)
-resolves and admits the fixed location for those reads. Linux committed writes,
-Windows native persistence and integrated acceptance remain pending.
+resolves and admits the fixed location for those reads. Linux production admission, Windows native persistence and integrated acceptance
+remain pending.
 The [Linux staging experiment](linux-storage-foundation.md#encrypted-staging-experiment)
 prepares and synchronizes a private candidate under the retained writer lease.
 Synthetic [publication and namespace operations](linux-storage-foundation.md#atomic-publication-and-namespace-experiment)
-are in place. Core transaction integration and committed-write validation are next.
+are in place. The [synthetic transaction experiment](linux-storage-foundation.md#core-transaction-experiment)
+connects them to the core. Linux production admission and broader fault
+coverage remain open. Windows native persistence is the next platform slice.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict
