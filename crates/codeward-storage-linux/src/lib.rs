@@ -10,7 +10,7 @@ use std::{
     io::{self, Read},
     os::unix::{ffi::OsStrExt, fs::MetadataExt},
     path::Path,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
@@ -22,6 +22,10 @@ mod staging;
 pub use staging::{PreparedStage, PublicationError};
 #[cfg(test)]
 mod tests;
+#[cfg(any(test, feature = "experimental-writer"))]
+mod writer;
+#[cfg(feature = "experimental-writer")]
+pub use writer::{ExperimentalStorage, ExperimentalWriterLease};
 
 const COMPANION: &CStr = c".codeward.writer-lock";
 const VAULT: &CStr = c"vault.cw";
@@ -68,6 +72,10 @@ impl Error for NativeError {}
 
 /// Retains advisory writer exclusion for a synthetic vault on Linux.
 pub struct ReadLease {
+    inner: Arc<LeaseState>,
+}
+
+struct LeaseState {
     location: managed::Location,
     companion: File,
     publication: Mutex<()>,
@@ -118,9 +126,11 @@ impl ReadLease {
             Err(TryLockError::Error(_)) => return Err(NativeError::Io),
         }
         let lease = Self {
-            location,
-            companion,
-            publication: Mutex::new(()),
+            inner: Arc::new(LeaseState {
+                location,
+                companion,
+                publication: Mutex::new(()),
+            }),
         };
         lease.verify()?;
         Ok(lease)
@@ -146,22 +156,22 @@ impl ReadLease {
     ) -> Result<Option<ObservedFile>, NativeError> {
         self.verify()?;
         let mut file = match open_regular(
-            self.location.parent(),
+            self.inner.location.parent(),
             VAULT,
             libc::O_RDONLY,
-            self.location.owner,
+            self.inner.location.owner,
         )? {
             Some(file) => file,
             None => {
                 self.verify()?;
-                return match named_metadata(self.location.parent(), VAULT) {
+                return match named_metadata(self.inner.location.parent(), VAULT) {
                     Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
                     _ => Err(NativeError::Conflict),
                 };
             }
         };
-        let before = validate_regular(&file, self.location.owner)?;
-        if same_inode(&before, &metadata(&self.companion)?) {
+        let before = validate_regular(&file, self.inner.location.owner)?;
+        if same_inode(&before, &metadata(&self.inner.companion)?) {
             return Err(NativeError::Conflict);
         }
         after_open();
@@ -172,7 +182,7 @@ impl ReadLease {
         }
         native::refuse_acl(&file, c"system.posix_acl_access")?;
         self.verify()?;
-        let named = named_metadata(self.location.parent(), VAULT).map_err(changed)?;
+        let named = named_metadata(self.inner.location.parent(), VAULT).map_err(changed)?;
         if !same_observation(&after, &named) {
             return Err(NativeError::Conflict);
         }
@@ -196,10 +206,10 @@ impl ReadLease {
 
     fn verify_current(&self, observed: Option<&ObservedFile>) -> Result<(), NativeError> {
         self.verify()?;
-        let named = named_metadata(self.location.parent(), VAULT);
+        let named = named_metadata(self.inner.location.parent(), VAULT);
         match (observed, named) {
             (Some(current), Ok(named)) => {
-                let actual = validate_regular(&current.file, self.location.owner)?;
+                let actual = validate_regular(&current.file, self.inner.location.owner)?;
                 if same_observation(&current.stamp, &actual) && same_observation(&actual, &named) {
                     Ok(())
                 } else {
@@ -213,9 +223,9 @@ impl ReadLease {
     }
 
     fn verify(&self) -> Result<(), NativeError> {
-        self.location.verify()?;
-        let companion = validate_regular(&self.companion, self.location.owner)?;
-        let named = named_metadata(self.location.parent(), COMPANION).map_err(changed)?;
+        self.inner.location.verify()?;
+        let companion = validate_regular(&self.inner.companion, self.inner.location.owner)?;
+        let named = named_metadata(self.inner.location.parent(), COMPANION).map_err(changed)?;
         if !same_observation(&companion, &named) {
             return Err(NativeError::Conflict);
         }

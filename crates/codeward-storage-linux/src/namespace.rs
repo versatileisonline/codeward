@@ -18,6 +18,7 @@ impl ReadLease {
         mut sync: impl FnMut(&File) -> io::Result<()>,
     ) -> Result<(), NativeError> {
         let _guard = self
+            .inner
             .publication
             .try_lock()
             .map_err(|_| NativeError::WriterUnavailable)?;
@@ -25,7 +26,7 @@ impl ReadLease {
         if let Some(current) = &current {
             sync(&current.file).map_err(|_| NativeError::SyncNamespace)?;
         }
-        for directory in self.location.directories_from_leaf() {
+        for directory in self.inner.location.directories_from_leaf() {
             self.verify_current(current.as_ref())?;
             sync(directory).map_err(|_| NativeError::SyncNamespace)?;
         }

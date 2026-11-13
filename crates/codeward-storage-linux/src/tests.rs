@@ -550,3 +550,5 @@ fn ext4_publish_refuses_racing_create_and_marks_lost_reply_unknown() {
     assert_eq!(lease.read_current().unwrap().unwrap(), b"replacement");
     lease.synchronize_namespace(Some(b"replacement")).unwrap();
 }
+
+mod writer;

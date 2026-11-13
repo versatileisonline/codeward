@@ -15,7 +15,7 @@ pub enum PublicationError {
     OutcomeUnknown,
 }
 
-impl PreparedStage<'_> {
+impl PreparedStage {
     /// Consume the synthetic stage and publish only at an absent vault name.
     ///
     /// A racing creator cannot be overwritten. Namespace synchronization is
@@ -40,8 +40,9 @@ impl PreparedStage<'_> {
     ) -> Result<(), PublicationError> {
         use PublicationError::{NotPublished, OutcomeUnknown};
 
-        let lease = self.lease;
+        let lease = &self.lease;
         let _guard = lease
+            .inner
             .publication
             .try_lock()
             .map_err(|_| NotPublished(NativeError::WriterUnavailable))?;
@@ -52,14 +53,14 @@ impl PreparedStage<'_> {
             .verify_current(current.as_ref())
             .map_err(NotPublished)?;
 
-        let parent = lease.location.parent();
+        let parent = lease.inner.location.parent();
         publish(parent, &self.name, VAULT, expected.is_none()).map_err(|_| OutcomeUnknown)?;
 
         let after = || -> Result<(), NativeError> {
             lease.verify()?;
-            let visible = open_regular(parent, VAULT, libc::O_RDONLY, lease.location.owner)?
+            let visible = open_regular(parent, VAULT, libc::O_RDONLY, lease.inner.location.owner)?
                 .ok_or(NativeError::Conflict)?;
-            let stamp = validate_regular(&visible, lease.location.owner)?;
+            let stamp = validate_regular(&visible, lease.inner.location.owner)?;
             // Rename can update ctime. Identity, size and mtime must match the stage.
             if !same_inode(&self.stamp, &stamp)
                 || self.stamp.len() != stamp.len()

@@ -15,18 +15,18 @@ pub use publication::PublicationError;
 
 const ATTEMPTS: usize = 8;
 
-/// A completed synthetic encrypted stage tied to its writer lease.
+/// A completed synthetic encrypted stage retaining writer exclusion.
 ///
 /// The private file remains in place when the marker is dropped. A stage
 /// is ready for an explicit publication attempt.
-pub struct PreparedStage<'lease> {
-    lease: &'lease ReadLease,
+pub struct PreparedStage {
+    lease: ReadLease,
     name: CString,
     identity: File,
     stamp: Metadata,
 }
 
-impl PreparedStage<'_> {
+impl PreparedStage {
     /// Recheck the lease and the staged file's observed identity and metadata.
     pub fn verify(&self) -> Result<(), NativeError> {
         self.lease.verify()?;
@@ -45,7 +45,7 @@ impl ReadLease {
     ///
     /// The caller owns encryption and authentication. The live vault is never
     /// modified by preparation. An incomplete stage is preserved on failure.
-    pub fn prepare_stage(&self, encrypted: &[u8]) -> Result<PreparedStage<'_>, NativeError> {
+    pub fn prepare_stage(&self, encrypted: &[u8]) -> Result<PreparedStage, NativeError> {
         self.prepare_stage_with(encrypted, File::write_all)
     }
 
@@ -53,7 +53,7 @@ impl ReadLease {
         &self,
         encrypted: &[u8],
         write: impl FnOnce(&mut File, &[u8]) -> io::Result<()>,
-    ) -> Result<PreparedStage<'_>, NativeError> {
+    ) -> Result<PreparedStage, NativeError> {
         if encrypted.len() > MAX_FILE_LENGTH {
             return Err(NativeError::TooLarge);
         }
@@ -61,21 +61,23 @@ impl ReadLease {
         let (mut file, name) = self.create_stage()?;
         let prepared = (|| {
             self.verify()?;
-            let initial = validate_regular(&file, self.location.owner)?;
+            let initial = validate_regular(&file, self.inner.location.owner)?;
             let identity = self.open_stage_identity(&name)?;
             if !same_observation(&initial, &metadata(&identity)?) {
                 return Err(NativeError::Conflict);
             }
 
             write(&mut file, encrypted).map_err(|_| NativeError::WriteStage)?;
-            let stamp = validate_regular(&file, self.location.owner)?;
+            let stamp = validate_regular(&file, self.inner.location.owner)?;
             if stamp.len() != encrypted.len() as u64 {
                 return Err(NativeError::Conflict);
             }
             file.sync_all().map_err(|_| NativeError::SyncStage)?;
 
             Ok(PreparedStage {
-                lease: self,
+                lease: ReadLease {
+                    inner: self.inner.clone(),
+                },
                 name,
                 identity,
                 stamp,
@@ -98,7 +100,7 @@ impl ReadLease {
             }
             let name = CString::new(name).expect("ASCII stage name");
             match native::open_at(
-                self.location.parent(),
+                self.inner.location.parent(),
                 &name,
                 libc::O_WRONLY | libc::O_CREAT | libc::O_EXCL,
                 true,
@@ -112,6 +114,6 @@ impl ReadLease {
     }
 
     fn open_stage_identity(&self, name: &std::ffi::CStr) -> Result<File, NativeError> {
-        native::open_at(self.location.parent(), name, libc::O_PATH, true).map_err(changed)
+        native::open_at(self.inner.location.parent(), name, libc::O_PATH, true).map_err(changed)
     }
 }
