@@ -1,4 +1,4 @@
-//! Native Linux read and writer-exclusion experiment for synthetic data.
+//! Native Linux read, writer-exclusion and staging experiments for synthetic data.
 #![cfg(target_os = "linux")]
 #![deny(missing_docs, unsafe_op_in_unsafe_fn)]
 
@@ -16,6 +16,8 @@ use codeward_core::envelope::MAX_FILE_LENGTH;
 
 mod managed;
 mod native;
+mod staging;
+pub use staging::PreparedStage;
 #[cfg(test)]
 mod tests;
 
@@ -41,6 +43,16 @@ pub enum NativeError {
     TooLarge,
     /// A fallible buffer reservation failed.
     AllocationFailed,
+    /// Native secure randomness was unavailable before creating a stage.
+    RandomnessUnavailable,
+    /// All bounded exclusive stage-name attempts collided.
+    StageUnavailable,
+    /// Writing the complete encrypted candidate failed.
+    WriteStage,
+    /// Synchronizing the stage file failed.
+    SyncStage,
+    /// Explicitly closing the stage writer failed.
+    CloseStage,
 }
 
 impl fmt::Display for NativeError {
