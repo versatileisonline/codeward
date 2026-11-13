@@ -7,6 +7,13 @@ use std::{
 use super::*;
 
 #[test]
+fn windows_leaf_requires_the_normalized_fixed_name() {
+    assert!(matches_leaf(Path::new(r"C:\base\VAULT.CW"), VAULT));
+    assert!(!matches_leaf(Path::new(r"C:\base\vault long.cw"), VAULT));
+    assert!(!matches_leaf(Path::new(r"C:\base\vault.cw:stream"), VAULT));
+}
+
+#[test]
 fn windows_distinguishes_missing_leaf_from_failed_parent_lookup() {
     use windows_sys::Win32::Foundation::ERROR_PATH_NOT_FOUND;
     assert!(leaf_missing(&io::Error::from_raw_os_error(

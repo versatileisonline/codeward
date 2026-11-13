@@ -143,7 +143,7 @@ impl ReadLease {
         };
         self.verify_managed_leaf(&file)?;
         let before = native::regular_info(&file)?;
-        let path = self.verify_leaf(&file)?;
+        let path = self.verify_leaf(&file, VAULT)?;
         if before.len > MAX_FILE_LENGTH as u64 {
             return Err(NativeError::TooLarge);
         }
@@ -166,7 +166,7 @@ impl ReadLease {
         }
         self.verify()?;
         self.verify_managed_leaf(&file)?;
-        if native::regular_info(&file)? != before || self.verify_leaf(&file)? != path {
+        if native::regular_info(&file)? != before || self.verify_leaf(&file, VAULT)? != path {
             return Err(NativeError::Read);
         }
         Ok(Some(bytes))
@@ -190,7 +190,7 @@ impl ReadLease {
         if native::regular_info(&self.companion)?.len != 0 {
             return Err(NativeError::Unsupported);
         }
-        self.verify_leaf(&self.companion)?;
+        self.verify_leaf(&self.companion, COMPANION)?;
         Ok(())
     }
 
@@ -200,13 +200,19 @@ impl ReadLease {
             .map_or(Ok(()), |admission| admission.verify_object(file))
     }
 
-    fn verify_leaf(&self, file: &File) -> Result<PathBuf, NativeError> {
+    fn verify_leaf(&self, file: &File, expected: &str) -> Result<PathBuf, NativeError> {
         let path = native::final_path(file)?;
-        if path.parent() != Some(self.parent.as_path()) {
+        if path.parent() != Some(self.parent.as_path()) || !matches_leaf(&path, expected) {
             return Err(NativeError::Unsupported);
         }
         Ok(path)
     }
+}
+
+fn matches_leaf(path: &Path, expected: &str) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case(expected))
 }
 
 fn companion_error(error: io::Error) -> NativeError {
