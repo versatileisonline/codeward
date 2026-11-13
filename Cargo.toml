@@ -4,6 +4,7 @@ members = [
     "crates/codeward-host-macos",
     "crates/codeward-storage-linux",
     "crates/codeward-storage-macos",
+    "crates/codeward-storage-windows",
 ]
 resolver = "3"
 
