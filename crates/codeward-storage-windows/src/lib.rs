@@ -25,6 +25,7 @@ use windows_sys::Win32::{
     },
 };
 
+mod managed;
 mod native;
 
 const COMPANION: &str = ".codeward.writer-lock";
@@ -47,6 +48,8 @@ pub enum NativeError {
     TooLarge,
     /// Bounded input allocation failed.
     AllocationFailed,
+    /// The managed object has an unsupported owner or access-control list.
+    Permissions,
 }
 
 /// Retained handles and writer exclusion for a synthetic NTFS fixture.
@@ -54,6 +57,7 @@ pub struct ReadLease {
     parent: PathBuf,
     directories: Vec<(PathBuf, File)>,
     companion: File,
+    managed: Option<managed::Admission>,
 }
 
 impl ReadLease {
@@ -62,6 +66,22 @@ impl ReadLease {
     /// The trusted caller supplies a disposable fixture directory. This API
     /// does not resolve app-data paths or admit real vaults.
     pub fn acquire_synthetic(path: &Path) -> Result<Self, NativeError> {
+        Self::acquire(path, None)
+    }
+
+    /// Prepare and open the fixed LocalAppData destination for synthetic reads.
+    ///
+    /// The OS selects the base for the current process account. Existing
+    /// entries must pass admission and are left intact on refusal.
+    pub fn acquire_managed_synthetic() -> Result<Self, NativeError> {
+        Self::acquire_managed_at(&managed::local_app_data()?)
+    }
+
+    fn acquire_managed_at(path: &Path) -> Result<Self, NativeError> {
+        Self::acquire(path, Some(managed::Admission::new()?))
+    }
+
+    fn acquire(path: &Path, mut managed: Option<managed::Admission>) -> Result<Self, NativeError> {
         let (root_path, components) = split_path(path)?;
         native::require_fixed_drive(&root_path)?;
         let root = open_directory(&root_path)?;
@@ -82,25 +102,24 @@ impl ReadLease {
             parent = actual;
         }
 
-        let companion = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(false)
-            .share_mode(0)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
-            .open(parent.join(COMPANION))
-            .map_err(|error| {
-                if error.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) {
-                    NativeError::WriterUnavailable
-                } else {
-                    NativeError::Open
-                }
-            })?;
+        let companion = if let Some(admission) = &mut managed {
+            admission.prepare(&mut parent, &mut directories)?
+        } else {
+            let result = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .share_mode(0)
+                .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
+                .open(parent.join(COMPANION));
+            result.map_err(companion_error)?
+        };
         let lease = Self {
             parent,
             directories,
             companion,
+            managed,
         };
         lease.verify()?;
         Ok(lease)
@@ -122,8 +141,9 @@ impl ReadLease {
             }
             Err(_) => return Err(NativeError::Read),
         };
+        self.verify_managed_leaf(&file)?;
         let before = native::regular_info(&file)?;
-        let path = self.verify_leaf(&file)?;
+        let path = self.verify_leaf(&file, VAULT)?;
         if before.len > MAX_FILE_LENGTH as u64 {
             return Err(NativeError::TooLarge);
         }
@@ -145,7 +165,8 @@ impl ReadLease {
             }
         }
         self.verify()?;
-        if native::regular_info(&file)? != before || self.verify_leaf(&file)? != path {
+        self.verify_managed_leaf(&file)?;
+        if native::regular_info(&file)? != before || self.verify_leaf(&file, VAULT)? != path {
             return Err(NativeError::Read);
         }
         Ok(Some(bytes))
@@ -160,30 +181,60 @@ impl ReadLease {
     }
 
     fn verify(&self) -> Result<(), NativeError> {
-        for (path, directory) in &self.directories {
-            native::require_directory(directory)?;
-            if &native::final_path(directory)? != path {
-                return Err(NativeError::Open);
-            }
+        if let Some(admission) = &self.managed {
+            admission.verify_directories(&self.directories)?;
+        } else {
+            verify_directory_chain(&self.directories)?;
         }
+        self.verify_managed_leaf(&self.companion)?;
         if native::regular_info(&self.companion)?.len != 0 {
             return Err(NativeError::Unsupported);
         }
-        self.verify_leaf(&self.companion)?;
+        self.verify_leaf(&self.companion, COMPANION)?;
         Ok(())
     }
 
-    fn verify_leaf(&self, file: &File) -> Result<PathBuf, NativeError> {
+    fn verify_managed_leaf(&self, file: &File) -> Result<(), NativeError> {
+        self.managed
+            .as_ref()
+            .map_or(Ok(()), |admission| admission.verify_object(file))
+    }
+
+    fn verify_leaf(&self, file: &File, expected: &str) -> Result<PathBuf, NativeError> {
         let path = native::final_path(file)?;
-        if path.parent() != Some(self.parent.as_path()) {
+        if path.parent() != Some(self.parent.as_path()) || !matches_leaf(&path, expected) {
             return Err(NativeError::Unsupported);
         }
         Ok(path)
     }
 }
 
+fn matches_leaf(path: &Path, expected: &str) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case(expected))
+}
+
+fn companion_error(error: io::Error) -> NativeError {
+    if error.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) {
+        NativeError::WriterUnavailable
+    } else {
+        NativeError::Open
+    }
+}
+
 fn leaf_missing(error: &io::Error) -> bool {
     error.raw_os_error() == Some(ERROR_FILE_NOT_FOUND as i32)
+}
+
+fn verify_directory_chain(directories: &[(PathBuf, File)]) -> Result<(), NativeError> {
+    for (path, directory) in directories {
+        native::require_directory(directory)?;
+        if &native::final_path(directory)? != path {
+            return Err(NativeError::Open);
+        }
+    }
+    Ok(())
 }
 
 fn open_directory(path: &Path) -> Result<File, NativeError> {

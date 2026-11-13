@@ -623,8 +623,10 @@ connects these operations to core commits and reconciliation for synthetic data.
 ## Windows storage foundation
 
 The [Windows foundation](windows-storage-foundation.md) adds bounded reads and
-cross-process companion exclusion for synthetic NTFS fixtures. Managed location
-and ACL admission, staging, publication, and persistence remain pending.
+cross-process companion exclusion for synthetic NTFS fixtures. The [managed
+experiment](windows-storage-foundation.md#managed-location-experiment) adds
+LocalAppData resolution and bounded ACL admission. Handle-relative creation,
+staging, publication and persistence remain pending.
 
 ## Remaining work
 

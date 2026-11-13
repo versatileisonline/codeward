@@ -39,7 +39,31 @@ and [normalized handle paths](https://learn.microsoft.com/en-us/windows/win32/ap
 
 The Windows CI suite exercises reads and the input cap, hard-link and junction
 refusal, preservation of a nonempty companion, and exclusion across processes.
-The fixture inherits the runner's permissions. Per-user LocalAppData resolution,
-ACL validation, fully handle-relative access, staging, publication and persistence
-remain separate work. Drive classification and the tested fixture do not
+The original fixture entry inherits the runner's permissions. The managed
+experiment below adds per-user resolution and bounded ACL admission. Staging,
+publication and persistence remain separate work. Drive classification and the tested fixture do not
 establish a production policy for removable or synchronized locations.
+
+## Managed location experiment
+
+`ReadLease::acquire_managed_synthetic()` resolves the current process account's
+LocalAppData through `SHGetKnownFolderPath`, then uses
+`Codeward\Vaults\vault.cw`. It does not consult the environment or accept an
+override. The base must already exist on a supported volume. New app directories
+and the companion receive a protected DACL at creation with explicit grants for
+the process user, Local System and built-in Administrators. Existing entries
+are inspected without changing their security descriptors or contents.
+
+LocalAppData, both app directories, the companion and any vault must be owned
+by the process user. Admission rejects null DACLs, unrecognized ACE types and
+allow ACEs for other principals. It checks those objects through their handles
+before use and rechecks admission around bounded reads. Ancestors above
+LocalAppData receive the existing path and reparse checks. Their ACLs, fully
+handle-relative creation, and admission for real vaults remain open.
+
+This adds the `windows-sys 0.61.2` features `Win32_Security`,
+`Win32_Security_Authorization`, `Win32_System_Com`, `Win32_System_Threading`
+and `Win32_UI_Shell` without changing the locked dependencies. See
+[known folder resolution](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath),
+[handle security information](https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-getsecurityinfo)
+and [ACE inspection](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-getace).

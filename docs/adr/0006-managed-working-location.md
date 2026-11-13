@@ -17,7 +17,7 @@ requiring users to manage filenames for ordinary use (FR-01/02, NFR-03/04/08/09)
 | Platform | Working file policy | Native status |
 | --- | --- | --- |
 | macOS, initial nonsandboxed desktop package | OS-account home + `Library/Application Support/Codeward/Vaults/vault.cw` | Bounded policy accepted; shared writer opt-in for synthetic development |
-| Windows | OS-resolved LocalAppData + `Codeward/Vaults/vault.cw` | Native resolution/admission pending |
+| Windows | OS-resolved LocalAppData + `Codeward/Vaults/vault.cw` | Synthetic LocalAppData resolution and bounded ACL checks; production admission pending |
 | Linux | Validated XDG_DATA_HOME, normally `~/.local/share`, + `codeward/vaults/vault.cw` | Opt-in synthetic commits on ext4; production admission and validation pending |
 
 Resolve these through the platform/account APIs and validate actual storage;

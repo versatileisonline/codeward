@@ -57,8 +57,9 @@ native directory-preparation entry and a
 development. The [Linux experiment](linux-storage-foundation.md#managed-location-experiment)
 resolves and prepares the fixed managed location for synthetic reads on ext4.
 The [Windows foundation](windows-storage-foundation.md) exercises synthetic
-NTFS reads and exclusion. Windows managed resolution and accepted production
-writers remain pending.
+NTFS reads and exclusion. A synthetic managed read path resolves LocalAppData
+and checks ACLs on the base and app-owned objects. Production admission and
+accepted writers remain pending.
 Do not infer real-vault or packaged support from those experiments.
 
 Support only regular files in user-controlled local directories on the declared
