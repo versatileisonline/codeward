@@ -18,7 +18,7 @@ use std::{
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 use windows_sys::Win32::{
-    Foundation::ERROR_SHARING_VIOLATION,
+    Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SHARING_VIOLATION},
     Storage::FileSystem::{
         FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_BACKUP_SEMANTICS,
         FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_READ, FILE_SHARE_WRITE,
@@ -70,6 +70,7 @@ impl ReadLease {
         if parent.parent().is_some() || parent.file_name().is_some() {
             return Err(NativeError::Unsupported);
         }
+        native::require_fixed_drive(&parent)?;
         let mut directories = vec![(parent.clone(), root)];
         for component in components {
             let directory = open_directory(&parent.join(component))?;
@@ -112,10 +113,10 @@ impl ReadLease {
         self.verify()?;
         let mut file = match self.open_vault() {
             Ok(file) => file,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            Err(error) if leaf_missing(&error) => {
                 self.verify()?;
                 return match self.open_vault() {
-                    Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+                    Err(error) if leaf_missing(&error) => Ok(None),
                     _ => Err(NativeError::Read),
                 };
             }
@@ -179,6 +180,10 @@ impl ReadLease {
         }
         Ok(path)
     }
+}
+
+fn leaf_missing(error: &io::Error) -> bool {
+    error.raw_os_error() == Some(ERROR_FILE_NOT_FOUND as i32)
 }
 
 fn open_directory(path: &Path) -> Result<File, NativeError> {

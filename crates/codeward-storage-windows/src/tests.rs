@@ -6,6 +6,17 @@ use std::{
 
 use super::*;
 
+#[test]
+fn windows_distinguishes_missing_leaf_from_failed_parent_lookup() {
+    use windows_sys::Win32::Foundation::ERROR_PATH_NOT_FOUND;
+    assert!(leaf_missing(&io::Error::from_raw_os_error(
+        ERROR_FILE_NOT_FOUND as i32
+    )));
+    assert!(!leaf_missing(&io::Error::from_raw_os_error(
+        ERROR_PATH_NOT_FOUND as i32
+    )));
+}
+
 struct Fixture(PathBuf);
 
 impl Fixture {
