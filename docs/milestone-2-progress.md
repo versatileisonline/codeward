@@ -619,10 +619,10 @@ namespace barriers and committed-write validation remain pending.
 
 ## Remaining work
 
-1. Resolve and validate the managed Linux vault location under
-   [ADR-0006](adr/0006-managed-working-location.md).
-2. Implement and verify committed writes on Linux, then implement and validate
-   Windows native persistence. The bounded macOS storage policy is accepted.
+1. Implement atomic publication and namespace barriers on Linux, then verify
+   committed writes through the core.
+2. Implement and validate Windows native persistence. The bounded macOS
+   storage policy is accepted.
 3. Demonstrate the Milestone 2 gate with synthetic vaults, including malformed
    input, competing writers, real process interruptions and native storage
    failures. Confirm that save acknowledgement follows the required barriers.

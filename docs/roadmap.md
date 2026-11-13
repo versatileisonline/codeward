@@ -23,9 +23,9 @@ design a vault requiring an incompatible recovery retrofit.
 
 ## Path to desktop integration
 
-1. **Milestone 2 — Vault core and persistence.** Resolve and validate the managed
-   Linux vault location first. Then implement Linux committed writes, Windows
-   native persistence and the integrated acceptance tests for the storage gate.
+1. **Milestone 2 — Vault core and persistence.** Complete Linux committed
+   writes, then implement Windows native persistence and run the integrated
+   acceptance tests for the storage gate.
 2. **Milestone 3 — Offline recovery.** After Milestone 2 acceptance, verify paper
    enrollment and confirmation, recovery with an intact vault and committed
    master-password replacement. Exercise invalid codes and interrupted access
