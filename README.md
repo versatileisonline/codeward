@@ -19,11 +19,11 @@ evidence so far uses synthetic data:
   [desktop pilot](docs/macos-desktop-pilot.md#packaged-live-probes).
 - Linux has bounded reads and writer exclusion tested on a disposable ext4
   filesystem. See the [Linux storage foundation](docs/linux-storage-foundation.md).
-- Windows runs the shared core checks in CI. Native Windows persistence is
-  pending. See the [platform validation plan](docs/platform-validation.md).
+- Windows has bounded reads and writer exclusion for synthetic NTFS fixtures.
+  See the [Windows storage foundation](docs/windows-storage-foundation.md).
 
-Linux now has an opt-in synthetic transaction adapter. Windows native storage
-is the next platform slice.
+Linux has an opt-in synthetic transaction adapter. Windows managed-location
+and ACL admission are the next Windows storage step.
 Desktop UI integration starts in Milestone 4, after persistence and offline
 recovery are accepted. See the [milestone sequence](docs/roadmap.md#path-to-desktop-integration).
 Use synthetic data for development and testing.

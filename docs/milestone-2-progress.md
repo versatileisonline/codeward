@@ -620,6 +620,12 @@ exercise atomic create and replace and checked file and directory synchronizatio
 The [opt-in transaction adapter](linux-storage-foundation.md#core-transaction-experiment)
 connects these operations to core commits and reconciliation for synthetic data.
 
+## Windows storage foundation
+
+The [Windows foundation](windows-storage-foundation.md) adds bounded reads and
+cross-process companion exclusion for synthetic NTFS fixtures. Managed location
+and ACL admission, staging, publication, and persistence remain pending.
+
 ## Remaining work
 
 1. Implement and validate Windows native persistence. The bounded macOS
