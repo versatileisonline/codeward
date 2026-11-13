@@ -614,13 +614,15 @@ a disposable ext4 image and separate processes to exercise exclusion. The
 [managed entry](linux-storage-foundation.md#managed-location-experiment)
 prepares and revalidates the fixed location for synthetic reads.
 [Encrypted staging](linux-storage-foundation.md#encrypted-staging-experiment)
-prepares private synchronized candidates under the existing lease. Publication,
-namespace barriers and committed-write validation remain pending.
+prepares private synchronized candidates under the existing lease.
+[Synthetic publication and namespace operations](linux-storage-foundation.md#atomic-publication-and-namespace-experiment)
+exercise atomic create and replace and checked file and directory synchronization.
+Core integration and committed-write validation remain pending.
 
 ## Remaining work
 
-1. Implement atomic publication and namespace barriers on Linux, then verify
-   committed writes through the core.
+1. Integrate Linux publication and namespace synchronization with the core
+   transaction protocol and verify committed writes.
 2. Implement and validate Windows native persistence. The bounded macOS
    storage policy is accepted.
 3. Demonstrate the Milestone 2 gate with synthetic vaults, including malformed

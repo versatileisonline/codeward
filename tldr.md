@@ -102,6 +102,8 @@ Root:
 - [src/managed.rs](crates/codeward-storage-linux/src/managed.rs): Managed location preparation and revalidation.
 - [src/native.rs](crates/codeward-storage-linux/src/native.rs): Linux descriptor, mount and ACL checks.
 - [src/staging.rs](crates/codeward-storage-linux/src/staging.rs): Private encrypted candidate preparation.
+- [src/staging/publication.rs](crates/codeward-storage-linux/src/staging/publication.rs): Atomic synthetic create and replacement.
+- [src/namespace.rs](crates/codeward-storage-linux/src/namespace.rs): Expected-state file and directory synchronization.
 - [src/tests.rs](crates/codeward-storage-linux/src/tests.rs): Mount parser and native ext4 regressions.
 
 `crates/codeward-storage-macos/`:

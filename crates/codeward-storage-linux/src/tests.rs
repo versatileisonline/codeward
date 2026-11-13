@@ -426,3 +426,127 @@ fn stage_path(fixture: &Fixture) -> PathBuf {
     assert!(stages.next().is_none());
     path
 }
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_publish_checks_expected_state_and_preserves_residue() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    lease
+        .prepare_stage(b"initial")
+        .unwrap()
+        .publish_create()
+        .unwrap();
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"initial");
+    assert_eq!(
+        lease.prepare_stage(b"collision").unwrap().publish_create(),
+        Err(PublicationError::NotPublished(NativeError::Conflict))
+    );
+    assert_eq!(fs::read(stage_path(&fixture)).unwrap(), b"collision");
+    assert_eq!(
+        lease
+            .prepare_stage(b"replacement")
+            .unwrap()
+            .publish_replace(b"stale"),
+        Err(PublicationError::NotPublished(NativeError::Conflict))
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"initial");
+    lease
+        .prepare_stage(b"replacement")
+        .unwrap()
+        .publish_replace(b"initial")
+        .unwrap();
+    lease.synchronize_namespace(Some(b"replacement")).unwrap();
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"replacement");
+    assert_eq!(
+        lease.synchronize_namespace(Some(b"initial")),
+        Err(NativeError::Conflict)
+    );
+    assert_eq!(
+        lease.synchronize_namespace(None),
+        Err(NativeError::Conflict)
+    );
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_namespace_sync_checks_absence_and_managed_chain_order() {
+    let fixture = Fixture::new();
+    let location = managed::Location::prepare(&fixture.0, true, test_owner()).unwrap();
+    let lease = ReadLease::acquire(location).unwrap();
+    lease.synchronize_namespace(None).unwrap();
+    lease
+        .prepare_stage(b"candidate")
+        .unwrap()
+        .publish_create()
+        .unwrap();
+
+    let mut seen = Vec::new();
+    lease
+        .synchronize_namespace_with(Some(b"candidate"), |file| {
+            seen.push(file.metadata()?.ino());
+            file.sync_all()
+        })
+        .unwrap();
+    let root = &fixture.0;
+    let expected: Vec<_> = [
+        ".local/share/codeward/vaults/vault.cw",
+        ".local/share/codeward/vaults",
+        ".local/share/codeward",
+        ".local/share",
+        ".local",
+        "",
+    ]
+    .map(|path| fs::metadata(root.join(path)).unwrap().ino())
+    .into();
+    assert_eq!(seen, expected);
+    assert_eq!(
+        lease.synchronize_namespace_with(Some(b"candidate"), |file| {
+            if file.metadata()?.is_dir() {
+                return Err(io::Error::other("synthetic directory sync error"));
+            }
+            file.sync_all()
+        }),
+        Err(NativeError::SyncNamespace)
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"candidate");
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_publish_refuses_racing_create_and_marks_lost_reply_unknown() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    let stage = lease.prepare_stage(b"candidate").unwrap();
+    assert_eq!(
+        stage.publish_with(None, |parent, from, to, create| {
+            fixture.put("vault.cw", b"racing");
+            native::publish_at(parent, from, to, create)
+        }),
+        Err(PublicationError::OutcomeUnknown)
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"racing");
+    assert_eq!(fs::read(stage_path(&fixture)).unwrap(), b"candidate");
+
+    let stage = lease.prepare_stage(b"replacement").unwrap();
+    assert_eq!(
+        stage.publish_with(Some(b"racing"), |parent, from, to, create| {
+            let contender = lease.prepare_stage(b"competing").unwrap();
+            assert_eq!(
+                contender.publish_replace(b"racing"),
+                Err(PublicationError::NotPublished(
+                    NativeError::WriterUnavailable
+                ))
+            );
+            assert_eq!(
+                lease.synchronize_namespace(Some(b"racing")),
+                Err(NativeError::WriterUnavailable)
+            );
+            native::publish_at(parent, from, to, create)?;
+            Err(io::Error::other("synthetic lost reply"))
+        }),
+        Err(PublicationError::OutcomeUnknown)
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"replacement");
+    lease.synchronize_namespace(Some(b"replacement")).unwrap();
+}
