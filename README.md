@@ -22,8 +22,8 @@ evidence so far uses synthetic data:
 - Windows has bounded reads and writer exclusion for synthetic NTFS fixtures.
   See the [Windows storage foundation](docs/windows-storage-foundation.md).
 
-Linux has an opt-in synthetic transaction adapter. Windows managed-location
-and ACL admission are the next Windows storage step.
+Linux has an opt-in synthetic transaction adapter. Windows has a synthetic managed
+read path. The next Windows storage step is handle-relative creation and staging.
 Desktop UI integration starts in Milestone 4, after persistence and offline
 recovery are accepted. See the [milestone sequence](docs/roadmap.md#path-to-desktop-integration).
 Use synthetic data for development and testing.

@@ -75,8 +75,9 @@ Synthetic [publication and namespace operations](linux-storage-foundation.md#ato
 are in place. The [synthetic transaction experiment](linux-storage-foundation.md#core-transaction-experiment)
 connects them to the core. Linux production admission and broader fault
 coverage remain open. The [Windows foundation](windows-storage-foundation.md)
-adds synthetic NTFS reads and exclusion. Windows managed-location and ACL
-admission come next.
+adds synthetic NTFS reads and exclusion. The managed experiment adds LocalAppData
+resolution and bounded ACL admission. Handle-relative creation and staging
+come next.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict
