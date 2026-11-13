@@ -369,3 +369,60 @@ fn ext4_competing_managed_preparations_preserve_the_same_directory() {
     );
     assert_eq!(first.read_current().unwrap(), None);
 }
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_stage_preserves_live_bytes_and_residue() {
+    let fixture = Fixture::new();
+    fixture.put("vault.cw", b"live");
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    let marker = lease.prepare_stage(b"synthetic candidate").unwrap();
+    marker.verify().unwrap();
+    let path = stage_path(&fixture);
+    assert_eq!(fs::read(&path).unwrap(), b"synthetic candidate");
+    assert_eq!(fs::metadata(&path).unwrap().mode() & 0o7777, 0o600);
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"live");
+    assert_eq!(
+        lease.prepare_stage(&vec![0; MAX_FILE_LENGTH + 1]).err(),
+        Some(NativeError::TooLarge)
+    );
+    assert_eq!(stage_path(&fixture), path);
+    fs::rename(&path, fixture.0.join("former-stage")).unwrap();
+    fixture.put(path.file_name().unwrap().to_str().unwrap(), b"substitute");
+    assert_eq!(marker.verify(), Err(NativeError::Conflict));
+    assert_eq!(
+        fs::read(fixture.0.join("former-stage")).unwrap(),
+        b"synthetic candidate"
+    );
+    assert_eq!(fs::read(&path).unwrap(), b"substitute");
+}
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_partial_stage_failure_preserves_live_bytes() {
+    let fixture = Fixture::new();
+    fixture.put("vault.cw", b"live");
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    let result = lease.prepare_stage_with(b"candidate", |file, bytes| {
+        file.write_all(&bytes[..3])?;
+        Err(io::Error::other("synthetic short-write failure"))
+    });
+    assert_eq!(result.err(), Some(NativeError::WriteStage));
+    assert_eq!(fs::read(stage_path(&fixture)).unwrap(), b"can");
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"live");
+}
+
+fn stage_path(fixture: &Fixture) -> PathBuf {
+    let mut stages = fs::read_dir(&fixture.0)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| {
+            path.file_name()
+                .unwrap()
+                .as_encoded_bytes()
+                .starts_with(b".codeward.stage-")
+        });
+    let path = stages.next().unwrap();
+    assert!(stages.next().is_none());
+    path
+}

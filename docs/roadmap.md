@@ -23,9 +23,9 @@ design a vault requiring an incompatible recovery retrofit.
 
 ## Path to desktop integration
 
-1. **Milestone 2 — Vault core and persistence.** Resolve and validate the managed
-   Linux vault location first. Then implement Linux committed writes, Windows
-   native persistence and the integrated acceptance tests for the storage gate.
+1. **Milestone 2 — Vault core and persistence.** Complete Linux committed
+   writes, then implement Windows native persistence and run the integrated
+   acceptance tests for the storage gate.
 2. **Milestone 3 — Offline recovery.** After Milestone 2 acceptance, verify paper
    enrollment and confirmation, recovery with an intact vault and committed
    master-password replacement. Exercise invalid codes and interrupted access
@@ -70,6 +70,9 @@ reads and writer exclusion for synthetic data on ext4. The
 [managed location experiment](linux-storage-foundation.md#managed-location-experiment)
 resolves and admits the fixed location for those reads. Linux committed writes,
 Windows native persistence and integrated acceptance remain pending.
+The [Linux staging experiment](linux-storage-foundation.md#encrypted-staging-experiment)
+prepares and synchronizes a private candidate under the retained writer lease.
+Atomic publication and namespace barriers are the next Linux storage slice.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict

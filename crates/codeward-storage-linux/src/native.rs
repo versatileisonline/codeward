@@ -3,7 +3,7 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader},
     mem::{MaybeUninit, size_of_val},
-    os::fd::{AsRawFd, FromRawFd},
+    os::fd::{AsRawFd, FromRawFd, IntoRawFd},
 };
 
 use crate::NativeError;
@@ -161,4 +161,28 @@ pub(super) fn account_home(owner: u32) -> Result<std::path::PathBuf, NativeError
             path.to_bytes(),
         )));
     }
+}
+
+pub(super) fn stage_random() -> io::Result<[u8; 16]> {
+    let mut bytes = [0; 16];
+    // SAFETY: bytes is writable for the supplied length. With flags zero, Linux
+    // guarantees a complete read up to 256 bytes once the random pool is ready.
+    let count = unsafe { libc::getrandom(bytes.as_mut_ptr().cast(), bytes.len(), 0) };
+    if count < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    if count as usize != bytes.len() {
+        return Err(io::ErrorKind::UnexpectedEof.into());
+    }
+    Ok(bytes)
+}
+
+pub(super) fn close_checked(file: File) -> io::Result<()> {
+    let fd = file.into_raw_fd();
+    // SAFETY: File transferred ownership. Never retry close on Linux, where
+    // the descriptor may have already been released even when close fails.
+    if unsafe { libc::close(fd) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
 }

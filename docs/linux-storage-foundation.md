@@ -47,7 +47,7 @@ cross-process exclusion.
 The standard test run also checks the mount record parser and invalid paths.
 
 The app does not use this experiment. Removable and sync-location admission,
-staging, publication, barriers and fault evidence remain open.
+publication, namespace barriers and write fault evidence remain open.
 The advisory lease coordinates cooperating processes. Observed
 metadata comparisons do not give a snapshot guarantee against arbitrary
 same-user writers. The experiment does not implement saves or recovery.
@@ -80,4 +80,21 @@ concurrent preparation, an existing synthetic vault, collision refusal,
 ancestor permission changes and substitutions, and the public XDG entry in a
 child process.
 Managed resolution is synthetic-only. Removable and sync-location policy,
-staging, committed writes and application integration remain open.
+committed writes and application integration remain open.
+
+## Encrypted staging experiment
+
+The synthetic read lease can prepare an already-encrypted candidate under
+[ADR-0003](adr/0003-committed-writes.md). It checks the input cap before
+creation and uses Linux `getrandom` for a 128-bit sibling name. Exclusive
+creation refuses collisions, with at most eight attempts. The stage must be
+a private single-link regular file with no POSIX access ACL. Preparation
+checks the complete write, file synchronization and explicit close, then
+rechecks the lease and named stage. The marker borrows the lease and retains
+an identity-only descriptor.
+
+Preparation leaves the named vault untouched. Partial and completed stages
+are preserved for inspection. File synchronization provides no evidence of
+namespace persistence. Atomic publication and save acknowledgement are
+follow-up work. The existing Ubuntu ext4 suite covers private stage creation,
+oversized input, stage substitution and a partial-write failure.

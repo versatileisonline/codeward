@@ -612,15 +612,17 @@ The [Linux foundation](linux-storage-foundation.md) adds bounded reads and an
 exclusive companion lease for synthetic files on ext4. Hosted Ubuntu tests use
 a disposable ext4 image and separate processes to exercise exclusion. The
 [managed entry](linux-storage-foundation.md#managed-location-experiment)
-prepares and revalidates the fixed location for synthetic reads. Linux staging,
-publication, persistence barriers and native write fault coverage remain pending.
+prepares and revalidates the fixed location for synthetic reads.
+[Encrypted staging](linux-storage-foundation.md#encrypted-staging-experiment)
+prepares private synchronized candidates under the existing lease. Publication,
+namespace barriers and committed-write validation remain pending.
 
 ## Remaining work
 
-1. Resolve and validate the managed Linux vault location under
-   [ADR-0006](adr/0006-managed-working-location.md).
-2. Implement and verify committed writes on Linux, then implement and validate
-   Windows native persistence. The bounded macOS storage policy is accepted.
+1. Implement atomic publication and namespace barriers on Linux, then verify
+   committed writes through the core.
+2. Implement and validate Windows native persistence. The bounded macOS
+   storage policy is accepted.
 3. Demonstrate the Milestone 2 gate with synthetic vaults, including malformed
    input, competing writers, real process interruptions and native storage
    failures. Confirm that save acknowledgement follows the required barriers.
