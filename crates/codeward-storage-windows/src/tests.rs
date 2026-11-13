@@ -167,3 +167,57 @@ fn ntfs_refuses_junction_as_directory_or_vault() {
     let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
     assert_eq!(lease.read_current(), Err(NativeError::Unsupported));
 }
+
+#[test]
+fn ntfs_managed_prepares_fixed_private_tree_and_reopens() {
+    let fixture = Fixture::new();
+    managed::protect_fixture(&fixture.0);
+    let lease = ReadLease::acquire_managed_at(&fixture.0).unwrap();
+    let parent = fixture.0.join("Codeward").join("Vaults");
+    assert!(parent.join(COMPANION).is_file());
+    assert_eq!(lease.read_current().unwrap(), None);
+    drop(lease);
+    assert_eq!(
+        ReadLease::acquire_managed_at(&fixture.0)
+            .unwrap()
+            .read_current()
+            .unwrap(),
+        None
+    );
+}
+
+#[test]
+fn ntfs_managed_refuses_acl_grants_without_repair() {
+    let fixture = Fixture::new();
+    managed::protect_fixture(&fixture.0);
+    let app = fixture.0.join("Codeward");
+    managed::create_broad_fixture(&app);
+    assert_eq!(
+        ReadLease::acquire_managed_at(&fixture.0).err(),
+        Some(NativeError::Permissions)
+    );
+    assert!(app.is_dir());
+    assert!(!app.join("Vaults").exists());
+}
+
+#[test]
+fn windows_resolves_os_local_app_data_without_creating_entries() {
+    let path = managed::local_app_data().unwrap();
+    let (_, components) = split_path(&path).unwrap();
+    assert!(!components.is_empty());
+    assert!(path.is_dir());
+}
+
+#[test]
+fn ntfs_managed_refuses_existing_vault_with_broad_acl() {
+    let fixture = Fixture::new();
+    managed::protect_fixture(&fixture.0);
+    let lease = ReadLease::acquire_managed_at(&fixture.0).unwrap();
+    let vault = fixture.0.join("Codeward").join("Vaults").join(VAULT);
+    // The protected app directories use non-inheritable grants. This ordinary
+    // creation uses the token default DACL, which need not be broad, so supply
+    // an explicit test descriptor to make the refusal deterministic.
+    managed::create_broad_vault(&vault);
+    assert_eq!(lease.read_current(), Err(NativeError::Permissions));
+    assert!(vault.is_file());
+}
