@@ -14,6 +14,9 @@ The application does not call this adapter.
   the handles without delete sharing. Check normalized volume-GUID paths to
   bind each opened directory to the validated parent and avoid re-resolving
   the drive letter. Recheck the retained directories before and after reads.
+  The adapter checks the opened companion and vault against the retained
+  parent after opening. Confining creation to a directory handle remains
+  follow-up work.
 - Use an empty, single-link `.codeward.writer-lock` file opened without sharing.
   Keep the handle until lease drop and preserve the companion itself.
 - Open only the named `vault.cw` with read sharing, excluding concurrent writes

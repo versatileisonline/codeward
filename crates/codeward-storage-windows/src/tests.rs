@@ -140,9 +140,8 @@ fn ntfs_refuses_junction_as_directory_or_vault() {
     let junction = fixture.0.join("vault.cw");
     fs::create_dir(&target).unwrap();
     let output = std::process::Command::new("cmd.exe")
-        .args(["/d", "/c", "mklink", "/J"])
-        .arg(&junction)
-        .arg(&target)
+        .args(["/d", "/c", "mklink", "/J", "vault.cw", "target"])
+        .current_dir(&fixture.0)
         .output()
         .unwrap();
     assert!(
