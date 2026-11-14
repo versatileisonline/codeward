@@ -1,4 +1,6 @@
 use super::*;
+
+mod write_failures;
 use crate::writer::ExperimentalStorage;
 use codeward_core::{
     credentials::{Credential, CredentialInput, CredentialSnapshot},
