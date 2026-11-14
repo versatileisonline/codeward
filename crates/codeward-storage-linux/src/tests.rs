@@ -332,7 +332,7 @@ fn test_owner() -> u32 {
 
 #[test]
 #[ignore = "requires the dedicated ext4 nodev test mount"]
-fn ext4_managed_public_entry_uses_xdg_in_separate_process() {
+fn ext4_managed_public_entry_refuses_loop_device_in_separate_process() {
     let fixture = Fixture::new();
     let result = Command::new(env::current_exe().unwrap())
         .args(["--exact", "tests::managed_xdg_child", "--ignored"])
@@ -341,16 +341,16 @@ fn ext4_managed_public_entry_uses_xdg_in_separate_process() {
         .status()
         .unwrap();
     assert!(result.success());
-    let vaults = fixture.0.join("codeward/vaults");
-    assert!(vaults.join(COMPANION.to_str().unwrap()).is_file());
-    assert!(!vaults.join("vault.cw").exists());
+    assert!(!fixture.0.join("codeward").exists());
 }
 
 #[test]
-#[ignore = "subprocess of ext4_managed_public_entry_uses_xdg_in_separate_process"]
+#[ignore = "subprocess of ext4_managed_public_entry_refuses_loop_device_in_separate_process"]
 fn managed_xdg_child() {
-    let lease = ReadLease::acquire_managed_synthetic().unwrap();
-    assert_eq!(lease.read_current().unwrap(), None);
+    assert_eq!(
+        ReadLease::acquire_managed_synthetic().err(),
+        Some(NativeError::Unsupported)
+    );
 }
 
 #[test]
@@ -552,3 +552,5 @@ fn ext4_publish_refuses_racing_create_and_marks_lost_reply_unknown() {
 }
 
 mod writer;
+
+mod admission;

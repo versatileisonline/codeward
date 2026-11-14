@@ -238,3 +238,78 @@ fn kill_writer(home: &Path, phase: &str) {
         )))
     );
 }
+
+#[test]
+#[ignore = "requires the dedicated ext4 nodev test mount"]
+fn ext4_named_vault_is_sole_authority_and_all_residue_survives() {
+    let fixture = Fixture::new();
+    drop(storage(&fixture.0));
+    let parent = fixture.0.join(".local/share/codeward/vaults");
+    let complete = parent.join(".codeward.stage-00000000000000000000000000000001");
+    let incomplete = parent.join(".codeward.stage-00000000000000000000000000000002");
+    let unrelated = parent.join("unrelated-entry");
+    let complete_bytes: Vec<u8> =
+        include_str!("../../../codeward-core/tests/fixtures/authenticated-v1.hex")
+            .split_ascii_whitespace()
+            .flat_map(|line| {
+                (0..line.len())
+                    .step_by(2)
+                    .map(|index| u8::from_str_radix(&line[index..index + 2], 16).unwrap())
+            })
+            .collect();
+    for (path, bytes) in [
+        (&complete, complete_bytes.as_slice()),
+        (&incomplete, &b"partial"[..]),
+        (&unrelated, &b"preserve unrelated"[..]),
+    ] {
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(path)
+            .unwrap()
+            .write_all(bytes)
+            .unwrap();
+    }
+    let check_residue = || {
+        assert_eq!(fs::read(&complete).unwrap(), complete_bytes);
+        assert_eq!(fs::read(&incomplete).unwrap(), b"partial");
+        assert_eq!(fs::read(&unrelated).unwrap(), b"preserve unrelated");
+    };
+    let vault = parent.join("vault.cw");
+    assert!(Committer::open_master(storage(&fixture.0), OWNER, "synthetic password").is_err());
+    assert!(!vault.exists());
+    check_residue();
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&vault)
+        .unwrap()
+        .write_all(b"invalid authoritative vault")
+        .unwrap();
+    assert!(Committer::open_master(storage(&fixture.0), OWNER, "synthetic password").is_err());
+    assert_eq!(fs::read(&vault).unwrap(), b"invalid authoritative vault");
+    check_residue();
+    fs::write(&vault, &complete_bytes).unwrap();
+    let (session, worker) =
+        Committer::open_master(storage(&fixture.0), OWNER, "synthetic password").unwrap();
+    assert_eq!(worker.committed_revision(), Some(1));
+    check_residue();
+    drop((session, worker));
+    // Explicit creation after absence is enrollment, never promotion of residue.
+    fs::remove_file(&vault).unwrap();
+    let (mut session, mut worker) = Committer::begin_create(storage(&fixture.0), OWNER).unwrap();
+    let paper = session.recovery_code(OWNER).unwrap();
+    session
+        .prepare_creation(&mut worker, OWNER, request(0), PASSWORD, PASSWORD, &paper)
+        .unwrap();
+    for phase in [Phase::Staged, Phase::Admitted, Phase::Published] {
+        assert_eq!(worker.advance(), Some(OperationStatus::Pending(phase)));
+    }
+    assert_eq!(
+        worker.advance(),
+        Some(OperationStatus::Committed { revision: 1 })
+    );
+    check_residue();
+}

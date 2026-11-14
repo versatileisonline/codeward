@@ -93,6 +93,62 @@ pub(super) fn verify_mount(id: u64) -> Result<(), NativeError> {
     Err(NativeError::Unsupported)
 }
 
+/// Resolve the live mount's major/minor through sysfs. Layered/virtual and USB
+/// devices are deliberately outside this bounded experiment; missing evidence
+/// refuses admission rather than treating `removable` absence as fixed storage.
+pub(super) fn verify_fixed_mount(id: u64) -> Result<(), NativeError> {
+    let mounts = File::open("/proc/self/mountinfo").map_err(|_| NativeError::Io)?;
+    for line in BufReader::new(mounts).split(b'\n') {
+        let line = line.map_err(|_| NativeError::Io)?;
+        if mount_allowed(&line, id) != Some(true) {
+            continue;
+        }
+        let device = line
+            .split(|&byte| byte == b' ')
+            .nth(2)
+            .ok_or(NativeError::Unsupported)?;
+        let device = std::str::from_utf8(device).map_err(|_| NativeError::Unsupported)?;
+        let (major, minor) = device.split_once(':').ok_or(NativeError::Unsupported)?;
+        let major: u32 = major.parse().map_err(|_| NativeError::Unsupported)?;
+        let minor: u32 = minor.parse().map_err(|_| NativeError::Unsupported)?;
+        let mut path = std::fs::canonicalize(format!("/sys/dev/block/{major}:{minor}"))
+            .map_err(|_| NativeError::Unsupported)?;
+        // Partitions inherit the parent disk's removability and device topology.
+        if path
+            .join("partition")
+            .try_exists()
+            .map_err(|_| NativeError::Unsupported)?
+        {
+            path = path.parent().ok_or(NativeError::Unsupported)?.to_owned();
+        }
+        let removable =
+            std::fs::read(path.join("removable")).map_err(|_| NativeError::Unsupported)?;
+        let slaves_empty = std::fs::read_dir(path.join("slaves"))
+            .map_err(|_| NativeError::Unsupported)?
+            .next()
+            .is_none();
+        let has_device = path
+            .join("device")
+            .try_exists()
+            .map_err(|_| NativeError::Unsupported)?;
+        let transport = path
+            .parent()
+            .and_then(|controller| std::fs::read(controller.join("transport")).ok());
+        return if crate::admission::fixed_local_device(
+            &path,
+            &removable,
+            slaves_empty,
+            has_device,
+            transport.as_deref(),
+        ) {
+            Ok(())
+        } else {
+            Err(NativeError::Unsupported)
+        };
+    }
+    Err(NativeError::Unsupported)
+}
+
 pub(super) fn mount_allowed(line: &[u8], id: u64) -> Option<bool> {
     let mut fields = line.split(|&byte| byte == b' ');
     let mount_id: u64 = std::str::from_utf8(fields.next()?).ok()?.parse().ok()?;
