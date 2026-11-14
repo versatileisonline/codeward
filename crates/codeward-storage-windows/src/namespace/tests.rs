@@ -350,7 +350,7 @@ fn ntfs_namespace_rechecks_file_and_directory_admission_after_flush() {
             Authorization::{SE_FILE_OBJECT, SetSecurityInfo},
             DACL_SECURITY_INFORMATION,
         },
-        Storage::FileSystem::WRITE_DAC,
+        Storage::FileSystem::{READ_CONTROL, WRITE_DAC},
     };
     struct Broaden {
         at: usize,
@@ -363,10 +363,12 @@ fn ntfs_namespace_rechecks_file_and_directory_admission_after_flush() {
             if self.count == self.at {
                 let path = native::final_path(file).unwrap();
                 let security = OpenOptions::new()
-                    .access_mode(WRITE_DAC)
+                    .access_mode(READ_CONTROL | WRITE_DAC)
                     .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
                     .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
                     .open(path)?;
+                // SetSecurityInfo file-security processing can query the current
+                // descriptor, so this test-only handle includes READ_CONTROL.
                 // SAFETY: this disposable fixture handle has WRITE_DAC. A null
                 // DACL deliberately models a now-unrestricted object; admission
                 // must refuse it. No owner/group/SACL update is requested.
@@ -382,7 +384,9 @@ fn ntfs_namespace_rechecks_file_and_directory_admission_after_flush() {
                             null_mut(),
                         )
                     },
-                    0
+                    0,
+                    "ACL fault injection failed after barrier {}",
+                    self.at
                 );
                 native::close_checked(security)?;
             }
