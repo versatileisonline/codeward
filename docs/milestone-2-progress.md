@@ -639,8 +639,9 @@ Completed stages retain writer exclusion and a file handle denying writes and
 deletes. [Atomic publication](windows-publication.md) adds consuming no-replace
 creation, exact-base replacement, source-transition checks and explicit unknown
 outcomes. Native tests include authenticated slot/content changes and four
-child kills around rename. Windows namespace persistence and core composition
-remain pending; preparation/publication are not a committed save.
+child kills around rename. The [owned writer and namespace barriers](windows-core-writer.md)
+now compose those operations with the core; preparation/publication alone still
+do not acknowledge a save.
 
 [PR #49](https://github.com/versatileisonline/codeward/pull/49) is merged, with
 passing three-platform CI and 35 native Windows runtime tests plus the ownership
@@ -649,44 +650,29 @@ tested revisions and directory-flush capability investigation.
 The [native flush matrix](windows-persistence-review.md#observed-native-results)
 now shows successful directory calls with add-file/add-subdirectory access under
 a restricted effective token. The existing traversal/metadata handles are denied.
-This identifies a barrier candidate without implementing the Windows writer.
+That measured access is now used by the bounded writer/barrier implementation;
+platform/product acceptance remains separate.
 
-## Remaining work
+## Remaining review gates
 
-### Scope estimate and near-term UI target
+The [bounded acceptance candidate](milestone-2-acceptance.md) supersedes the
+previous approximate 85% scope estimate. Windows barriers/core composition and
+Linux capacity/submount/managed-policy work are implemented for review. Technical
+closeout requires the final combined PR head's complete CI and the independent
+review regression checks; formal 100% milestone acceptance remains an explicit
+owner decision.
 
-Engineering estimate as of [PR #51](https://github.com/versatileisonline/codeward/pull/51):
-Milestone 2 is approximately **85% complete**. This is a judgment about remaining
-scope, not a measured test-coverage percentage or formal milestone acceptance.
-The flush capability diagnostic reduces uncertainty without implementing the
-Windows barrier/writer, so it does not materially increase the previous estimate.
-
-The remaining work is concentrated in three blocks:
-
-| Block | Required outcome |
+| Block | Current closeout state |
 | --- | --- |
-| Windows persistence | Choose and validate namespace barriers; compose the core writer and verify interruption, uncertainty/reconciliation and location/failure behavior. |
-| Linux admission and faults | Review the managed-location policy and fill native capacity/location/failure evidence gaps. |
-| Integrated Milestone 2 review | Demonstrate create/open/save/lock/reopen and coherent access metadata across the bounded adapters, with no premature acknowledgement; obtain acceptance. |
+| Windows persistence | Namespace barriers, owned writer, lifecycle/error/reconciliation tests and six core kill cases implemented. The independently identified final-close identity gap has a native failing regression and a corrected identity guard/final reader. |
+| Linux admission and faults | Real ext4 ENOSPC creation/content/password failures and fresh retries, preserve-all authority and same-device bind-mount refusal passed native execution. Proposed location exclusions and untested positive fixed-device admission remain explicit owner review points. |
+| Integrated Milestone 2 review | The final PR includes both reviewed implementations and the seven-requirement acceptance packet. Current combined head/base CI, merge and bounded-policy/milestone approval must be recorded. |
 
-The owner wants UI work during the week of **2026-11-16 through 2026-11-22**.
-UI flow/design exploration is a realistic near-term target. A connected
-macOS-first credential prototype is a conditional target: the current roadmap
-requires Milestone 2 acceptance followed by Milestone 3 offline recovery
-validation before Milestone 4 integration. Existing Tauri/session-event and Rust
-host work can be reused, but the pilot has no credential IPC or persistence.
-Do not promise the full three-platform UI or turn the calendar target into an
-implicit acceptance of the remaining storage/recovery gates.
-
-### Acceptance sequence
-
-1. Implement and validate Windows native persistence. The bounded macOS
-   storage policy is accepted.
-2. Review the Linux location policy and close remaining native fault-evidence
-   gaps for the declared Linux target.
-3. Demonstrate the Milestone 2 gate with synthetic vaults, including malformed
-   input, competing writers, real process interruptions and native storage
-   failures. Confirm that save acknowledgement follows the required barriers.
+The UI target remains the week of **2026-11-16 through 2026-11-22**. The next
+accepted milestone is offline recovery validation, followed by the macOS-first
+credential UI. Existing core, host and Tauri/session-event work can be reused;
+the current desktop pilot still has no credential IPC or persistence. This
+closeout does not promise a finished three-platform UI that week.
 
 Offline recovery acceptance follows in Milestone 3. Draft handling, close
 interactions, Linux and Windows desktop events, and integrated credential

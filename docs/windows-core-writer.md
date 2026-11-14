@@ -30,7 +30,11 @@ It requires exact expected complete encrypted bytes or confirmed absence. A
 present candidate is opened relative to the retained parent with read/write access,
 denying competing writes/deletes. Complete bytes, regular-file identity, canonical
 name and ACL admission are checked before and after its flags-zero
-`NtFlushBuffersFileEx`. Every temporary close is checked.
+`NtFlushBuffersFileEx`. A read guard pins the flushed identity and denies deletion
+across writable-handle close; a restrictive final reader then checks the original
+identity/metadata and full expected bytes while denying writes/deletes. It stays
+protected through the guard close and its own checked final close. Every temporary
+close is checked.
 
 Directories are temporarily reopened with the measured directory-specific
 `FILE_ADD_FILE` plus traversal/attribute/security/synchronization access and
@@ -78,3 +82,17 @@ current-head CI are required in the PR; local cross-compilation alone cannot
 validate NTFS behavior. Hosted Windows Server restricted-token evidence is distinct
 from ordinary-account Windows 11 desktop support. Real-vault admission, physical
 device coverage and milestone acceptance require their own explicit review.
+
+## Review regression
+
+Independent review identified a close/reopen identity gap: exact bytes alone could
+accept a replacement object after the flushed writable handle closed. A real
+Windows regression first failed in
+[run 43652628091](https://github.com/versatileisonline/codeward/actions/runs/43652628091)
+for head `b14b7f41c79d558d2ba71a0e607057441c8dd9f7`. The identity guard and final
+restrictive reader close that observed transition without claiming a snapshot
+against an arbitrary external writer after the final protected handle closes.
+The same run reproduced an ACL injection fixture error; its security-control
+handle now requests READ_CONTROL together with WRITE_DAC. Runtime retained rights
+and the restricted effective token are unchanged. Native green results must be
+recorded for the corrected revision.

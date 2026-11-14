@@ -164,6 +164,18 @@ fn ntfs_core_managed_create_content_delete_password_lock_and_reopen() {
     committed(&mut worker, Some(3), 4);
     drop((recovery, worker));
     let bytes = fs::read(&vault).unwrap();
+    for secret in [
+        PASSWORD.as_bytes(),
+        REPLACEMENT.as_bytes(),
+        paper.as_bytes(),
+        b"synthetic credential",
+    ] {
+        assert!(
+            !bytes.windows(secret.len()).any(|part| part == secret),
+            "unexpected plaintext in the encrypted vault artifact"
+        );
+    }
+    assert!(stages(vault.parent().unwrap()).is_empty());
     let unlocked = unlock_with_master(&bytes, REPLACEMENT).unwrap();
     assert_eq!(unlocked.revision(), 4);
     assert_eq!(

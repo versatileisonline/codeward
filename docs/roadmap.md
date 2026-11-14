@@ -65,26 +65,18 @@ blocked from real-vault use until platform-specific evidence exists.
 
 ## Current Milestone 2 slice
 
-The [Linux storage foundation](linux-storage-foundation.md) implements bounded
-reads and writer exclusion for synthetic data on ext4. The
-[managed location experiment](linux-storage-foundation.md#managed-location-experiment)
-resolves and admits the fixed location for those reads.
-The [Linux staging experiment](linux-storage-foundation.md#encrypted-staging-experiment)
-prepares and synchronizes a private candidate under the retained writer lease.
-Synthetic [publication and namespace operations](linux-storage-foundation.md#atomic-publication-and-namespace-experiment)
-are in place. The [synthetic transaction experiment](linux-storage-foundation.md#core-transaction-experiment)
-connects them to the core. Linux production admission and broader fault
-coverage remain open. The [Windows foundation](windows-storage-foundation.md)
-adds synthetic NTFS reads and exclusion. The managed experiment adds LocalAppData
-resolution and bounded ACL admission. The [Windows staging slice](windows-staging.md)
-adds handle-relative file operations and checked private candidate preparation.
-[Windows publication](windows-publication.md) now adds consuming no-replace
-creation and expected-base replacement. Namespace persistence and core
-transaction composition remain required.
-The [Windows persistence API review](windows-persistence-review.md) records the
-merged publication evidence and the native flush capability matrix. Restricted
-thread-token probes identified working directory access on the tested NTFS system;
-namespace barrier composition and a Windows writer remain the next steps.
+The bounded [Milestone 2 closeout candidate](milestone-2-acceptance.md) now
+collects the core and three experimental native adapters for review. Linux adds
+[real capacity/retry and managed-submount evidence](linux-capacity-and-admission.md)
+to its shared writer. Windows adds [expected-state namespace barriers and the
+owned core writer](windows-core-writer.md), including fresh authenticated
+reconciliation and staged/published/committed termination cases. The earlier
+[flush capability matrix](windows-persistence-review.md) records the access
+candidate used by the Windows barriers. Current combined-revision checks and
+explicit owner policy/milestone acceptance remain required before M3 entry.
+
+The following paragraphs retain the earlier implementation sequence and its
+slice-specific limits; the closeout packet is the current review checklist.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict
@@ -112,7 +104,8 @@ companion and vault reads, with refusal revalidated throughout native operations
 Remaining location policy and runtime storage acceptance are still required.
 A [mount-policy recheck](macos-location-admission.md) now spans shared native
 verification checkpoints; it does not prove that an APFS directory is outside sync.
-No native commit/durability guarantee exists; Milestone 2 remains incomplete.
+Native synthetic commit evidence now exists; a general durability/product support
+claim and formal Milestone 2 acceptance are not inferred from it.
 The selected [managed working-location contract](adr/0006-managed-working-location.md)
 now has [macOS directory-preparation evidence](macos-managed-location.md), including
 ancestor revalidation. Backup/copy/restore workflows remain explicitly deferred.

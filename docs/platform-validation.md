@@ -55,11 +55,14 @@ per-platform paths and backup/portability contract are in
 native directory-preparation entry and a
 [default-off experimental writer](macos-experimental-writer.md) for synthetic
 development. The [Linux experiment](linux-storage-foundation.md#managed-location-experiment)
-resolves and prepares the fixed managed location for synthetic reads on ext4.
+resolves the managed location and composes synthetic ext4 commits; the
+[capacity/admission closeout](linux-capacity-and-admission.md) records the bounded
+device/sync policy, real disk-full retry and submount evidence.
 The [Windows foundation](windows-storage-foundation.md) exercises synthetic
 NTFS reads and exclusion. A synthetic managed read path resolves LocalAppData
-and checks ACLs on the base and app-owned objects. Production admission and
-accepted writers remain pending.
+and checks ACLs on the base and app-owned objects. The [Windows writer](windows-core-writer.md)
+adds synthetic namespace barriers and core composition. Production admission and
+formal adapter/milestone acceptance remain pending.
 Do not infer real-vault or packaged support from those experiments.
 
 Support only regular files in user-controlled local directories on the declared
@@ -76,10 +79,10 @@ Do not generalize a successful Rust filesystem call into a cross-platform guaran
 | --- | --- |
 | Linux | Restrictive exclusive staging creation; sync file; same-directory atomic rename; sync parent directory. Use an atomic no-replace publication for initial creation. Validate exact ext4/mount behavior. |
 | macOS | Same logical stages; use the required native flush/cache barrier including evaluation of `F_FULLFSYNC`, and validate directory/name persistence on APFS. Unsupported barriers fail the requested durability contract. |
-| Windows | Evaluate handle-based `SetFileInformationByHandle` rename with `FileRenameInfoEx` for replacement, no-replace creation and sharing modes; flush candidate data. Verify NTFS publication/failure outcomes before accepting the adapter. Do not assume file flushing alone persists namespace changes. |
+| Windows | The synthetic implementation uses root-relative `NtSetInformationFile(FileRenameInformationEx)` for replace/no-replace publication, then checked flags-zero file and managed-directory barriers. Validate exact NTFS failure outcomes and stated evidence scope before acceptance; publication/file flushing alone do not acknowledge save. |
 
-The Windows API above is a candidate to test, not established atomicity or
-power-loss evidence. `ReplaceFileW` is not an automatic fallback: its documented
+The Windows sequence has bounded synthetic native evidence as recorded in its
+writer document; that is not a Windows 11 desktop or power-loss claim. `ReplaceFileW` is not an automatic fallback: its documented
 failure cases can change pathnames and its write-through flag is unsupported.
 Never fall back to deleting the destination first. Unsupported or unproven
 publication behavior blocks that adapter's use with real vaults; shared core work
