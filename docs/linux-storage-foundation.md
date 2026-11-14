@@ -144,3 +144,8 @@ confirmed content commit. The workflow checks the old vault and residue,
 writer exclusion while the child is alive, and the updated authenticated
 snapshot after reopening. These are synthetic application-termination cases.
 Product location admission and broader durability evidence remain open.
+
+The [kernel write-failure experiment](linux-write-failures.md) adds child-local
+`EFBIG` and partial-write cases through raw staging and the managed transaction
+path. It checks preserved base access, failed-request deduplication, fresh
+creation enrollment and explicit retry after the limit is removed.
