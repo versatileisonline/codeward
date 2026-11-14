@@ -82,8 +82,9 @@ Native execution and full workspace/doctest checks are supplied by the current
 [PR #48](https://github.com/versatileisonline/codeward/pull/48)'s three-platform
 Rust CI. Cross-compilation alone proves no native behavior.
 
-Publication, namespace persistence, core transaction composition, interruption
-and native capacity/fault evidence remain pending for Windows. Directory
+[Atomic publication](windows-publication.md) now consumes prepared stages with
+no-replace creation and expected-base replacement. Namespace persistence, core
+transaction composition and broader native capacity/fault evidence remain pending. Directory
 creation above the file boundary and ancestor/cloud admission still require
 review. File flush/close/readback is not a durable save; no product writer or
 Milestone 2 acceptance is established here.
