@@ -103,18 +103,93 @@ impl ReadLease {
             }
             Ok(())
         })();
+        // Keep the flushed object pinned and deny deletion while its writable
+        // handle is closed. The read guard shares writes only to coexist with
+        // that handle; a subsequent restrictive reader closes the sharing gap.
+        let protected = if result.is_ok() {
+            candidate
+                .as_ref()
+                .map(|file| {
+                    let stamp = native::regular_info(file)?;
+                    let guard = native::open_child(
+                        parent,
+                        VAULT,
+                        GENERIC_READ,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        FILE_OPEN,
+                        None,
+                    )
+                    .map_err(|_| NativeError::Open)?;
+                    let checked = (|| {
+                        admission.verify_object(&guard)?;
+                        self.verify_leaf(&guard, VAULT)?;
+                        if native::regular_info(&guard)? != stamp {
+                            return Err(NativeError::Conflict);
+                        }
+                        Ok(())
+                    })();
+                    if let Err(error) = checked {
+                        let _ = operations.close(guard);
+                        return Err(error);
+                    }
+                    Ok((guard, stamp))
+                })
+                .transpose()
+        } else {
+            Ok(None)
+        };
         let closed = candidate.map_or(Ok(()), |file| {
             operations
                 .close(file)
                 .map_err(|_| NativeError::SyncNamespace)
         });
         result?;
-        closed?;
-        self.verify()?;
-        if self.read_current()?.as_deref() != expected {
-            return Err(NativeError::Conflict);
-        }
-        Ok(())
+        let Some((guard, stamp)) = protected? else {
+            closed?;
+            self.verify()?;
+            return if self.read_current()?.is_none() {
+                Ok(())
+            } else {
+                Err(NativeError::Conflict)
+            };
+        };
+        let mut final_reader = None;
+        let checked = (|| {
+            closed?;
+            // This reader denies write/delete sharing after the writable handle
+            // has closed. Check the original identity, metadata and full bytes,
+            // rather than accepting a same-byte replacement through read_current.
+            final_reader = Some(self.open_vault().map_err(|_| NativeError::Open)?);
+            self.verify_expected(final_reader.as_mut(), expected, &admission)?;
+            if native::regular_info(final_reader.as_ref().unwrap())? != stamp {
+                return Err(NativeError::Conflict);
+            }
+            Ok(())
+        })();
+        // Consume both temporary handles even when an earlier check/close failed.
+        // The final reader keeps write/delete exclusion while the guard closes.
+        let guard_closed = operations
+            .close(guard)
+            .map_err(|_| NativeError::SyncNamespace);
+        let verified = (|| {
+            checked?;
+            guard_closed?;
+            self.verify_expected(final_reader.as_mut(), expected, &admission)?;
+            if native::regular_info(final_reader.as_ref().unwrap())? != stamp {
+                return Err(NativeError::Conflict);
+            }
+            Ok(())
+        })();
+        let final_closed = final_reader.map_or(Ok(()), |file| {
+            operations
+                .close(file)
+                .map_err(|_| NativeError::SyncNamespace)
+        });
+        verified?;
+        final_closed?;
+        // An arbitrary writer ignoring the companion can still race after the
+        // last protected handle closes; no external-writer snapshot is promised.
+        self.verify()
     }
 
     fn verify_expected(

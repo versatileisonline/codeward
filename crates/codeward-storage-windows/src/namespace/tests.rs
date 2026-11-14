@@ -166,7 +166,7 @@ fn ntfs_namespace_orders_file_then_leaf_and_stops_at_fixture_anchor() {
         trace.paths,
         [lease.inner.parent.join(VAULT), lease.inner.parent.clone()]
     );
-    assert_eq!(trace.closes, 2);
+    assert_eq!(trace.closes, 4);
 }
 
 #[test]
@@ -204,7 +204,7 @@ fn ntfs_namespace_covers_fresh_managed_names_through_existing_anchor() {
 fn ntfs_namespace_failures_preserve_candidate_residue_and_exclusion() {
     for (flush, close) in (1..=4)
         .map(|index| (Some(index), None))
-        .chain((1..=4).map(|index| (None, Some(index))))
+        .chain((1..=6).map(|index| (None, Some(index))))
     {
         let _context = RestrictedContext::enter();
         let fixture = Fixture::new();
