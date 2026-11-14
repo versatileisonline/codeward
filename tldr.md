@@ -30,6 +30,7 @@ Root:
 - [windows-staging.md](docs/windows-staging.md): Handle-relative private encrypted staging and retained writer exclusion.
 - [windows-publication.md](docs/windows-publication.md): Synthetic NTFS no-replace creation, exact-base replacement and interruption evidence.
 - [windows-persistence-review.md](docs/windows-persistence-review.md): Merged Windows publication evidence, flush API contract review and next native probe.
+- [windows-core-writer.md](docs/windows-core-writer.md): Synthetic NTFS namespace barriers, owned core writer and native lifecycle/failure evidence.
 - [linux-storage-foundation.md](docs/linux-storage-foundation.md): Synthetic ext4 reads, exclusion and managed location.
 - [linux-write-failures.md](docs/linux-write-failures.md): Child-isolated ext4 kernel write refusals and explicit transaction retries.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.

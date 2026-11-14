@@ -105,6 +105,9 @@ impl ReadLease {
     }
 
     fn acquire_managed_at(path: &Path) -> Result<Self, NativeError> {
+        if managed::recognized_cloud_path(path) {
+            return Err(NativeError::Unsupported);
+        }
         Self::acquire(path, Some(managed::Admission::new()?))
     }
 

@@ -11,6 +11,29 @@ pub(crate) static AUTHENTICATION: std::sync::Mutex<()> = std::sync::Mutex::new((
 pub(crate) mod flush_probe;
 
 #[test]
+fn windows_managed_refuses_recognized_cloud_ancestors_before_preparation() {
+    for path in [
+        r"C:\Users\user\OneDrive\LocalData",
+        r"C:\Users\user\OneDrive - Team\LocalData",
+        r"C:\Users\user\DROPBOX\LocalData",
+        r"C:\Users\user\Nextcloud\LocalData",
+        r"C:\Users\user\iCloudDrive\LocalData",
+        r"C:\Users\user\Google Drive\LocalData",
+    ] {
+        assert_eq!(
+            ReadLease::acquire_managed_at(Path::new(path)).err(),
+            Some(NativeError::Unsupported)
+        );
+    }
+    assert!(!managed::recognized_cloud_path(Path::new(
+        r"C:\Users\user\AppData\Local"
+    )));
+    assert!(!managed::recognized_cloud_path(Path::new(
+        r"C:\Users\user\Dropbox-not-a-root\LocalData"
+    )));
+}
+
+#[test]
 fn ntfs_publication_creates_without_overwrite_and_replaces_only_matching_base() {
     let fixture = Fixture::new();
     let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();

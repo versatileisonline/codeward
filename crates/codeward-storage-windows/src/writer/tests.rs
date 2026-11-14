@@ -1,4 +1,5 @@
 use super::*;
+use crate::tests::flush_probe::RestrictedContext;
 use crate::{
     MAX_FILE_LENGTH,
     tests::{AUTHENTICATION, Fixture},
@@ -19,6 +20,8 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
+
+mod termination;
 
 const OWNER: CallerId = CallerId(9);
 const PASSWORD: &str = "synthetic Windows managed password";
@@ -74,6 +77,7 @@ fn committed<L: WriterLease>(worker: &mut Committer<L>, previous: Option<u64>, r
 
 #[test]
 fn ntfs_writer_revokes_failed_stages_and_invalid_barrier_observations() {
+    let _restricted = RestrictedContext::enter();
     let fixture = fixture();
     let mut writer = storage(&fixture.0).acquire().unwrap();
     assert_eq!(writer.persist(), Err(StorageError::Barrier));
@@ -103,6 +107,7 @@ fn ntfs_writer_revokes_failed_stages_and_invalid_barrier_observations() {
 #[test]
 fn ntfs_core_managed_create_content_delete_password_lock_and_reopen() {
     let _authentication = AUTHENTICATION.lock().unwrap();
+    let _restricted = RestrictedContext::enter();
     let fixture = fixture();
     let vault = fixture.0.join("Codeward/Vaults/vault.cw");
     let (mut session, mut worker) = Committer::begin_create(storage(&fixture.0), OWNER).unwrap();
@@ -224,6 +229,7 @@ impl WriterLease for BarrierLease {
 #[test]
 fn ntfs_core_failed_barrier_requires_fresh_authenticated_reconciliation() {
     let _authentication = AUTHENTICATION.lock().unwrap();
+    let _restricted = RestrictedContext::enter();
     let fixture = fixture();
     let fail = Arc::new(AtomicBool::new(true));
     let (mut session, mut worker) = Committer::begin_create(
@@ -296,6 +302,7 @@ fn stages(parent: &Path) -> Vec<(PathBuf, Vec<u8>)> {
 #[test]
 fn ntfs_core_refuses_malformed_or_tampered_named_input_without_promoting_residue() {
     let _authentication = AUTHENTICATION.lock().unwrap();
+    let _restricted = RestrictedContext::enter();
     let fixture = fixture();
     let vault = fixture.0.join("Codeward/Vaults/vault.cw");
     let (mut session, mut worker) = Committer::begin_create(storage(&fixture.0), OWNER).unwrap();

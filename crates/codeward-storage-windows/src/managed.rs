@@ -36,6 +36,26 @@ use windows_sys::{
 
 use crate::{COMPANION, NativeError, companion_error, native, open_directory};
 
+pub(super) fn recognized_cloud_path(path: &Path) -> bool {
+    path.components().any(|part| {
+        let name = part.as_os_str().to_string_lossy().to_ascii_lowercase();
+        matches!(
+            name.as_str(),
+            "onedrive"
+                | "dropbox"
+                | "nextcloud"
+                | "owncloud"
+                | "google drive"
+                | "googledrive"
+                | "iclouddrive"
+                | "icloud drive"
+                | "pclouddrive"
+                | "mega"
+                | "insync"
+        ) || name.starts_with("onedrive - ")
+    })
+}
+
 pub(super) struct Admission {
     user: String,
     first_private: usize,

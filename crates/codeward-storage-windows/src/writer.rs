@@ -3,7 +3,7 @@
 use codeward_core::transaction::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 use std::path::PathBuf;
 
-use crate::{MAX_FILE_LENGTH, NativeError, PreparedStage, PublicationError, ReadLease, managed};
+use crate::{MAX_FILE_LENGTH, NativeError, PreparedStage, PublicationError, ReadLease};
 
 /// Opt-in Windows managed storage for synthetic development.
 ///
@@ -32,7 +32,7 @@ impl ExperimentalStorage {
     #[cfg(feature = "experimental-writer")]
     pub fn managed() -> Result<Self, NativeError> {
         Ok(Self {
-            base: managed::local_app_data()?,
+            base: crate::managed::local_app_data()?,
         })
     }
 }
