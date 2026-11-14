@@ -158,7 +158,71 @@ fn prepare<L: WriterLease>(
     }
 }
 
-fn transaction_refusal(home: &Path, case: &str, limit: u64) {
+enum Refusal {
+    FileLimit(u64),
+    Capacity,
+}
+
+struct Capacity(File);
+
+impl Capacity {
+    fn fill(home: &Path) -> Self {
+        use std::os::fd::AsRawFd;
+        let filler = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(home.join("synthetic-capacity-filler"))
+            .unwrap();
+        let mut stat = std::mem::MaybeUninit::<libc::statvfs>::zeroed();
+        // SAFETY: filler is live and stat points to writable native storage.
+        assert_eq!(
+            unsafe { libc::fstatvfs(filler.as_raw_fd(), stat.as_mut_ptr()) },
+            0
+        );
+        // SAFETY: successful fstatvfs populated stat.
+        let stat = unsafe { stat.assume_init() };
+        assert!(
+            stat.f_blocks.saturating_mul(stat.f_frsize) <= 128 * 1024 * 1024,
+            "capacity test requires a disposable filesystem no larger than 128 MiB"
+        );
+        let mut offset = 0;
+        // fallocate reserves actual ext4 blocks rather than relying on delayed
+        // buffered allocation. Small ext4 images may use 1 KiB blocks; exhaust
+        // the filesystem's reported allocation unit rather than assuming 4 KiB.
+        let unit = i64::try_from(stat.f_frsize).unwrap();
+        assert!((1024..=65536).contains(&unit));
+        for block in [1024 * 1024, unit] {
+            loop {
+                // SAFETY: fd is live, offsets are nonnegative and bounded by the
+                // dedicated 64 MiB CI filesystem. No raw memory is referenced.
+                let result = unsafe { libc::fallocate(filler.as_raw_fd(), 0, offset, block) };
+                if result == 0 {
+                    offset += block;
+                    assert!(offset <= 128 * 1024 * 1024);
+                } else {
+                    assert_eq!(
+                        io::Error::last_os_error().raw_os_error(),
+                        Some(libc::ENOSPC)
+                    );
+                    break;
+                }
+            }
+        }
+        filler.sync_all().unwrap();
+        Self(filler)
+    }
+}
+
+impl Drop for Capacity {
+    fn drop(&mut self) {
+        // Release only the filler owned by this test. Abandoned stages survive.
+        self.0.set_len(0).unwrap();
+        self.0.sync_all().unwrap();
+    }
+}
+
+fn transaction_refusal(home: &Path, case: &str, refusal: Refusal) {
     let vault = home.join(".local/share/codeward/vaults/vault.cw");
     let store = storage(home);
     let creating = case == "create";
@@ -183,9 +247,21 @@ fn transaction_refusal(home: &Path, case: &str, limit: u64) {
         .as_ref()
         .map_or(fixture_paper(), |code| code.as_str());
     let operation = prepare(case, &mut session, &mut worker, 101, paper).unwrap();
-    let mut guard = Some(FileLimit::install(limit));
-    let failed = OperationStatus::Failed(StorageError::Write);
-    assert_eq!(worker.advance(), Some(failed));
+    let mut size_guard = None;
+    let mut capacity_guard = None;
+    match refusal {
+        Refusal::FileLimit(limit) => size_guard = Some(FileLimit::install(limit)),
+        Refusal::Capacity => capacity_guard = Some(Capacity::fill(home)),
+    }
+    let failed = worker.advance().unwrap();
+    match refusal {
+        Refusal::FileLimit(_) => assert_eq!(failed, OperationStatus::Failed(StorageError::Write)),
+        // ext4 may report full allocation on write or delayed-allocation sync.
+        Refusal::Capacity => assert!(matches!(
+            failed,
+            OperationStatus::Failed(StorageError::Write | StorageError::SyncStage)
+        )),
+    }
     assert_eq!(
         worker.committed_revision(),
         if creating { None } else { Some(1) }
@@ -194,7 +270,9 @@ fn transaction_refusal(home: &Path, case: &str, limit: u64) {
     let residue = stages(parent);
     assert_eq!(residue.len(), 1);
     let partial = fs::read(&residue[0]).unwrap();
-    assert_eq!(partial.len(), limit as usize);
+    if let Refusal::FileLimit(limit) = refusal {
+        assert_eq!(partial.len(), limit as usize);
+    }
     assert_eq!(fs::metadata(&residue[0]).unwrap().mode() & 0o7777, 0o600);
     if creating {
         assert!(!vault.exists());
@@ -219,7 +297,8 @@ fn transaction_refusal(home: &Path, case: &str, limit: u64) {
     // A known failed request stays failed both before and after lifting the limit.
     for restore in [false, true] {
         if restore {
-            drop(guard.take().unwrap());
+            drop(size_guard.take());
+            drop(capacity_guard.take());
         }
         let same = prepare(case, &mut session, &mut worker, 101, paper).unwrap();
         assert_eq!(worker.status(OWNER, &operation).unwrap(), failed);
@@ -340,7 +419,14 @@ fn write_limit_child() {
     let limit = env::var(CHILD_LIMIT).unwrap().parse().unwrap();
     match case.as_str() {
         "stage" => stage_refusal(&home, limit),
-        "create" | "update" | "recover" => transaction_refusal(&home, &case, limit),
+        "create" | "update" | "recover" => {
+            transaction_refusal(&home, &case, Refusal::FileLimit(limit))
+        }
+        "capacity-create" | "capacity-update" | "capacity-recover" => transaction_refusal(
+            &home,
+            case.strip_prefix("capacity-").unwrap(),
+            Refusal::Capacity,
+        ),
         _ => panic!("unknown kernel write case"),
     }
 }
@@ -360,5 +446,13 @@ fn ext4_kernel_write_failures_require_explicit_transaction_retry() {
         for limit in [0, 17] {
             run_case(case, limit);
         }
+    }
+}
+
+#[test]
+#[ignore = "requires exclusive access to the dedicated disposable 64 MiB ext4 mount"]
+fn ext4_capacity_failures_require_explicit_transaction_retry() {
+    for case in ["capacity-create", "capacity-update", "capacity-recover"] {
+        run_case(case, 0);
     }
 }

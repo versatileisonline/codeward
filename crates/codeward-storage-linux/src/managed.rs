@@ -16,6 +16,7 @@ pub(super) struct Location {
     private_anchor: bool,
     pub(super) owner: u32,
     mount: u64,
+    bounded: bool,
     children: Vec<Child>,
 }
 
@@ -35,11 +36,26 @@ impl Location {
         let owner = unsafe { libc::geteuid() };
         let xdg = std::env::var_os("XDG_DATA_HOME");
         let (path, use_default) = data_root(xdg.as_deref(), || native::account_home(owner))?;
-        Self::prepare(&path, use_default, owner)
+        Self::prepare_impl(&path, use_default, owner, true)
     }
 
+    #[cfg(test)]
     pub(super) fn prepare(path: &Path, use_default: bool, owner: u32) -> Result<Self, NativeError> {
+        Self::prepare_impl(path, use_default, owner, false)
+    }
+
+    fn prepare_impl(
+        path: &Path,
+        use_default: bool,
+        owner: u32,
+        bounded: bool,
+    ) -> Result<Self, NativeError> {
+        if bounded && crate::admission::recognized_cloud_path(path) {
+            return Err(NativeError::Unsupported);
+        }
         let mut location = Self::open(path, owner, false)?;
+        location.bounded = bounded;
+        location.verify()?;
         if use_default {
             location.prepare_child(c".local", false)?;
             location.prepare_child(c"share", false)?;
@@ -63,6 +79,7 @@ impl Location {
             private_anchor,
             owner,
             mount,
+            bounded: false,
             children: Vec::new(),
         })
     }
@@ -113,6 +130,9 @@ impl Location {
             return Err(NativeError::Conflict);
         }
         native::verify_mount(self.mount)?;
+        if self.bounded {
+            native::verify_fixed_mount(self.mount)?;
+        }
         if !self.private_anchor {
             validate_managed_directory(&current, self.owner, false)?;
         }
