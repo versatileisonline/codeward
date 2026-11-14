@@ -15,8 +15,8 @@ The application does not call this adapter.
   bind each opened directory to the validated parent and avoid re-resolving
   the drive letter. Recheck the retained directories before and after reads.
   The adapter checks the opened companion and vault against the retained
-  parent after opening. Confining creation to a directory handle remains
-  follow-up work.
+  parent after opening. Companion creation and vault opens now use the retained
+  parent directly through the [relative file boundary](windows-staging.md).
 - Use an empty, single-link `.codeward.writer-lock` file opened without sharing.
   Keep the handle until lease drop and preserve the companion itself.
 - Open only the named `vault.cw` with read sharing, excluding concurrent writes
@@ -40,8 +40,9 @@ and [normalized handle paths](https://learn.microsoft.com/en-us/windows/win32/ap
 The Windows CI suite exercises reads and the input cap, hard-link and junction
 refusal, preservation of a nonempty companion, and exclusion across processes.
 The original fixture entry inherits the runner's permissions. The managed
-experiment below adds per-user resolution and bounded ACL admission. Staging,
-publication and persistence remain separate work. Drive classification and the tested fixture do not
+experiment below adds per-user resolution and bounded ACL admission. The
+[staging experiment](windows-staging.md) adds private encrypted candidate
+preparation. Publication and persistence remain separate work. Drive classification and the tested fixture do not
 establish a production policy for removable or synchronized locations.
 
 ## Managed location experiment
@@ -58,8 +59,8 @@ LocalAppData, both app directories, the companion and any vault must be owned
 by the process user. Admission rejects null DACLs, unrecognized ACE types and
 allow ACEs for other principals. It checks those objects through their handles
 before use and rechecks admission around bounded reads. Ancestors above
-LocalAppData receive the existing path and reparse checks. Their ACLs, fully
-handle-relative creation, and admission for real vaults remain open.
+LocalAppData receive the existing path and reparse checks. Their ACLs,
+handle-relative directory preparation, and admission for real vaults remain open.
 
 This adds the `windows-sys 0.61.2` features `Win32_Security`,
 `Win32_Security_Authorization`, `Win32_System_Com`, `Win32_System_Threading`

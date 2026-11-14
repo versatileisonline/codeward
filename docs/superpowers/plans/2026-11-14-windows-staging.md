@@ -43,14 +43,14 @@ Files: `crates/codeward-storage-windows/src/native/relative.rs`,
 Interfaces: private `native::open_child(parent, name, access, share,
 disposition, security) -> io::Result<File>`; retain all directory handles.
 
-- [ ] Add tests for exclusive collision preservation, rejected multi-component
+- [x] Add tests for exclusive collision preservation, rejected multi-component
   names and creation under the retained parent.
-- [ ] Run Windows-target `cargo check --tests` and observe missing APIs.
-- [ ] Implement the bounded `UNICODE_STRING`/`OBJECT_ATTRIBUTES` wrapper,
+- [x] Run Windows-target `cargo check --tests` and observe missing APIs.
+- [x] Implement the bounded `UNICODE_STRING`/`OBJECT_ATTRIBUTES` wrapper,
   synchronous native open, status conversion and native randomness/close.
-- [ ] Use the same relative boundary for companions and vault reads; preserve
+- [x] Use the same relative boundary for companions and vault reads; preserve
   existing admission and missing-leaf behavior.
-- [ ] Run Windows-target checks and Clippy; commit the native boundary.
+- [x] Run Windows-target checks and Clippy; commit the native boundary.
 
 ## Task 2: Staging and evidence
 
@@ -60,10 +60,10 @@ Files: `src/staging.rs`, `src/staging/tests.rs`, `src/lib.rs`, `src/native.rs`,
 Interfaces: public `ReadLease::prepare_stage(&self, encrypted: &[u8]) ->
 Result<PreparedStage, NativeError>` and opaque `PreparedStage::verify()`.
 
-- [ ] Add tests requiring byte-exact stages, cap-before-create, bounded collisions,
+- [x] Add tests requiring byte-exact stages, cap-before-create, bounded collisions,
   random failure, partial writes and flush/close refusal without vault changes.
-- [ ] Observe the missing staging API in the Windows-target check.
-- [ ] Implement shared lease ownership, exclusive private file creation,
+- [x] Observe the missing staging API in the Windows-target check.
+- [x] Implement shared lease ownership, exclusive private file creation,
   checked write/flush/close, retained identity and bounded encrypted readback.
 - [ ] Cover ACL refusal, independent-process exclusion, stage lifetime and
   preservation of abandoned stages. Native tests run on Windows CI.
@@ -71,3 +71,13 @@ Result<PreparedStage, NativeError>` and opaque `PreparedStage::verify()`.
   Rust CI; record exact head/base/run and unresolved acceptance gates in the PR.
 - [ ] Open a focused PR against reviewed main. Do not merge or claim milestone
   acceptance without explicit review.
+
+## Execution notes
+
+The native and staging code are committed together because the shared lease
+and public stage type form one compiling boundary. The first Windows-target
+test check failed on missing `open_child` and `prepare_stage` as expected.
+All-feature/all-target Windows-target Clippy and the default build pass
+locally; native execution is pending hosted Windows CI. Independent review
+identified a close/reopen race coverage gap; added real filesystem probes for
+the identity guard and both interfering-writer outcomes, plus child termination.
