@@ -7,6 +7,39 @@ use std::{
 use super::*;
 
 #[test]
+fn ntfs_publication_creates_without_overwrite_and_replaces_only_matching_base() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    lease
+        .prepare_stage(b"first candidate")
+        .unwrap()
+        .publish_create()
+        .unwrap();
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"first candidate");
+    assert_eq!(
+        lease
+            .prepare_stage(b"must not overwrite")
+            .unwrap()
+            .publish_create(),
+        Err(PublicationError::NotPublished(NativeError::Conflict))
+    );
+    assert_eq!(
+        lease
+            .prepare_stage(b"must not overwrite")
+            .unwrap()
+            .publish_replace(b"stale base"),
+        Err(PublicationError::NotPublished(NativeError::Conflict))
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"first candidate");
+    lease
+        .prepare_stage(b"second candidate")
+        .unwrap()
+        .publish_replace(b"first candidate")
+        .unwrap();
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"second candidate");
+}
+
+#[test]
 fn ntfs_relative_creation_preserves_collisions_and_rejects_escape_names() {
     use windows_sys::Wdk::Storage::FileSystem::FILE_CREATE;
     use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};

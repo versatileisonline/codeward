@@ -15,7 +15,8 @@ use crate::{
 /// A complete private encrypted sibling retaining the original writer lease.
 ///
 /// The read handle denies writes and deletes. Dropping the stage preserves
-/// its file; it never promotes or cleans up residue. There is no save result.
+/// its file. Explicit consuming publication changes visibility only; dropping
+/// never promotes or cleans up residue. There is no save result.
 ///
 /// ```compile_fail
 /// use codeward_storage_windows::PreparedStage;
@@ -195,6 +196,9 @@ trait StageIo {
 
 struct SystemIo;
 impl StageIo for SystemIo {}
+
+mod publication;
+pub use publication::PublicationError;
 
 #[cfg(test)]
 mod tests;
