@@ -6,6 +6,8 @@ use std::{
 
 use super::*;
 
+mod flush_probe;
+
 #[test]
 fn ntfs_publication_creates_without_overwrite_and_replaces_only_matching_base() {
     let fixture = Fixture::new();

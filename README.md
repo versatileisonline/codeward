@@ -23,9 +23,10 @@ evidence so far uses synthetic data:
   See the [Windows storage foundation](docs/windows-storage-foundation.md).
 
 Linux has an opt-in synthetic transaction adapter. Windows has synthetic managed
-reads, encrypted staging and atomic publication. The next Windows storage step is
-the [persistence-barrier review and native probe](docs/windows-persistence-review.md),
-followed by core transaction composition.
+reads, encrypted staging and atomic publication. A native
+[flush capability probe](docs/windows-persistence-review.md#observed-native-results)
+now identifies working directory access on the tested NTFS system. The next
+Windows steps are namespace barriers and core transaction composition.
 Desktop UI integration starts in Milestone 4, after persistence and offline
 recovery are accepted. See the [milestone sequence](docs/roadmap.md#path-to-desktop-integration).
 Use synthetic data for development and testing.

@@ -21,7 +21,12 @@ Each platform checks the default workspace with `--no-default-features`, then
 runs tests/doctests and all-target Clippy with `--all-features` across the
 complete workspace. On Windows, native storage tests/doctests run first for
 prompt platform feedback; the remaining workspace test command excludes that
-already-tested crate. These checks cover the
+already-tested crate.
+Windows also runs an explicitly filtered, ignored NTFS flush capability probe
+under a restricted same-user thread token with visible numeric results. This
+diagnostic is test-only and does not authorize a save or a persistence claim.
+See the [probe contract](windows-persistence-review.md#capability-probe).
+These checks cover the
 default-off experimental writer's feature-enabled exports and documentation while
 also compiling its disabled default boundary. Tests use synthetic destinations;
 the public managed-constructor example compiles without running on a real home.
