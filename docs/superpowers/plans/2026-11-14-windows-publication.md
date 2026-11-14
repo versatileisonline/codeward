@@ -55,7 +55,7 @@ operations for real syscall delegation/fault cases.
 - [x] Add real racing creator, transition substitution/mutation, native error,
   lost reply, postcheck/close refusal and same-lease contention tests.
 - [x] Verify Windows-target default build, test compilation/Clippy and formatting.
-- [ ] Commit the implementation and native tests.
+- [x] Commit the implementation and native tests.
 
 ## Task 2: Integrated evidence and review
 
@@ -67,8 +67,8 @@ Files: publication tests, `docs/windows-publication.md`, roadmap/progress/file m
   check exclusion, coherent visible bytes and preserved residue on reopen.
 - [x] Document API review, temporary encrypted-memory bounds and the remaining
   Windows persistence-barrier/core-composition gates.
-- [ ] Obtain independent review and current-head three-platform Rust CI.
-- [ ] Open a focused PR, record the tested head/base/run, and report milestone
+- [x] Obtain independent review and current-head three-platform Rust CI.
+- [x] Open a focused PR, record the tested head/base/run, and report milestone
   completion estimates without claiming formal acceptance or merging.
 
 ## Execution notes
@@ -76,10 +76,18 @@ Files: publication tests, `docs/windows-publication.md`, roadmap/progress/file m
 The initial Windows-target test check failed on missing publication methods
 and error type before implementation. Local default-build and all-target,
 all-feature Clippy checks passed with Rust 1.99.1 and warnings denied.
-Independent read-only review found no concrete implementation defects; native
-Windows execution remains the required evidence gate for the FFI and sharing
-transition. The test additions above await that hosted execution.
+Independent read-only review found no concrete implementation defects. Native
+Windows execution subsequently passed in the hosted run recorded below.
 
 Debugging evidence: native Win32 rename returned error 87 in the boundary
-probe. Testing the documented NT entry point with identical rename semantics;
-current-head native CI must pass before this is treated as resolved.
+probe. The documented NT entry point with identical rename semantics passed the
+regression, 35 runtime tests and one ownership doctest in
+[run 43630634692](https://github.com/versatileisonline/codeward/actions/runs/43630634692).
+Formatting, Ubuntu, Windows, macOS and the combined gate passed for head
+`f7a099ef91831cee62ee434801209d28f0fc6297` against base
+`6641f3c085a7d87d7882f9d8a5aa5bdac011b17e`.
+[PR #49](https://github.com/versatileisonline/codeward/pull/49) records the independent
+review and approximate 85% Milestone 2 scope estimate. It was subsequently merged
+as `69ede0f679b4b472ef1dd2c19c589f806c60a1e5` on 2026-11-14.
+Milestone acceptance and persistence gates remain
+open. See the [next persistence review](../../windows-persistence-review.md).
