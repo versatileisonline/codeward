@@ -41,6 +41,61 @@ impl NamespaceIo for Trace {
 }
 
 #[test]
+fn ntfs_namespace_never_acknowledges_same_bytes_substituted_after_candidate_close() {
+    struct Substitute<'a> {
+        lease: &'a ReadLease,
+        parent: PathBuf,
+        attempted: bool,
+    }
+    impl NamespaceIo for Substitute<'_> {
+        fn close(&mut self, file: File) -> io::Result<()> {
+            let path = native::final_path(&file).unwrap();
+            native::close_checked(file)?;
+            if path.file_name().is_some_and(|name| name == VAULT) && !self.attempted {
+                self.attempted = true;
+                // Model an external writer ignoring the companion immediately
+                // after the real close, using the same complete encrypted bytes.
+                fs::remove_file(&path)?;
+                let replacement = self.lease.prepare_stage(b"candidate").unwrap();
+                drop(replacement);
+                let stage = fs::read_dir(&self.parent)?
+                    .map(|entry| entry.unwrap().path())
+                    .find(|path| {
+                        path.file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .starts_with(".codeward.stage-")
+                    })
+                    .unwrap();
+                fs::rename(stage, path)?;
+            }
+            Ok(())
+        }
+    }
+    let (_context, fixture, lease) = fixture();
+    lease
+        .prepare_stage(b"candidate")
+        .unwrap()
+        .publish_create()
+        .unwrap();
+    let mut operations = Substitute {
+        lease: &lease,
+        parent: fixture.0.clone(),
+        attempted: false,
+    };
+    let result = lease.synchronize_with(Some(b"candidate"), &mut operations);
+    assert!(operations.attempted);
+    assert!(
+        result.is_err(),
+        "a substituted unflushed identity must not be acknowledged"
+    );
+    assert_eq!(
+        lease.read_current().unwrap().as_deref(),
+        Some(&b"candidate"[..])
+    );
+}
+
+#[test]
 fn ntfs_namespace_matches_complete_presence_absence_and_stale_state() {
     let (_context, _fixture, lease) = fixture();
     lease.synchronize_namespace(None).unwrap();
