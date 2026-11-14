@@ -43,9 +43,9 @@ pub enum NativeError {
     Unsupported,
     /// Another handle prevents exclusive companion acquisition.
     WriterUnavailable,
-    /// The fixture or companion could not be opened or verified.
+    /// A native file or directory could not be opened or verified.
     Open,
-    /// The vault could not be read or changed during observation.
+    /// A bounded file read failed or changed during observation.
     Read,
     /// The vault exceeds the core input cap.
     TooLarge,

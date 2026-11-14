@@ -69,7 +69,7 @@ Result<PreparedStage, NativeError>` and opaque `PreparedStage::verify()`.
   preservation of abandoned stages. Native tests run on Windows CI.
 - [ ] Run focused checks, independent review and current-head three-platform
   Rust CI; record exact head/base/run and unresolved acceptance gates in the PR.
-- [ ] Open a focused PR against reviewed main. Do not merge or claim milestone
+- [x] Open a focused PR against reviewed main. Do not merge or claim milestone
   acceptance without explicit review.
 
 ## Execution notes
@@ -81,3 +81,6 @@ All-feature/all-target Windows-target Clippy and the default build pass
 locally; native execution is pending hosted Windows CI. Independent review
 identified a close/reopen race coverage gap; added real filesystem probes for
 the identity guard and both interfering-writer outcomes, plus child termination.
+[PR #48](https://github.com/versatileisonline/codeward/pull/48) tracks native
+evidence. PR #47 was merged into main during this work; the feature branch
+incorporates that reviewed baseline before its final CI run.

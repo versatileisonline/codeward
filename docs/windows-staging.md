@@ -79,7 +79,8 @@ native file boundary. A compile-fail example prevents stage duplication.
 
 Local Rust 1.99.1 Windows-target Clippy checks all targets with warnings denied.
 Native execution and full workspace/doctest checks are supplied by the current
-PR's three-platform Rust CI. Cross-compilation alone proves no native behavior.
+[PR #48](https://github.com/versatileisonline/codeward/pull/48)'s three-platform
+Rust CI. Cross-compilation alone proves no native behavior.
 
 Publication, namespace persistence, core transaction composition, interruption
 and native capacity/fault evidence remain pending for Windows. Directory
