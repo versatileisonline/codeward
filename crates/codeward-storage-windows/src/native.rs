@@ -20,6 +20,9 @@ use windows_sys::Win32::System::SystemServices::FILE_READ_ONLY_VOLUME;
 
 use crate::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT, NativeError};
 
+mod relative;
+pub(super) use relative::open_child;
+
 pub(super) fn require_fixed_drive(path: &Path) -> Result<(), NativeError> {
     const DRIVE_FIXED: u32 = 3;
     let root: Vec<_> = path.as_os_str().encode_wide().chain([0]).collect();
@@ -86,11 +89,19 @@ pub(super) fn require_directory(file: &File) -> Result<(), NativeError> {
     Ok(())
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(super) struct Observation {
     pub(super) len: u64,
+    volume: u32,
+    index: u64,
     write_time: i64,
     change_time: i64,
+}
+
+impl Observation {
+    pub(super) fn same_file(&self, other: &Self) -> bool {
+        self.volume == other.volume && self.index == other.index
+    }
 }
 
 pub(super) fn regular_info(file: &File) -> Result<Observation, NativeError> {
@@ -117,9 +128,44 @@ pub(super) fn regular_info(file: &File) -> Result<Observation, NativeError> {
     let basic = unsafe { basic.assume_init() };
     Ok(Observation {
         len: (u64::from(info.nFileSizeHigh) << 32) | u64::from(info.nFileSizeLow),
+        volume: info.dwVolumeSerialNumber,
+        index: (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow),
         write_time: basic.LastWriteTime,
         change_time: basic.ChangeTime,
     })
+}
+
+pub(super) fn stage_random() -> std::io::Result<[u8; 16]> {
+    use windows_sys::Win32::Security::Cryptography::{
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG, BCryptGenRandom,
+    };
+    let mut bytes = [0; 16];
+    // SAFETY: the system provider uses a null algorithm handle; the output
+    // buffer is live and writable for its declared length.
+    if unsafe {
+        BCryptGenRandom(
+            null_mut(),
+            bytes.as_mut_ptr(),
+            bytes.len() as u32,
+            BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+        )
+    } != 0
+    {
+        return Err(std::io::ErrorKind::Other.into());
+    }
+    Ok(bytes)
+}
+
+pub(super) fn close_checked(file: File) -> std::io::Result<()> {
+    use std::os::windows::io::IntoRawHandle;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    let handle = file.into_raw_handle();
+    // SAFETY: into_raw_handle transfers sole ownership of this handle. Close
+    // is attempted exactly once, including when the native call reports failure.
+    if unsafe { CloseHandle(handle) } == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
 }
 
 fn file_info(file: &File) -> Result<BY_HANDLE_FILE_INFORMATION, NativeError> {

@@ -632,8 +632,12 @@ Native execution is tracked in
 The [Windows foundation](windows-storage-foundation.md) adds bounded reads and
 cross-process companion exclusion for synthetic NTFS fixtures. The [managed
 experiment](windows-storage-foundation.md#managed-location-experiment) adds
-LocalAppData resolution and bounded ACL admission. Handle-relative creation,
-staging, publication and persistence remain pending.
+LocalAppData resolution and bounded ACL admission. The
+[staging experiment](windows-staging.md) adds handle-relative file creation,
+private encrypted stages, checked writes/flush/close and byte-exact readback.
+Completed stages retain writer exclusion and a file handle denying writes and
+deletes. Windows publication, namespace persistence and core composition remain
+pending; this is synthetic preparation, not a committed save.
 
 ## Remaining work
 

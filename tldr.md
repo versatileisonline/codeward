@@ -27,6 +27,7 @@ Root:
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
 - [platform-validation.md](docs/platform-validation.md): Initial validation matrix and evidence plan.
 - [windows-storage-foundation.md](docs/windows-storage-foundation.md): Synthetic NTFS reads, exclusion and managed admission.
+- [windows-staging.md](docs/windows-staging.md): Handle-relative private encrypted staging and retained writer exclusion.
 - [linux-storage-foundation.md](docs/linux-storage-foundation.md): Synthetic ext4 reads, exclusion and managed location.
 - [linux-write-failures.md](docs/linux-write-failures.md): Child-isolated ext4 kernel write refusals and explicit transaction retries.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.

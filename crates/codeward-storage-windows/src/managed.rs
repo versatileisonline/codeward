@@ -12,9 +12,7 @@ use std::{
 
 use windows_sys::{
     Win32::{
-        Foundation::{
-            ERROR_ALREADY_EXISTS, GENERIC_READ, GENERIC_WRITE, INVALID_HANDLE_VALUE, LocalFree,
-        },
+        Foundation::{ERROR_ALREADY_EXISTS, GENERIC_READ, GENERIC_WRITE, LocalFree},
         Security::{
             ACCESS_ALLOWED_ACE, ACE_HEADER, ACL, ACL_SIZE_INFORMATION, AclSizeInformation,
             Authorization::{
@@ -25,7 +23,7 @@ use windows_sys::{
             IsWellKnownSid, OWNER_SECURITY_INFORMATION, PSID, SECURITY_ATTRIBUTES, TOKEN_QUERY,
             TOKEN_USER, TokenUser, WinBuiltinAdministratorsSid, WinLocalSystemSid,
         },
-        Storage::FileSystem::{CreateDirectoryW, CreateFileW, OPEN_ALWAYS},
+        Storage::FileSystem::CreateDirectoryW,
         System::{
             Com::CoTaskMemFree,
             SystemServices::{ACCESS_ALLOWED_ACE_TYPE, ACCESS_DENIED_ACE_TYPE},
@@ -36,10 +34,7 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use crate::{
-    COMPANION, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, NativeError,
-    companion_error, native, open_directory,
-};
+use crate::{COMPANION, NativeError, companion_error, native, open_directory};
 
 pub(super) struct Admission {
     user: String,
@@ -81,25 +76,31 @@ impl Admission {
         }
         self.verify_directories(directories)?;
 
-        let path = wide(&parent.join(COMPANION));
-        // SAFETY: path and attributes live through the call; the descriptor is
-        // retained above. OPEN_ALWAYS leaves an existing object unchanged.
-        let handle = unsafe {
-            CreateFileW(
-                path.as_ptr(),
-                GENERIC_READ | GENERIC_WRITE,
-                0,
-                &attributes,
-                OPEN_ALWAYS,
-                FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
-                null_mut(),
-            )
-        };
-        if handle == INVALID_HANDLE_VALUE {
-            return Err(companion_error(io::Error::last_os_error()));
-        }
-        // SAFETY: CreateFileW returned a fresh owned handle.
-        Ok(unsafe { File::from_raw_handle(handle) })
+        native::open_child(
+            &directories.last().expect("retained parent").1,
+            COMPANION,
+            GENERIC_READ | GENERIC_WRITE,
+            0,
+            windows_sys::Wdk::Storage::FileSystem::FILE_OPEN_IF,
+            Some(&attributes),
+        )
+        .map_err(companion_error)
+    }
+
+    pub(super) fn create_stage(&self, parent: &File, name: &str) -> io::Result<File> {
+        let owner = &self.user;
+        let descriptor = security_descriptor(&format!(
+            "O:{owner}D:P(A;;FA;;;{owner})(A;;FA;;;SY)(A;;FA;;;BA)"
+        ))
+        .map_err(|_| io::Error::from(io::ErrorKind::PermissionDenied))?;
+        native::open_child(
+            parent,
+            name,
+            GENERIC_READ | GENERIC_WRITE,
+            crate::FILE_SHARE_READ,
+            windows_sys::Wdk::Storage::FileSystem::FILE_CREATE,
+            Some(&attributes(&descriptor)),
+        )
     }
 
     pub(super) fn verify_directories(
@@ -336,7 +337,10 @@ pub(super) fn create_broad_fixture(path: &Path) {
 
 #[cfg(test)]
 pub(super) fn create_broad_vault(path: &Path) {
-    use windows_sys::Win32::Storage::FileSystem::CREATE_NEW;
+    use windows_sys::Win32::{
+        Foundation::INVALID_HANDLE_VALUE,
+        Storage::FileSystem::{CREATE_NEW, CreateFileW},
+    };
 
     let owner = process_user_string().unwrap();
     let descriptor =

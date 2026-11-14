@@ -7,6 +7,101 @@ use std::{
 use super::*;
 
 #[test]
+fn ntfs_relative_creation_preserves_collisions_and_rejects_escape_names() {
+    use windows_sys::Wdk::Storage::FileSystem::FILE_CREATE;
+    use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
+    let fixture = Fixture::new();
+    let parent = open_directory(&fixture.0).unwrap();
+    let name = ".codeward.stage-00000000000000000000000000000000";
+    let mut file = native::open_child(
+        &parent,
+        name,
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ,
+        FILE_CREATE,
+        None,
+    )
+    .unwrap();
+    use std::io::Write;
+    file.write_all(b"preserve collision").unwrap();
+    drop(file);
+    assert_eq!(
+        native::open_child(&parent, name, GENERIC_WRITE, 0, FILE_CREATE, None)
+            .err()
+            .unwrap()
+            .kind(),
+        io::ErrorKind::AlreadyExists
+    );
+    assert_eq!(
+        fs::read(fixture.0.join(name)).unwrap(),
+        b"preserve collision"
+    );
+    for invalid in [
+        "..",
+        "../escape",
+        r"..\escape",
+        r"C:\escape",
+        "vault.cw:stream",
+        "alias.",
+    ] {
+        assert_eq!(
+            native::open_child(&parent, invalid, GENERIC_WRITE, 0, FILE_CREATE, None)
+                .err()
+                .unwrap()
+                .kind(),
+            io::ErrorKind::InvalidInput
+        );
+    }
+}
+
+#[test]
+fn ntfs_stage_preserves_live_vault_and_retains_writer_exclusion() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    fs::write(fixture.0.join(VAULT), b"old synthetic vault").unwrap();
+    let stage = lease
+        .prepare_stage(b"encrypted synthetic candidate")
+        .unwrap();
+    stage.verify().unwrap();
+    assert_eq!(
+        lease.read_current().unwrap().unwrap(),
+        b"old synthetic vault"
+    );
+    let stages: Vec<_> = fs::read_dir(&fixture.0)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| {
+            path.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with(".codeward.stage-")
+        })
+        .collect();
+    assert_eq!(stages.len(), 1);
+    assert_eq!(
+        fs::read(&stages[0]).unwrap(),
+        b"encrypted synthetic candidate"
+    );
+    assert!(OpenOptions::new().write(true).open(&stages[0]).is_err());
+    assert!(fs::remove_file(&stages[0]).is_err());
+    drop(lease);
+    assert_eq!(
+        ReadLease::acquire_synthetic(&fixture.0).err(),
+        Some(NativeError::WriterUnavailable)
+    );
+    drop(stage);
+    assert!(ReadLease::acquire_synthetic(&fixture.0).is_ok());
+    assert_eq!(
+        fs::read(&stages[0]).unwrap(),
+        b"encrypted synthetic candidate"
+    );
+    assert_eq!(
+        fs::read(fixture.0.join(VAULT)).unwrap(),
+        b"old synthetic vault"
+    );
+}
+
+#[test]
 fn windows_leaf_requires_the_normalized_fixed_name() {
     assert!(matches_leaf(Path::new(r"C:\base\VAULT.CW"), VAULT));
     assert!(!matches_leaf(Path::new(r"C:\base\vault long.cw"), VAULT));
@@ -24,10 +119,10 @@ fn windows_distinguishes_missing_leaf_from_failed_parent_lookup() {
     )));
 }
 
-struct Fixture(PathBuf);
+pub(crate) struct Fixture(pub(crate) PathBuf);
 
 impl Fixture {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
             "codeward-ntfs-{}-{}",
