@@ -7,7 +7,7 @@ local NTFS. Success establishes visibility only. It is not a committed save.
 
 ## Native operation and ownership
 
-`SetFileInformationByHandle` receives `FileRenameInfoEx`, a source handle with
+`NtSetInformationFile` receives `FileRenameInformationEx`, a source handle with
 DELETE access, and the retained destination directory as `RootDirectory`.
 The destination is always the fixed relative name `vault.cw`. Creation uses
 flags zero; replacement uses only `FILE_RENAME_REPLACE_IF_EXISTS`. There is no
@@ -15,7 +15,7 @@ POSIX sharing override, read-only override, copy/delete fallback or path-based
 second implementation. Existing readers that deny delete sharing can refuse
 replacement; an attempted native refusal remains uncertain at this boundary.
 
-The native buffer uses the locked generated `FILE_RENAME_INFO` header in an
+The native buffer uses the locked generated `FILE_RENAME_INFORMATION` header in an
 aligned bounded stack allocation. Its flexible UTF-16 tail is contiguous
 across header padding, with compile-time size bounds and an explicit byte
 length. The filename includes a spare NUL while the counted name excludes it.
@@ -85,8 +85,7 @@ evidence comes from current-head three-platform Rust CI.
 
 The existing `windows-sys 0.61.2` bindings/features and `windows-link 0.2.1`
 are unchanged; no package, crypto profile or vault bytes change. Reviewed
-primary references are [SetFileInformationByHandle](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle),
-[FILE_RENAME_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)
+primary references are [NtSetInformationFile](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntsetinformationfile)
 and [FILE_RENAME_INFORMATION](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_rename_information).
 The last reference specifies root-relative names, DELETE access and target
 directory sharing considerations. The [staging review](windows-staging.md)
@@ -97,3 +96,12 @@ broader native fault/location admission and integrated Milestone 2 acceptance
 remain open. File flushing, close, readback and rename alone do not authorize
 a saved indicator. OS-crash, power-loss and packaged Windows 11 evidence remain
 separate gates.
+
+The first native CI run rejected the Win32 `SetFileInformationByHandle` call
+with error 87 despite successful prechecks. A numeric boundary regression
+test records that failure without paths or OS text. The implementation now
+uses the documented user-mode NT entry point directly, retaining the same
+root-relative name, DELETE access and replace/no-replace flags. There is one
+native implementation and no retry/fallback path. Windows storage tests and
+doctests now run before the longer core suite; the rest of the Windows
+workspace excludes that already-tested crate.

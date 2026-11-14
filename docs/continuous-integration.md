@@ -18,7 +18,10 @@ branch-push and PR pipelines. Superseded runs for the same PR/ref are canceled.
 toolchain or reduced KDF profile is substituted. Each check fetches `Cargo.lock`
 dependencies with `--locked`, then runs tests/Clippy with `--locked --offline`.
 Each platform checks the default workspace with `--no-default-features`, then
-runs tests/doctests and all-target Clippy with `--all-features`. This covers the
+runs tests/doctests and all-target Clippy with `--all-features` across the
+complete workspace. On Windows, native storage tests/doctests run first for
+prompt platform feedback; the remaining workspace test command excludes that
+already-tested crate. These checks cover the
 default-off experimental writer's feature-enabled exports and documentation while
 also compiling its disabled default boundary. Tests use synthetic destinations;
 the public managed-constructor example compiles without running on a real home.

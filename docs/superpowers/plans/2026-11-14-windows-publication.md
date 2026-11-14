@@ -7,7 +7,7 @@
 overwriting a racing creator or an observed stale base.
 
 **Architecture:** Continue the accepted ADR-0003 protocol after private staging.
-Use handle-based `SetFileInformationByHandle(FileRenameInfoEx)` with the retained
+Use handle-based `NtSetInformationFile(FileRenameInformationEx)` with the retained
 destination directory and only the replace flag when requested. A lease-local
 nonblocking guard serializes publication. Pre-call refusals are definite;
 attempted rename failures and failed postchecks remain unknown.
@@ -79,3 +79,7 @@ all-feature Clippy checks passed with Rust 1.99.1 and warnings denied.
 Independent read-only review found no concrete implementation defects; native
 Windows execution remains the required evidence gate for the FFI and sharing
 transition. The test additions above await that hosted execution.
+
+Debugging evidence: native Win32 rename returned error 87 in the boundary
+probe. Testing the documented NT entry point with identical rename semantics;
+current-head native CI must pass before this is treated as resolved.
