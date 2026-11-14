@@ -119,5 +119,25 @@ separate evidence/review gates.
 Local verification on 2026-11-14 with the pinned Rust 1.99.1 passed:
 Linux-target all-target/all-feature Clippy with warnings denied; Linux-target
 `cargo check --tests` with default features; the two pure admission tests on macOS;
-workspace rustfmt; and `git diff --check`. Native Linux execution is pending the
-PR's hosted Ubuntu run. Full workspace/three-platform CI remains required.
+workspace rustfmt; and `git diff --check`. Initial native Linux execution passed as recorded below. Later revisions require
+their own complete current-head/current-base three-platform CI.
+
+## Recorded native execution
+
+[PR #52](https://github.com/versatileisonline/codeward/pull/52)'s
+[Ubuntu job](https://github.com/versatileisonline/codeward/actions/runs/43651994690/job/132622286986)
+passed all 22 explicitly selected serial ext4 tests, including the real capacity
+creation/content/password cases and sole-authority residue test. The separate
+privileged same-device bind-mount test also passed. The ordinary workspace run
+passed the five Linux tests, including both pure admission decisions, while
+leaving native fixtures explicitly ignored. Rust 1.99.1 used head
+`d06ec8813d095ca208ed4e5351a8ba13e6e5e7b7` against base
+`faba4afc3019242dbbb311fde69a537a552b9f8b`; checkout recorded test merge
+`ede5491121142374a43e6c1d1217b7d58f76c4f0`.
+
+An independent read-only review found no Critical, Important or Minor code
+findings. The bounded topology/sync-name and absent successful fixed-device home
+admission evidence remain explicit review limits. The branch subsequently
+incorporates merged PR #51/main and this evidence-only documentation; its final
+head must pass its own current-base CI before merge. Native success above is not
+misrepresented as a test run for that later documentation revision.
