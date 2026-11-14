@@ -14,6 +14,7 @@ use std::{
         fs::OpenOptionsExt,
     },
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
@@ -27,6 +28,8 @@ use windows_sys::Win32::{
 
 mod managed;
 mod native;
+mod staging;
+pub use staging::PreparedStage;
 
 const COMPANION: &str = ".codeward.writer-lock";
 const VAULT: &str = "vault.cw";
@@ -50,10 +53,26 @@ pub enum NativeError {
     AllocationFailed,
     /// The managed object has an unsupported owner or access-control list.
     Permissions,
+    /// An observed stage identity, length or contents changed.
+    Conflict,
+    /// OS randomness was unavailable; no fallback was used.
+    RandomnessUnavailable,
+    /// All bounded exclusive stage-name attempts collided.
+    StageUnavailable,
+    /// The complete encrypted stage could not be written.
+    WriteStage,
+    /// File synchronization failed before stage completion.
+    SyncStage,
+    /// The stage write handle could not be closed successfully.
+    CloseStage,
 }
 
 /// Retained handles and writer exclusion for a synthetic NTFS fixture.
 pub struct ReadLease {
+    inner: Arc<LeaseState>,
+}
+
+struct LeaseState {
     parent: PathBuf,
     directories: Vec<(PathBuf, File)>,
     companion: File,
@@ -105,21 +124,24 @@ impl ReadLease {
         let companion = if let Some(admission) = &mut managed {
             admission.prepare(&mut parent, &mut directories)?
         } else {
-            let result = OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .truncate(false)
-                .share_mode(0)
-                .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
-                .open(parent.join(COMPANION));
+            let result = native::open_child(
+                &directories.last().expect("retained parent").1,
+                COMPANION,
+                windows_sys::Win32::Foundation::GENERIC_READ
+                    | windows_sys::Win32::Foundation::GENERIC_WRITE,
+                0,
+                windows_sys::Wdk::Storage::FileSystem::FILE_OPEN_IF,
+                None,
+            );
             result.map_err(companion_error)?
         };
         let lease = Self {
-            parent,
-            directories,
-            companion,
-            managed,
+            inner: Arc::new(LeaseState {
+                parent,
+                directories,
+                companion,
+                managed,
+            }),
         };
         lease.verify()?;
         Ok(lease)
@@ -138,6 +160,9 @@ impl ReadLease {
                     Err(error) if leaf_missing(&error) => Ok(None),
                     _ => Err(NativeError::Read),
                 };
+            }
+            Err(error) if error.kind() == io::ErrorKind::Unsupported => {
+                return Err(NativeError::Unsupported);
             }
             Err(_) => return Err(NativeError::Read),
         };
@@ -173,36 +198,40 @@ impl ReadLease {
     }
 
     fn open_vault(&self) -> io::Result<File> {
-        OpenOptions::new()
-            .read(true)
-            .share_mode(FILE_SHARE_READ)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
-            .open(self.parent.join(VAULT))
+        native::open_child(
+            &self.inner.directories.last().expect("retained parent").1,
+            VAULT,
+            windows_sys::Win32::Foundation::GENERIC_READ,
+            FILE_SHARE_READ,
+            windows_sys::Wdk::Storage::FileSystem::FILE_OPEN,
+            None,
+        )
     }
 
     fn verify(&self) -> Result<(), NativeError> {
-        if let Some(admission) = &self.managed {
-            admission.verify_directories(&self.directories)?;
+        if let Some(admission) = &self.inner.managed {
+            admission.verify_directories(&self.inner.directories)?;
         } else {
-            verify_directory_chain(&self.directories)?;
+            verify_directory_chain(&self.inner.directories)?;
         }
-        self.verify_managed_leaf(&self.companion)?;
-        if native::regular_info(&self.companion)?.len != 0 {
+        self.verify_managed_leaf(&self.inner.companion)?;
+        if native::regular_info(&self.inner.companion)?.len != 0 {
             return Err(NativeError::Unsupported);
         }
-        self.verify_leaf(&self.companion, COMPANION)?;
+        self.verify_leaf(&self.inner.companion, COMPANION)?;
         Ok(())
     }
 
     fn verify_managed_leaf(&self, file: &File) -> Result<(), NativeError> {
-        self.managed
+        self.inner
+            .managed
             .as_ref()
             .map_or(Ok(()), |admission| admission.verify_object(file))
     }
 
     fn verify_leaf(&self, file: &File, expected: &str) -> Result<PathBuf, NativeError> {
         let path = native::final_path(file)?;
-        if path.parent() != Some(self.parent.as_path()) || !matches_leaf(&path, expected) {
+        if path.parent() != Some(self.inner.parent.as_path()) || !matches_leaf(&path, expected) {
             return Err(NativeError::Unsupported);
         }
         Ok(path)
