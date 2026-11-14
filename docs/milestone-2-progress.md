@@ -642,6 +642,11 @@ outcomes. Native tests include authenticated slot/content changes and four
 child kills around rename. Windows namespace persistence and core composition
 remain pending; preparation/publication are not a committed save.
 
+[PR #49](https://github.com/versatileisonline/codeward/pull/49) is merged, with
+passing three-platform CI and 35 native Windows runtime tests plus the ownership
+doctest. The [persistence API review](windows-persistence-review.md) records the
+tested revisions, directory-flush contract gap and next native capability probe.
+
 ## Remaining work
 
 1. Implement and validate Windows native persistence. The bounded macOS

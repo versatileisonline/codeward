@@ -77,9 +77,13 @@ bytes, paper authentication and residue afterward. These are four application
 termination cases, not interruption inside a syscall or a power-loss test.
 
 Local Rust 1.99.1 checks use the Windows cross target for default builds and
-all-target/all-feature Clippy with warnings denied. Native results require the
-current PR's hosted Windows job; full workspace/doctest, formatting and lint
-evidence comes from current-head three-platform Rust CI.
+all-target/all-feature Clippy with warnings denied. PR #49's
+[hosted run](https://github.com/versatileisonline/codeward/actions/runs/43630634692)
+passed all three platforms, formatting and the Rust CI gate. Windows passed 35
+runtime tests and the ownership doctest, including the corrected rename regression
+and four publication termination checkpoints. The
+[persistence review](windows-persistence-review.md#reviewed-baseline) records the
+tested head/base and separates these results from the next barrier gate.
 
 ## API review and remaining gates
 
