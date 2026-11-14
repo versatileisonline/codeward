@@ -30,6 +30,10 @@ mod managed;
 mod native;
 mod staging;
 pub use staging::{PreparedStage, PublicationError};
+#[cfg(any(test, feature = "experimental-writer"))]
+mod writer;
+#[cfg(feature = "experimental-writer")]
+pub use writer::{ExperimentalStorage, ExperimentalWriterLease};
 
 const COMPANION: &str = ".codeward.writer-lock";
 const VAULT: &str = "vault.cw";

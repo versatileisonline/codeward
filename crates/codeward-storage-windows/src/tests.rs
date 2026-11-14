@@ -6,6 +6,8 @@ use std::{
 
 use super::*;
 
+pub(crate) static AUTHENTICATION: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 mod flush_probe;
 
 #[test]

@@ -1,13 +1,13 @@
 use super::*;
+use crate::tests::AUTHENTICATION;
 use codeward_core::{
     credentials::CredentialSnapshot,
     vault::{begin_recovery, unlock_with_master},
 };
-use std::{path::PathBuf, sync::Mutex};
+use std::path::PathBuf;
 
 const PASSWORD: &str = "synthetic password";
 const REPLACEMENT: &str = "synthetic Windows replacement password";
-static AUTHENTICATION: Mutex<()> = Mutex::new(());
 
 fn fixture_bytes() -> Vec<u8> {
     include_str!("../../../../../codeward-core/tests/fixtures/authenticated-v1.hex")
