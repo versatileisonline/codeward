@@ -82,8 +82,9 @@ adds handle-relative file operations and checked private candidate preparation.
 creation and expected-base replacement. Namespace persistence and core
 transaction composition remain required.
 The [Windows persistence API review](windows-persistence-review.md) records the
-merged publication evidence and the directory-handle/access questions to resolve
-with a native capability probe before composing a Windows writer.
+merged publication evidence and the native flush capability matrix. Restricted
+thread-token probes identified working directory access on the tested NTFS system;
+namespace barrier composition and a Windows writer remain the next steps.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict

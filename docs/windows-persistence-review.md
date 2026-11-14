@@ -116,8 +116,50 @@ output, separately from the complete native suite:
 cargo test -p codeward-storage-windows --all-features --locked --offline -- tests::flush_probe::ntfs_flush_capability_probe --ignored --exact --nocapture
 ```
 
-Native results are pending the current PR run. Cross-target default build and
-all-target/all-feature Clippy pass locally with the pinned Rust toolchain; these
-compile checks cannot establish native capability. Even successful directory
-calls leave barrier composition, standard-account desktop validation and
+Cross-target default build and all-target/all-feature Clippy pass locally with
+the pinned Rust toolchain. Native results below establish bounded capability;
+they leave barrier composition, standard-account desktop validation and
 integrated failure/reconciliation evidence open.
+The probe records the NTFS filesystem type and Windows OS build; the NTFS on-disk
+version is not collected and must not be inferred from the runner label.
+
+### Observed native results
+
+[PR #51](https://github.com/versatileisonline/codeward/pull/51)'s
+[Windows job](https://github.com/versatileisonline/codeward/actions/runs/43650206575/job/132616750051)
+passed the explicit diagnostic, all 35 existing native runtime tests and the
+ownership doctest. The ordinary suite ignored the diagnostic and three child
+helpers; the explicit command ran exactly one diagnostic. Head
+`057b8fcc3725a1e9591b0b3e29c4340b9661ff35`, base
+`faba4afc3019242dbbb311fde69a537a552b9f8b`, test merge
+`3140e25b4df1403c6566bfd2ae007e9987aaa513`; Rust 1.99.1, Windows Server 2025
+runner reporting build `10.0.26100.33674`, local NTFS. The process token was
+elevated; the verified effective thread token had elevation zero and no enabled
+Administrators membership. Both publication phases produced identical outcomes:
+
+| Handle | Requested access | FlushFileBuffers result | NtFlush / NtFlushEx-zero status |
+| --- | --- | --- | --- |
+| File read control | `0x80100000` | Error 5 (access denied) | `0xc0000022` (access denied) |
+| File write control | `0xc0100000` | Success | `0x00000000` |
+| Retained directory | `0x001200a0` | Error 5 | `0xc0000022` |
+| Directory + write attributes | `0x001201a0` | Error 5 | `0xc0000022` |
+| Directory + add file | `0x001200a2` | Success | `0x00000000` |
+| Directory + add subdirectory | `0x001200a4` | Success | `0x00000000` |
+
+Directory handles shared read/write (`0x3`) and used backup-semantics plus
+open-reparse-point flags (`0x02200000`). File controls shared read (`0x1`) and
+used synchronous non-directory/reparse-refusing NT create options (`0x00200060`).
+Candidate bytes, residue, directory identity and companion exclusion checks
+passed before reopening the final visible candidate.
+
+Inference: directory-specific create rights supply a working access combination
+on this tested NTFS system. The earlier access ambiguity is now a measured
+candidate for a barrier design, rather than a reason to assume directory flushing
+is unavailable. Implementing it still requires expected-state binding, guarded
+handle transitions, managed ancestor coverage and failure/reconciliation tests.
+This experiment does not accept a production writer or prove power-loss durability.
+
+The complete [implementation-head run](https://github.com/versatileisonline/codeward/actions/runs/43650206575)
+passed formatting, Ubuntu, Windows, macOS and the combined Rust CI gate.
+Subsequent evidence-documentation commits do not change the probe; their own PR
+checks must still pass before merge.
