@@ -14,7 +14,7 @@ use std::{
         fs::OpenOptionsExt,
     },
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
@@ -29,7 +29,7 @@ use windows_sys::Win32::{
 mod managed;
 mod native;
 mod staging;
-pub use staging::PreparedStage;
+pub use staging::{PreparedStage, PublicationError};
 
 const COMPANION: &str = ".codeward.writer-lock";
 const VAULT: &str = "vault.cw";
@@ -53,7 +53,7 @@ pub enum NativeError {
     AllocationFailed,
     /// The managed object has an unsupported owner or access-control list.
     Permissions,
-    /// An observed stage identity, length or contents changed.
+    /// The observed stage or expected current vault changed.
     Conflict,
     /// OS randomness was unavailable; no fallback was used.
     RandomnessUnavailable,
@@ -63,7 +63,7 @@ pub enum NativeError {
     WriteStage,
     /// File synchronization failed before stage completion.
     SyncStage,
-    /// The stage write handle could not be closed successfully.
+    /// A staged file handle could not be closed successfully.
     CloseStage,
 }
 
@@ -77,6 +77,7 @@ struct LeaseState {
     directories: Vec<(PathBuf, File)>,
     companion: File,
     managed: Option<managed::Admission>,
+    publication: Mutex<()>,
 }
 
 impl ReadLease {
@@ -141,6 +142,7 @@ impl ReadLease {
                 directories,
                 companion,
                 managed,
+                publication: Mutex::new(()),
             }),
         };
         lease.verify()?;
@@ -267,8 +269,14 @@ fn verify_directory_chain(directories: &[(PathBuf, File)]) -> Result<(), NativeE
 }
 
 fn open_directory(path: &Path) -> Result<File, NativeError> {
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_READ_ATTRIBUTES, FILE_TRAVERSE, READ_CONTROL, SYNCHRONIZE,
+    };
     let file = OpenOptions::new()
-        .read(true)
+        // Retain traversal/metadata/security access without directory-list data
+        // access. This also permits the rename target's internal directory open
+        // without a reverse sharing conflict (FILE_RENAME_INFORMATION contract).
+        .access_mode(FILE_TRAVERSE | FILE_READ_ATTRIBUTES | READ_CONTROL | SYNCHRONIZE)
         .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
         .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
         .open(path)

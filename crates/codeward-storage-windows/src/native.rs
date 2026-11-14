@@ -23,6 +23,9 @@ use crate::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT, NativeError}
 mod relative;
 pub(super) use relative::open_child;
 
+mod publication;
+pub(super) use publication::rename as publish;
+
 pub(super) fn require_fixed_drive(path: &Path) -> Result<(), NativeError> {
     const DRIVE_FIXED: u32 = 3;
     let root: Vec<_> = path.as_os_str().encode_wide().chain([0]).collect();

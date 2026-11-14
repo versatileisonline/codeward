@@ -636,8 +636,11 @@ LocalAppData resolution and bounded ACL admission. The
 [staging experiment](windows-staging.md) adds handle-relative file creation,
 private encrypted stages, checked writes/flush/close and byte-exact readback.
 Completed stages retain writer exclusion and a file handle denying writes and
-deletes. Windows publication, namespace persistence and core composition remain
-pending; this is synthetic preparation, not a committed save.
+deletes. [Atomic publication](windows-publication.md) adds consuming no-replace
+creation, exact-base replacement, source-transition checks and explicit unknown
+outcomes. Native tests include authenticated slot/content changes and four
+child kills around rename. Windows namespace persistence and core composition
+remain pending; preparation/publication are not a committed save.
 
 ## Remaining work
 

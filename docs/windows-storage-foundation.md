@@ -42,7 +42,8 @@ refusal, preservation of a nonempty companion, and exclusion across processes.
 The original fixture entry inherits the runner's permissions. The managed
 experiment below adds per-user resolution and bounded ACL admission. The
 [staging experiment](windows-staging.md) adds private encrypted candidate
-preparation. Publication and persistence remain separate work. Drive classification and the tested fixture do not
+preparation. [Atomic publication](windows-publication.md) adds consuming create
+and replace operations. Persistence remains separate work. Drive classification and the tested fixture do not
 establish a production policy for removable or synchronized locations.
 
 ## Managed location experiment
