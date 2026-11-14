@@ -74,6 +74,9 @@ jobs:
       - name: Test native Windows storage before the core suite
         if: runner.os == 'Windows'
         run: cargo test -p codeward-storage-windows --all-features --locked --offline
+      - name: Probe synthetic NTFS flush capabilities under a restricted token
+        if: runner.os == 'Windows'
+        run: cargo test -p codeward-storage-windows --all-features --locked --offline -- tests::flush_probe::ntfs_flush_capability_probe --ignored --exact --nocapture
       - name: Test workspace including experimental features and doctests
         run: |
           if [ "$RUNNER_OS" = Windows ]; then
