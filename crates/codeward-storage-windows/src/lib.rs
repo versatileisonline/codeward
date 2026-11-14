@@ -27,6 +27,7 @@ use windows_sys::Win32::{
 };
 
 mod managed;
+mod namespace;
 mod native;
 mod staging;
 pub use staging::{PreparedStage, PublicationError};
@@ -69,6 +70,8 @@ pub enum NativeError {
     SyncStage,
     /// A staged file handle could not be closed successfully.
     CloseStage,
+    /// A namespace persistence barrier or its checked close failed.
+    SyncNamespace,
 }
 
 /// Retained handles and writer exclusion for a synthetic NTFS fixture.

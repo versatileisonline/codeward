@@ -20,6 +20,9 @@ use windows_sys::Win32::System::SystemServices::FILE_READ_ONLY_VOLUME;
 
 use crate::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT, NativeError};
 
+mod namespace;
+pub(super) use namespace::flush;
+
 mod relative;
 pub(super) use relative::open_child;
 
@@ -183,4 +186,16 @@ fn file_info(file: &File) -> Result<BY_HANDLE_FILE_INFORMATION, NativeError> {
         }
         Ok(info.assume_init())
     }
+}
+
+// Directory size/timestamps can change during publication. Only its volume and
+// file ID identify the retained directory object across a temporary writable open.
+pub(super) fn same_directory(left: &File, right: &File) -> Result<bool, NativeError> {
+    require_directory(left)?;
+    require_directory(right)?;
+    let left = file_info(left)?;
+    let right = file_info(right)?;
+    Ok(left.dwVolumeSerialNumber == right.dwVolumeSerialNumber
+        && left.nFileIndexHigh == right.nFileIndexHigh
+        && left.nFileIndexLow == right.nFileIndexLow)
 }

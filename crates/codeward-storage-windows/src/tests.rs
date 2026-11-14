@@ -8,7 +8,7 @@ use super::*;
 
 pub(crate) static AUTHENTICATION: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-mod flush_probe;
+pub(crate) mod flush_probe;
 
 #[test]
 fn ntfs_publication_creates_without_overwrite_and_replaces_only_matching_base() {

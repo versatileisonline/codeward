@@ -87,6 +87,10 @@ impl Admission {
         .map_err(companion_error)
     }
 
+    pub(super) fn namespace_anchor(&self) -> usize {
+        self.first_private
+    }
+
     pub(super) fn create_stage(&self, parent: &File, name: &str) -> io::Result<File> {
         let owner = &self.user;
         let descriptor = security_descriptor(&format!(
