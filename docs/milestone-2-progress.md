@@ -624,7 +624,8 @@ The [Linux kernel write-failure experiment](linux-write-failures.md) extends
 the managed path with zero-byte and partial `EFBIG` refusals during creation,
 content saves and master-password replacement. The tests require preserved
 base/residue, no failed-request replay and a successful new explicit retry.
-Native execution remains pending until the branch can run the Ubuntu ext4 job.
+Native execution is tracked in
+[PR #47](https://github.com/versatileisonline/codeward/pull/47)'s Ubuntu ext4 job.
 
 ## Windows storage foundation
 

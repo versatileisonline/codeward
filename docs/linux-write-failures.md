@@ -45,7 +45,9 @@ Local checks on 2026-11-14 passed with Rust 1.99.1: Linux-target all-feature,
 all-target Clippy with warnings denied; Linux-target default-feature test
 compilation with `cargo check --tests`; workspace formatting and whitespace;
 and balanced fences/existing local link targets in the four affected Markdown
-files. Native execution remains pending until the branch can be published.
+files. Native execution is tracked in
+[PR #47](https://github.com/versatileisonline/codeward/pull/47); local
+cross-compilation alone does not establish native results.
 
 This is file-size-limit evidence, not disk-full, quota, media-error, OS-crash
 or power-loss evidence. It does not change Linux location admission or accept
