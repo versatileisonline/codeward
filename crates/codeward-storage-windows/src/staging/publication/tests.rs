@@ -8,6 +8,32 @@ use std::{
 
 mod authenticated;
 
+#[test]
+fn ntfs_native_publication_reports_the_rename_boundary_result() {
+    let fixture = Fixture::new();
+    let lease = ReadLease::acquire_synthetic(&fixture.0).unwrap();
+    let stage = lease.prepare_stage(b"candidate").unwrap();
+    let native_error = Cell::new(None);
+    let mut hooks = Hooks {
+        rename: Some(Box::new(|source, parent, replace| {
+            let result = native::publish(source, parent, replace);
+            if let Err(error) = &result {
+                native_error.set(error.raw_os_error());
+            }
+            result
+        })),
+        ..Default::default()
+    };
+    let result = stage.publish_with(None, &mut hooks);
+    assert_eq!(
+        result,
+        Ok(()),
+        "native rename OS code: {:?}",
+        native_error.get()
+    );
+    assert_eq!(lease.read_current().unwrap().unwrap(), b"candidate");
+}
+
 type Close<'a> = dyn FnMut(File) -> io::Result<()> + 'a;
 type Rename<'a> = dyn FnMut(&File, &File, bool) -> io::Result<()> + 'a;
 #[derive(Default)]

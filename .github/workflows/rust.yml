@@ -71,8 +71,16 @@ jobs:
         run: cargo fetch --locked
       - name: Check default builds without experimental features
         run: cargo check --workspace --no-default-features --locked --offline
+      - name: Test native Windows storage before the core suite
+        if: runner.os == 'Windows'
+        run: cargo test -p codeward-storage-windows --all-features --locked --offline
       - name: Test workspace including experimental features and doctests
-        run: cargo test --workspace --all-features --locked --offline
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            cargo test --workspace --exclude codeward-storage-windows --all-features --locked --offline
+          else
+            cargo test --workspace --all-features --locked --offline
+          fi
       - name: Test synthetic Linux storage on ext4
         if: runner.os == 'Linux'
         run: |
