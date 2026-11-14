@@ -99,6 +99,7 @@ jobs:
           findmnt --target "$fixture" --output FSTYPE,OPTIONS
           # An unrelated test's fork can retain the companion lock until exec.
           CODEWARD_LINUX_EXT4_FIXTURE="$fixture" cargo test -p codeward-storage-linux --locked --offline -- ext4_ --ignored --test-threads=1
+          CODEWARD_LINUX_EXT4_FIXTURE="$fixture" CODEWARD_LINUX_PRIVILEGED_MOUNT_TEST=1 cargo test -p codeward-storage-linux --locked --offline -- tests::admission::privileged_managed_submount_refuses_preparation_reads_and_publication --exact --ignored --test-threads=1
       - name: Test synthetic desktop redaction
         if: runner.os == 'macOS'
         run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs

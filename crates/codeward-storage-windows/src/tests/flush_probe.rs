@@ -203,13 +203,13 @@ fn snapshot(path: &Path) -> Vec<(OsString, Vec<u8>)> {
 }
 
 // Thread impersonation must end on the same thread, even when assertions unwind.
-struct RestrictedContext {
+pub(crate) struct RestrictedContext {
     _token: OwnedHandle,
     _thread: PhantomData<Rc<()>>,
 }
 
 impl RestrictedContext {
-    fn enter() -> Self {
+    pub(crate) fn enter() -> Self {
         let mut original = null_mut();
         // SAFETY: pseudo-handle is valid; original is writable for the new handle.
         win32_ok(unsafe {

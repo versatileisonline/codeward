@@ -22,6 +22,7 @@ Root:
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
+- [milestone-2-acceptance.md](docs/milestone-2-acceptance.md): Bounded seven-requirement closeout packet and explicit owner acceptance decisions.
 - [dependency-review.md](docs/dependency-review.md): Exact crypto package pins, features and advisory review.
 - [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
@@ -30,8 +31,10 @@ Root:
 - [windows-staging.md](docs/windows-staging.md): Handle-relative private encrypted staging and retained writer exclusion.
 - [windows-publication.md](docs/windows-publication.md): Synthetic NTFS no-replace creation, exact-base replacement and interruption evidence.
 - [windows-persistence-review.md](docs/windows-persistence-review.md): Merged Windows publication evidence, flush API contract review and next native probe.
+- [windows-core-writer.md](docs/windows-core-writer.md): Synthetic NTFS namespace barriers, owned core writer and native lifecycle/failure evidence.
 - [linux-storage-foundation.md](docs/linux-storage-foundation.md): Synthetic ext4 reads, exclusion and managed location.
 - [linux-write-failures.md](docs/linux-write-failures.md): Child-isolated ext4 kernel write refusals and explicit transaction retries.
+- [linux-capacity-and-admission.md](docs/linux-capacity-and-admission.md): Real ext4 disk-full/retry, submount refusal, conservative managed policy and evidence limits.
 - [macos-storage-foundation.md](docs/macos-storage-foundation.md): Synthetic native path/read/exclusion evidence, dependency review and limitations.
 - [macos-staging.md](docs/macos-staging.md): Synthetic encrypted staging, native API/ACL review, file synchronization and failure evidence.
 - [macos-publication.md](docs/macos-publication.md): Synthetic atomic creation/replacement, stale-base checks, uncertainty and process-kill evidence.

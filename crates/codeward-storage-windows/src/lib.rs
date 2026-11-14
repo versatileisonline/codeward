@@ -27,9 +27,14 @@ use windows_sys::Win32::{
 };
 
 mod managed;
+mod namespace;
 mod native;
 mod staging;
 pub use staging::{PreparedStage, PublicationError};
+#[cfg(any(test, feature = "experimental-writer"))]
+mod writer;
+#[cfg(feature = "experimental-writer")]
+pub use writer::{ExperimentalStorage, ExperimentalWriterLease};
 
 const COMPANION: &str = ".codeward.writer-lock";
 const VAULT: &str = "vault.cw";
@@ -65,6 +70,8 @@ pub enum NativeError {
     SyncStage,
     /// A staged file handle could not be closed successfully.
     CloseStage,
+    /// A namespace persistence barrier or its checked close failed.
+    SyncNamespace,
 }
 
 /// Retained handles and writer exclusion for a synthetic NTFS fixture.
@@ -98,6 +105,9 @@ impl ReadLease {
     }
 
     fn acquire_managed_at(path: &Path) -> Result<Self, NativeError> {
+        if managed::recognized_cloud_path(path) {
+            return Err(NativeError::Unsupported);
+        }
         Self::acquire(path, Some(managed::Admission::new()?))
     }
 

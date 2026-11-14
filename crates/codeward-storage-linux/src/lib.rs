@@ -15,6 +15,7 @@ use std::{
 
 use codeward_core::envelope::MAX_FILE_LENGTH;
 
+mod admission;
 mod managed;
 mod namespace;
 mod native;
@@ -95,7 +96,9 @@ impl ReadLease {
     /// Prepare the fixed per-account Linux location and acquire a synthetic read lease.
     ///
     /// Uses an existing absolute XDG data directory or the OS account home for the
-    /// default path. The admitted location must be on a writable ext4 nodev mount.
+    /// default path. The admitted location must be on a writable ext4 nodev mount,
+    /// backed by a recognized fixed local block device. Recognized cloud roots
+    /// are refused; arbitrarily configured third-party synchronization is unsupported.
     pub fn acquire_managed_synthetic() -> Result<Self, NativeError> {
         Self::acquire(managed::Location::managed()?)
     }

@@ -8,25 +8,23 @@ and React/TypeScript UI, and targets macOS, Windows and Linux.
 
 ## Current status
 
-Milestone 2 is in progress. The Rust core implements vault authentication,
-credential validation, session locking and the commit protocol. Platform
-evidence so far uses synthetic data:
+Milestone 2 has a bounded implementation/evidence candidate ready for review.
+The Rust core implements authenticated vaults, validated credentials, session
+locking and the commit protocol. All storage evidence uses synthetic data:
 
-- macOS has a default-off writer tested for create, save, process termination
-  and reopen on managed APFS storage. A separate packaged pilot exercised
-  lock, sleep and redaction of synthetic WebView fields.
-  See the [managed workflow](docs/macos-managed-workflow.md) and
-  [desktop pilot](docs/macos-desktop-pilot.md#packaged-live-probes).
-- Linux has bounded reads and writer exclusion tested on a disposable ext4
-  filesystem. See the [Linux storage foundation](docs/linux-storage-foundation.md).
-- Windows has bounded reads and writer exclusion for synthetic NTFS fixtures.
-  See the [Windows storage foundation](docs/windows-storage-foundation.md).
+- macOS has a default-off managed APFS writer with application-termination and
+  capacity evidence, plus a packaged synthetic lock/sleep/redaction pilot. See
+  the [managed workflow](docs/macos-managed-workflow.md).
+- Linux has an opt-in managed writer, real ext4 disk-full/retry evidence and
+  managed-submount refusal checks. See [capacity/admission](docs/linux-capacity-and-admission.md).
+- Windows has an opt-in managed NTFS writer with exact-state namespace barriers,
+  lifecycle/failure checks and publication/committed-write termination evidence.
+  See [the Windows writer](docs/windows-core-writer.md).
 
-Linux has an opt-in synthetic transaction adapter. Windows has synthetic managed
-reads, encrypted staging and atomic publication. A native
-[flush capability probe](docs/windows-persistence-review.md#observed-native-results)
-now identifies working directory access on the tested NTFS system. The next
-Windows steps are namespace barriers and core transaction composition.
+The [Milestone 2 acceptance packet](docs/milestone-2-acceptance.md) maps the seven
+requirements to evidence and names the Linux/Windows policy decisions and
+residual limits. Final combined-revision CI, merge and owner acceptance remain
+required; this candidate is not real-vault or desktop-support approval.
 Desktop UI integration starts in Milestone 4, after persistence and offline
 recovery are accepted. See the [milestone sequence](docs/roadmap.md#path-to-desktop-integration).
 Use synthetic data for development and testing.

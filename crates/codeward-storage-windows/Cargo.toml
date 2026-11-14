@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+default = []
+experimental-writer = []
+
 [target.'cfg(windows)'.dependencies]
 codeward-core = { path = "../codeward-core" }
 windows-sys = { version = "=0.61.2", default-features = false, features = [
