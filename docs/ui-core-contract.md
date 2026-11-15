@@ -100,6 +100,12 @@ See [Tauri capabilities](https://v2.tauri.app/security/capabilities/).
 
 ## Secret lifetime and UI limits
 
+The [selected-record Rust foundation](scoped-credential-reads.md) now supplies
+password-free details and a separately requested password reveal through `Session`
+and `HeadlessVault`. Both require current generation and expected committed revision.
+They enforce Rust access/snapshot gates and attach a bounded reveal deadline;
+the limited Tauri wire schema and actual UI delivery/redaction remain later work.
+
 Session encryption keys and bulk decrypted vault state stay in the core. A typed
 master password or recovery secret originates in UI memory and crosses IPC;
 plaintext must also reach the UI when a credential is displayed or edited.

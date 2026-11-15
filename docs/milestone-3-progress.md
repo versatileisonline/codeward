@@ -4,6 +4,14 @@ Status: in progress, 2026-11-15. The owner authorized M3 after accepting the
 [bounded storage foundation](milestone-2-acceptance.md) and selected macOS for
 the first polished demo. M3 completion and M4 entry remain owner decisions.
 Review: [PR #55](https://github.com/versatileisonline/codeward/pull/55).
+The implementation merged on 2026-11-15 as
+`c645f4ca86ab844b713333a48cffde95bfffb10e`. The final PR records passing combined
+CI at head `94cd8718ce1c35c1558a7589d49a255aa144c582`, base
+`cf9e6ddd0540c301c0545222eb8c922dede91b77`, test merge
+`96eb7d30dda5063abcdef00d09afbe60711fa4b6`,
+[run 43757159065](https://github.com/versatileisonline/codeward/actions/runs/43757159065).
+The owner's subsequent continuation request authorizes the next demo groundwork;
+merge alone is not a separate formal milestone acceptance record.
 
 ## Scope
 

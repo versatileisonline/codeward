@@ -284,6 +284,32 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         Ok(session.list_credentials(worker, caller, generation, limit, cursor)?)
     }
 
+    /// Read one current record's non-password fields through ordinary access.
+    /// Use the selection/list revision. Retain caller/opened-vault context and
+    /// recheck generation/revision before delivering a queued result.
+    pub fn get_credential_details(
+        &mut self,
+        generation: u64,
+        expected_revision: u64,
+        id: &str,
+    ) -> Result<CredentialDetails, HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.get_credential_details(worker, caller, generation, expected_revision, id)?)
+    }
+
+    /// Explicitly request one current selected password, without extending idle.
+    /// The caller must enforce `expires_at`, session scope and presentation
+    /// revocation on its own copies; returning Rust text does not create a UI timer.
+    pub fn reveal_password(
+        &mut self,
+        generation: u64,
+        expected_revision: u64,
+        id: &str,
+    ) -> Result<PasswordReveal, HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.reveal_password(worker, caller, generation, expected_revision, id)?)
+    }
+
     /// Current scoped generation. Poll before composing an access-state reply.
     pub fn generation(&self) -> u64 {
         self.session.generation()
