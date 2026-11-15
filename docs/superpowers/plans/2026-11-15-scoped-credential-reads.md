@@ -49,17 +49,17 @@ Export the result types and `PASSWORD_REVEAL_DURATION` through `transaction`.
 
 **Files:** `transaction/host.rs`, `transaction/host/tests/selected.rs`, test registration.
 
-- [ ] Write host tests before adding delegates; observe missing-method failures.
-- [ ] Add `get_credential_details(generation, expected_revision, id)` and
+- [x] Write host tests before adding delegates; observe missing-method failures.
+- [x] Add `get_credential_details(generation, expected_revision, id)` and
   `reveal_password(generation, expected_revision, id)` through the existing idle gate.
-- [ ] Verify normal reads, restricted access, queued work, expiry and old revision
+- [x] Verify normal reads, restricted access, queued work, expiry and old revision
   refusal after a saved deletion. Run core Clippy/default builds/formatting; commit.
 
 ### Task 3: Reviewable integration
 
 **Files:** `docs/scoped-credential-reads.md`, core README, UI/core contract and file map.
 
-- [ ] Document payload fields, exact guards, deadline and delivery/erasure limits.
+- [x] Document payload fields, exact guards, deadline and delivery/erasure limits.
 - [ ] Verify docs and relevant Rust checks; independently review the full branch.
 - [ ] Address material findings with failing regressions and passing checks.
 - [ ] Push a draft PR and record final current-head/base three-platform CI.

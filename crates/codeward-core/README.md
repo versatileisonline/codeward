@@ -92,6 +92,16 @@ The caller and opened worker scope the request, and a continuation is valid only
 for the same generation and revision. See the
 [listing contract](../../docs/milestone-2-progress.md#scoped-credential-listing).
 
+`Session::get_credential_details` returns one selected record without its password;
+`Session::reveal_password` explicitly returns only that record's password and a
+display deadline capped at 30 seconds and the existing idle deadline. Both require
+current caller/opened-vault scope, generation and expected committed revision.
+The headless host delegates these reads through its idle gate. Stale, restricted
+and unresolved states return no records. See the
+[selected-read contract](../../docs/scoped-credential-reads.md) for fields, errors
+and caller obligations. Returned copies are not automatically revoked or erased;
+the future interface must enforce delivery scope, masking and redaction.
+
 The [headless host](../../docs/headless-vault-host.md) keeps the session on the
 control side, dispatches authentication and writes off that thread, and reports
 commit outcome separately from post-save refresh. The caller schedules deadline
