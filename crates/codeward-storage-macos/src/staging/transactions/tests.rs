@@ -18,6 +18,7 @@ use codeward_core::{
 use super::*;
 use crate::test_support::{MASTER_TESTS, fixture, maximum_revision_fixture, stages};
 
+mod recovery;
 mod write_failures;
 
 const OWNER: CallerId = CallerId(7);
