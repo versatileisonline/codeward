@@ -28,9 +28,9 @@ pub use event_loop::{
 };
 pub use host::{AccessProof, HeadlessVault, HostCompletion, HostError};
 pub use session::{
-    ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialPage,
-    CredentialSummary, INACTIVITY_TIMEOUT, MAX_CREDENTIAL_SUMMARIES, Session, SessionActivity,
-    SessionEvent,
+    ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialDetails,
+    CredentialPage, CredentialSummary, INACTIVITY_TIMEOUT, MAX_CREDENTIAL_SUMMARIES,
+    PASSWORD_REVEAL_DURATION, PasswordReveal, Session, SessionActivity, SessionEvent,
 };
 pub use storage::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 pub use worker::Committer;
@@ -115,6 +115,10 @@ pub enum TransactionError {
     ReloadRequired,
     /// The requested summary page size is outside the supported range.
     InvalidPageSize,
+    /// A selected record ID is not exactly 32 lowercase hexadecimal characters.
+    InvalidCredentialId,
+    /// The authenticated current snapshot contains no record with this valid ID.
+    CredentialNotFound,
     /// The list cursor belongs to an older session generation or committed revision.
     StaleCursor,
     /// Another transaction is active, including an uncertain outcome.

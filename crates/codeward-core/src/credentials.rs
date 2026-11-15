@@ -81,11 +81,7 @@ impl CredentialInput<'_> {
             self.url,
             self.notes,
         ];
-        if self.id.len() != 32
-            || !self
-                .id
-                .bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        if !valid_id(self.id)
             || self.title.is_empty()
             || text.iter().zip(TEXT_LIMITS).any(|(s, max)| s.len() > max)
             || self.updated_at > MAX_TIMESTAMP
@@ -167,6 +163,13 @@ impl CredentialSnapshot {
     pub fn credentials(&self) -> &[Credential] {
         &self.credentials
     }
+}
+
+pub(crate) fn valid_id(id: &str) -> bool {
+    id.len() == 32
+        && id
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 pub(crate) fn copy_text(text: &str) -> Result<Zeroizing<String>, CredentialError> {

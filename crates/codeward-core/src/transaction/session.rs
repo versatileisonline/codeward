@@ -17,6 +17,7 @@ mod authentication;
 mod listing;
 mod policy;
 pub(super) mod refresh;
+mod selected;
 #[cfg(test)]
 mod tests;
 pub(super) mod write;
@@ -25,6 +26,7 @@ pub use authentication::{AuthenticationJob, AuthenticationResult};
 pub use listing::{CredentialCursor, CredentialPage, CredentialSummary, MAX_CREDENTIAL_SUMMARIES};
 use policy::Inactivity;
 pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent};
+pub use selected::{CredentialDetails, PASSWORD_REVEAL_DURATION, PasswordReveal};
 
 /// Secret-owning admission context, separate from potentially blocked storage.
 ///
