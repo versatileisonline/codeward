@@ -88,3 +88,10 @@ cargo test -p codeward-core --doc --locked --offline transaction::session::selec
 Use the pinned Rust 1.99.1 toolchain and synthetic data. Current-head hosted
 three-platform CI and independent review are recorded in the PR; focused local
 results do not establish a finished credential UI or real-vault readiness.
+
+Local verification on 2026-11-15 passed eight session scenarios, three headless
+host scenarios, six selected-read compile-fail doctests and 20 credential/schema
+tests. Default workspace builds, all-target/all-feature workspace Clippy with
+warnings denied, rustfmt and whitespace checks also passed. A read-only independent
+review of `c645f4c..2260502` found no Critical, Important or Minor findings; final
+hosted checks must cover the PR's actual head/base, including later documentation.

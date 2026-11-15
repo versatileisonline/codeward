@@ -60,6 +60,6 @@ Export the result types and `PASSWORD_REVEAL_DURATION` through `transaction`.
 **Files:** `docs/scoped-credential-reads.md`, core README, UI/core contract and file map.
 
 - [x] Document payload fields, exact guards, deadline and delivery/erasure limits.
-- [ ] Verify docs and relevant Rust checks; independently review the full branch.
-- [ ] Address material findings with failing regressions and passing checks.
+- [x] Verify docs and relevant Rust checks; independently review the full branch.
+- [x] Address material findings with failing regressions and passing checks (none found).
 - [ ] Push a draft PR and record final current-head/base three-platform CI.
