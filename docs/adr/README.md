@@ -21,7 +21,7 @@ remaining acceptance gates.
 | [0001](0001-implementation-platform.md) | Rust/Tauri/React, desktop targets and tooling | Accepted — platform/boundary design; validation pending | Milestone 1 gate |
 | [0002](0002-vault-security-and-format.md) | Security, key relationships, format, compatibility | Accepted — authenticated core and bounded synthetic native commits accepted for M2 | Milestone 1 gate |
 | [0003](0003-committed-writes.md) | Crash-safe commits, durability, conflicting writers | Accepted — bounded synthetic core and macOS/Linux/Windows storage evidence accepted for M2 | Milestone 1 gate |
-| [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Accepted — synthetic macOS recovery tested; offline recovery acceptance pending | Milestone 1 gate |
+| [0004](0004-offline-recovery.md) | Recovery-secret lifecycle and access changes | Accepted design — native headless recovery tested; focused M3 offline validation in progress, owner acceptance pending | Milestone 1 gate |
 | [0005](0005-session-and-drafts.md) | Lock triggers, session lifetime, drafts, save feedback | Accepted — core revocation and synthetic macOS desktop events tested; drafts and other platform events pending | Milestone 1 gate |
 | [0006](0006-managed-working-location.md) | Managed working storage, backup and portability boundaries | Accepted for bounded synthetic macOS/Linux/Windows M2 storage; future copy/reset workflows proposed | Milestone 2 / prototype storage |
 

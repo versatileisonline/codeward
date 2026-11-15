@@ -23,6 +23,8 @@ Root:
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
 - [milestone-2-acceptance.md](docs/milestone-2-acceptance.md): Accepted bounded seven-requirement closeout, final CI evidence and retained validation limits.
+- [milestone-3-progress.md](docs/milestone-3-progress.md): Headless macOS recovery acceptance scenarios, network-denied verification and remaining review.
+- [offline-recovery.md](docs/offline-recovery.md): Enrollment/recovery workflow and message contract, reusable-code and file-loss boundaries.
 - [dependency-review.md](docs/dependency-review.md): Exact crypto package pins, features and advisory review.
 - [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.

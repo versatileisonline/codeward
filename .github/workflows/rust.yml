@@ -103,6 +103,15 @@ jobs:
       - name: Test synthetic desktop redaction
         if: runner.os == 'macOS'
         run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
+      - name: Verify synthetic recovery with macOS networking denied
+        if: runner.os == 'macOS'
+        run: |
+          recovery_filter=staging::transactions::tests::recovery::
+          recovery_listing=$(cargo test -p codeward-storage-macos --all-features --locked --offline "$recovery_filter" -- --list)
+          python3 -c 'import sys; names = [line for line in sys.stdin if line.startswith("staging::transactions::tests::recovery::") and line.rstrip().endswith(": test")]; assert len(names) == 6, "expected five recovery scenarios and the explicit network-denial probe"' <<< "$recovery_listing"
+          recovery_sandbox_profile='(version 1) (allow default) (deny network*)'
+          sandbox-exec -p "$recovery_sandbox_profile" cargo test -p codeward-storage-macos --all-features --locked --offline "${recovery_filter}offline_network_denial_probe" -- --ignored --exact
+          sandbox-exec -p "$recovery_sandbox_profile" cargo test -p codeward-storage-macos --all-features --locked --offline "$recovery_filter" -- --test-threads=1
       - name: Check all targets with Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings
 

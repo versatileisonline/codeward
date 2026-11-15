@@ -1,7 +1,7 @@
 # Project charter
 
 Status: Milestone 2 complete within its accepted bounded synthetic scope;
-Milestone 3 entry authorized. Owner acceptance recorded on 2026-11-15 in the
+Milestone 3 in progress. Owner acceptance recorded on 2026-11-15 in the
 [Milestone 2 acceptance record](milestone-2-acceptance.md).
 Updated: 2026-11-15. Rust/Tauri/React, RustCrypto primitives, the starting profile
 and format structure are selected. Accepted contracts and the validation sequence
@@ -26,6 +26,8 @@ forgetting the master password. Work in small milestones with explicit review ga
   application window without opening a browser tab or starting a localhost server.
   The accepted bounded initial matrix and packaging plan are in
   [platform-validation.md](platform-validation.md); runtime evidence is pending.
+  The first polished demonstration targets macOS with synthetic credentials;
+  Windows and Linux remain in the eventual private prototype scope.
 - Create, open, unlock, lock, and close a vault; view and manage credentials.
 - Use a Codeward-managed working file per OS account for the first prototype.
   [ADR-0006](adr/0006-managed-working-location.md) records the selected direction,

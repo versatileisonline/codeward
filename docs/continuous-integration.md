@@ -31,6 +31,11 @@ disposable image, including real ENOSPC retry cases, followed by the privileged
 same-device bind-mount refusal test. macOS runs the synthetic desktop-redaction
 Node tests. Native helper/fixture cases remain explicitly selected rather than
 being counted as executed by the ordinary workspace test command.
+The macOS recovery step also lists exactly five recovery scenarios and one
+ignored network-denial probe, explicitly runs that probe under sandbox-exec and
+then runs the five scenarios with the same deny-network policy. The
+[M3 evidence record](milestone-3-progress.md) distinguishes this headless result
+from installed desktop offline validation.
 These checks cover the
 default-off experimental writer's feature-enabled exports and documentation while
 also compiling its disabled default boundary. Tests use synthetic destinations;

@@ -111,5 +111,6 @@ The project has not undergone an independent security audit. The
 - [Architecture decisions](docs/adr/README.md): storage, security, recovery and session contracts.
 - [Requirements](docs/requirements.md): intended behavior and acceptance checks.
 - [UI/core contract](docs/ui-core-contract.md): commands, data exposure and lock/save behavior.
+- [Offline recovery](docs/offline-recovery.md): paper enrollment, password replacement and file-loss limits.
 - [Roadmap](docs/roadmap.md): completed work and next steps.
 - [File map](tldr.md): a guide to the repository's detailed documentation.

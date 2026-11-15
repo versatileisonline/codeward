@@ -2,7 +2,8 @@
 
 Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
 Milestone 1 design review and Milestone 2 are complete. The owner accepted
-Milestone 2's bounded synthetic scope on 2026-11-15; Milestone 3 entry is authorized.
+Milestone 2's bounded synthetic scope on 2026-11-15; Milestone 3 is in progress.
+Its [recovery evidence](milestone-3-progress.md) tracks FR-06/07/10 validation.
 The [acceptance record](milestone-2-acceptance.md) retains its validation limits. The
 [accepted handoff](milestone-1-handoff.md) records approval on 2026-10-29 and defines
 the Rust core, Tauri/React interface, three desktop target families, exact vault
@@ -27,7 +28,7 @@ design a vault requiring an incompatible recovery retrofit.
 
 1. **Milestone 2 — Vault core and persistence (complete).** The bounded core and
    native storage evidence passed combined CI and was accepted on 2026-11-15.
-2. **Milestone 3 — Offline recovery (entry authorized).** Verify paper
+2. **Milestone 3 — Offline recovery (in progress).** Verify paper
    enrollment and confirmation, recovery with an intact vault and committed
    master-password replacement. Exercise invalid codes and interrupted access
    changes, and verify that a paper code cannot restore a missing vault.
@@ -37,6 +38,10 @@ design a vault requiring an incompatible recovery retrofit.
 Each milestone requires explicit acceptance before the next begins.
 
 ### Local Apple silicon demo
+
+The owner selected macOS for the first polished demo on 2026-11-15. Windows and
+Linux remain later prototype targets; their desktop validation is not required
+for this first demonstration. Use sample credentials until real-vault admission.
 
 The first Milestone 4 slice connects setup, paper-code confirmation, saving a
 sample credential, locking, reopening and recovering access in one bundled
