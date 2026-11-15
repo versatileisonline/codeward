@@ -1,6 +1,9 @@
 # ADR-0004: Offline recovery-secret lifecycle
 
-Status: Accepted — in-memory recovery preparation tested; committed recovery/lifecycle pending.
+Status: Accepted design — native headless recovery and coherent password commits
+have bounded synthetic evidence. [M3 validation](../milestone-3-progress.md) adds
+managed macOS acceptance scenarios and network-denied execution; milestone
+acceptance and complete desktop workflow validation remain pending.
 Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
@@ -47,8 +50,9 @@ Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2)
 These are confirmed design choices. The paper-code component and HKDF primitive
 have [bounded test evidence](../milestone-2-progress.md). The core now gates
 enrollment preparation on confirmation and authenticates a restricted recovery
-context that can prepare a replacement password. File commits, application session
-policy and the user recovery workflow remain unimplemented.
+context that can prepare a replacement password. The headless host and native
+writer now compose committed recovery with session revocation; M3's focused
+scenarios verify this composition. The user interface remains later work.
 Routine recovery preserves the same reusable secret, HKDF salt and recovery slot;
 the replacement password slot changes the header authenticated by the payload.
 

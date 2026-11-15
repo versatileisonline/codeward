@@ -5,6 +5,8 @@ Milestone 2's FR-01/02/09 and NFR-02/03/04/08 gate was accepted within the bound
 synthetic scope on 2026-11-15; see the [acceptance record](milestone-2-acceptance.md).
 Full product workflows retain their later validation gates. All requirements
 apply to the initial version unless explicitly deferred.
+M3's FR-06/07/10 evidence is tracked in [recovery progress](milestone-3-progress.md),
+with the later desktop message contract in [offline recovery](offline-recovery.md).
 
 ## Terms
 
