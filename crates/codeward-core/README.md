@@ -137,5 +137,5 @@ Run `cargo run --locked --offline --example vault_round_trip` for a synthetic
 in-memory creation/edit/lock/recovery demonstration. It prints no secret values.
 
 Use synthetic data for examples, native experiments and development. See the
-[workspace status](../../README.md#current-status) for application and platform
+[workspace overview](../../README.md#what-works-today) for application and platform
 progress.
