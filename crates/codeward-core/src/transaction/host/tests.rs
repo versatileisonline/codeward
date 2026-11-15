@@ -14,6 +14,8 @@ const OWNER: CallerId = CallerId(7);
 const PASSWORD: &str = "synthetic password";
 type Host = HeadlessVault<Lease>;
 
+mod selected;
+
 fn next(host: &mut Host) -> Result<HostCompletion, HostError> {
     let until = Instant::now() + Duration::from_secs(10);
     loop {
