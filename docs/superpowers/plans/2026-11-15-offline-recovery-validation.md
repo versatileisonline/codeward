@@ -69,5 +69,5 @@ requirements/ADR/roadmap summaries, README navigation and file map.
 - [x] Record current local commands and results without reusing older runs as
   current evidence; leave formal M3 acceptance pending.
 - [x] Verify Markdown links/anchors, whitespace and relevant Rust checks.
-- [ ] Review the full branch independently, address material findings and publish
+- [x] Review the full branch independently, address material findings and publish
   the reviewable branch/PR without merging it or starting M4.

@@ -107,10 +107,24 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           recovery_filter=staging::transactions::tests::recovery::
+          recovery_probe="${recovery_filter}offline_network_denial_probe"
           recovery_listing=$(cargo test -p codeward-storage-macos --all-features --locked --offline "$recovery_filter" -- --list)
-          python3 -c 'import sys; names = [line for line in sys.stdin if line.startswith("staging::transactions::tests::recovery::") and line.rstrip().endswith(": test")]; assert len(names) == 6, "expected five recovery scenarios and the explicit network-denial probe"' <<< "$recovery_listing"
+          recovery_probe_listing=$(cargo test -p codeward-storage-macos --all-features --locked --offline "$recovery_probe" -- --ignored --exact --list)
+          python3 - "$recovery_listing" "$recovery_probe_listing" "$recovery_probe" <<'PY'
+          import sys
+          def tests(listing):
+              return {
+                  line.removesuffix(": test") for line in listing.splitlines()
+                  if line.startswith("staging::transactions::tests::recovery::")
+                  and line.endswith(": test")
+              }
+          if len(tests(sys.argv[1])) != 6:
+              raise SystemExit("expected five recovery scenarios and the network-denial probe")
+          if tests(sys.argv[2]) != {sys.argv[3]}:
+              raise SystemExit("expected the exact ignored network-denial probe")
+          PY
           recovery_sandbox_profile='(version 1) (allow default) (deny network*)'
-          sandbox-exec -p "$recovery_sandbox_profile" cargo test -p codeward-storage-macos --all-features --locked --offline "${recovery_filter}offline_network_denial_probe" -- --ignored --exact
+          sandbox-exec -p "$recovery_sandbox_profile" cargo test -p codeward-storage-macos --all-features --locked --offline "$recovery_probe" -- --ignored --exact
           sandbox-exec -p "$recovery_sandbox_profile" cargo test -p codeward-storage-macos --all-features --locked --offline "$recovery_filter" -- --test-threads=1
       - name: Check all targets with Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings

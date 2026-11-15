@@ -3,6 +3,7 @@
 Status: in progress, 2026-11-15. The owner authorized M3 after accepting the
 [bounded storage foundation](milestone-2-acceptance.md) and selected macOS for
 the first polished demo. M3 completion and M4 entry remain owner decisions.
+Review: [PR #55](https://github.com/versatileisonline/codeward/pull/55).
 
 ## Scope
 
@@ -49,7 +50,8 @@ The ignored probe requires kernel `EPERM` from even a loopback TCP connection;
 ordinary connection refusal is not accepted as offline isolation. Running it
 without a network-denied sandbox must fail. The same sandbox profile then runs
 the five recovery scenarios. The macOS CI step first lists exactly six tests
-(five scenarios and the ignored probe) so an empty filter cannot silently pass.
+(five scenarios and the ignored probe), and separately verifies the exact ignored
+probe name, so a missing or renamed probe cannot silently execute zero tests.
 Default workspace tests leave the probe ignored.
 
 Local execution on 2026-11-15 used Apple silicon, macOS 26.3.1 (25D2128), local
@@ -62,12 +64,28 @@ APFS and the pinned Rust/Cargo 1.99.1 toolchain:
 - Network-denied probe: one passed, observing `EPERM`.
 - Network-denied recovery scenarios: five passed; the separate probe stayed ignored
   during that invocation, rather than being counted as an executed scenario.
-- The exact macOS CI run block also checks that all six tests are present.
+- The exact macOS CI run block also checks that all six tests are present and
+  that the explicitly selected probe exists in the ignored-test inventory.
 - Native all-target/all-feature Clippy with warnings denied, default workspace
   check, workspace rustfmt and whitespace checks passed.
 
 Final PR head/base/test-merge and hosted results must be recorded for the review
 revision. Local native results do not stand in for final three-platform CI.
+
+## Independent review
+
+Read-only review of the initial implementation found no runtime defects. It
+identified a CI verification gap: six listed tests could still include a renamed
+probe while the exact invocation silently ran zero tests. A renamed-probe
+regression reproduced that false pass; the corrected inventory requires the exact
+probe in the ignored-test listing and rejects the same regression. The probe and
+five scenarios remain separately executed under the deny-network profile.
+
+One optional assertion enhancement is deferred: explicitly check denied browsing
+and absent refresh on the uncertain completion before the test calls lock.
+The current test already checks duplicate recovery authorization without replay
+and denied browsing after reconciliation; the normal recovery test directly checks
+restricted browsing. No runtime correction is deferred.
 
 ## Remaining limits and review
 
