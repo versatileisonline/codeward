@@ -3,8 +3,8 @@
 Status: Accepted for bounded synthetic Milestone 2 storage on macOS, Linux and
 Windows, 2026-11-15. The [Milestone 2 acceptance record](../milestone-2-acceptance.md)
 records owner approval following reviewed/merged [PR #53](https://github.com/versatileisonline/codeward/pull/53)
-and passing combined CI. The owner previously
-accepted the managed location, application-termination and capacity evidence,
+and passing combined CI. On 2026-11-07 the owner previously
+accepted the macOS managed location, application-termination and capacity evidence,
 and preserve-all leftover-file policy following [PR #28](https://github.com/versatileisonline/codeward/pull/28).
 Future copy/reset workflows remain proposed. Linux's narrow device family and
 recognized sync-name exclusions are accepted for synthetic M2 evidence; successful

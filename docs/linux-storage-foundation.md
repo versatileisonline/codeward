@@ -46,8 +46,11 @@ entries, default ACL refusal, directory/companion/vault substitutions and
 cross-process exclusion.
 The standard test run also checks the mount record parser and invalid paths.
 
-The app does not use this experiment. Removable and sync-location admission
-and broader write fault evidence remain open.
+The desktop app does not use this experiment. Subsequent
+[capacity/admission evidence](linux-capacity-and-admission.md) covers narrow
+fixed-device/sync-name policy, real disk-full retry and managed-submount refusal.
+The bounded synthetic scope was [accepted for M2](milestone-2-acceptance.md);
+successful real fixed-device managed-home entry and product admission remain open.
 The advisory lease coordinates cooperating processes. Observed
 metadata comparisons do not give a snapshot guarantee against arbitrary
 same-user writers. The core transaction experiment below exercises synthetic
@@ -80,8 +83,9 @@ The Ubuntu ext4 tests cover a fresh default tree, idempotent reopening,
 concurrent preparation, an existing synthetic vault, collision refusal,
 ancestor permission changes and substitutions, and the public XDG entry in a
 child process.
-Managed resolution is synthetic-only. Removable and sync-location policy and
-application integration remain open.
+Managed resolution remains synthetic-only. The narrow removable/sync-location
+policy is accepted for bounded M2 evidence; application integration and wider
+real-device admission retain later gates.
 
 ## Encrypted staging experiment
 

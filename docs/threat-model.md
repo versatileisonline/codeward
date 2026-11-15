@@ -6,9 +6,11 @@ Scope: one person per local vault; installed macOS/Windows/Linux desktop targets
 Rust core, separate UI responsibility, handwritten recovery secret. Private beta
 audience size does not change the per-vault threat model.
 
-Bounded parser/crypto/paper/credential and authenticated in-memory vault evidence
-is recorded in [Milestone 2 progress](milestone-2-progress.md). Application access,
-persistence, UI and platform protection against these threats remain unverified.
+Bounded parser/crypto/paper/credential, session and native persistence evidence
+is recorded in [Milestone 2 progress](milestone-2-progress.md) and its
+[acceptance record](milestone-2-acceptance.md), approved on 2026-11-15.
+This synthetic scope leaves integrated UI, real-vault/platform protection and
+independent security audit coverage for later validation.
 
 ## Assets and boundaries
 

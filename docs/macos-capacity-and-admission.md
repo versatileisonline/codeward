@@ -63,5 +63,6 @@ python3 crates/codeward-storage-macos/tests/run_capacity_test.py
 This evidence covers capacity exhaustion during staging. Quota enforcement,
 media faults, physical power loss, and storage outside the declared location
 remain separate. The owner accepted the bounded policy on 2026-11-07. The writer
-stays default-off for synthetic development. Product integration and Windows/Linux
-native storage remain Milestone 2 work.
+stays default-off for synthetic development. Bounded macOS/Linux/Windows storage
+evidence was [accepted for M2](milestone-2-acceptance.md) on 2026-11-15; product
+integration and real-vault admission retain later gates.

@@ -163,5 +163,7 @@ The checksum needs fixed vectors for unused bits, grouping, transposition, wrong
 characters and normalization. The original handoff contained no runtime evidence;
 current primitive/paper-code vectors, credential codec and authenticated in-memory
 vault evidence are recorded in [Milestone 2 progress](milestone-2-progress.md).
-Full encrypted-envelope fixtures and schema-gated access tests now exist; file
-commits, application/session authorization and platform evidence remain outstanding.
+Full encrypted-envelope fixtures, schema-gated access, core session authorization
+and bounded native commits now have synthetic evidence accepted for
+[Milestone 2](milestone-2-acceptance.md). Complete application workflows,
+real-vault admission and packaged platform validation remain outstanding.

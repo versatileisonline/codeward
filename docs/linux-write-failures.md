@@ -52,8 +52,10 @@ cross-compilation alone does not establish native results.
 This is file-size-limit evidence, not disk-full, quota, media-error, OS-crash
 or power-loss evidence. It does not change Linux location admission or accept
 a product writer. See [Linux storage boundaries](linux-storage-foundation.md).
-Linux location/fault review, Windows native writes and integrated acceptance
-remain required before Milestone 2 completion and Milestone 3 entry.
+Subsequent [Linux capacity/admission work](linux-capacity-and-admission.md) and
+[Windows native writes](windows-core-writer.md) passed final combined CI and
+merged in PR #53. [Milestone 2 acceptance](milestone-2-acceptance.md) was recorded
+on 2026-11-15, authorizing M3 entry with the documented evidence limits retained.
 
 Native references: [Linux resource limits](https://man7.org/linux/man-pages/man2/getrlimit.2.html)
 and [write errors and partial progress](https://man7.org/linux/man-pages/man2/write.2.html).

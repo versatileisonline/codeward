@@ -60,7 +60,9 @@ and three-platform result; local focused checks do not substitute for that gate.
 This is EFBIG/file-size-limit evidence, not actual ENOSPC, quota exhaustion,
 media errors, failed close, in-syscall termination or physical power-loss evidence.
 The committed retry results remain outcomes of the private test adapter; they do
-not accept a shipping storage contract. Runtime storage, complete location and
-namespace acceptance, application sessions, Windows/Linux adapters and packaged
-support remain pending. Backups and restoration remain deferred under
+not accept a shipping storage contract. Subsequent location/namespace integration,
+the headless host and Linux/Windows adapters form part of
+[M2's accepted bounded evidence](milestone-2-acceptance.md). Product admission,
+complete desktop sessions and packaged support retain later gates.
+Backups and restoration remain deferred under
 [ADR-0006](adr/0006-managed-working-location.md).

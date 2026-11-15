@@ -6,6 +6,13 @@ NTFS staging, atomic publication and the measured directory-flush access from
 It uses synthetic data only. Default builds omit `experimental-writer` and the
 public storage constructor never accepts a UI-supplied path.
 
+Status: bounded synthetic storage evidence accepted for Milestone 2 on 2026-11-15.
+PR #53 merged after [final combined CI](https://github.com/versatileisonline/codeward/actions/runs/43653858082)
+passed, including 53 Windows runtime tests, three doctests and the explicit
+capability diagnostic. The [acceptance record](milestone-2-acceptance.md) identifies
+tested head/base/test-merge revisions and retains Windows 11 desktop validation
+and real-vault admission as later gates.
+
 ## Native sequence and ownership
 
 `ExperimentalStorage::managed()` resolves the current process account's
@@ -77,11 +84,11 @@ termination checkpoints, not interruption inside a syscall, OS-crash or power-lo
 evidence.
 
 Windows-target default/feature test compilation, Clippy with warnings denied and
-formatting pass locally with Rust 1.99.1. Native execution and three-platform
-current-head CI are required in the PR; local cross-compilation alone cannot
+formatting passed locally with Rust 1.99.1. Native execution and final combined
+three-platform CI passed as linked above; local cross-compilation alone cannot
 validate NTFS behavior. Hosted Windows Server restricted-token evidence is distinct
 from ordinary-account Windows 11 desktop support. Real-vault admission, physical
-device coverage and milestone acceptance require their own explicit review.
+device coverage and desktop support require their own explicit review.
 
 ## Review regression
 
@@ -94,5 +101,6 @@ restrictive reader close that observed transition without claiming a snapshot
 against an arbitrary external writer after the final protected handle closes.
 The same run reproduced an ACL injection fixture error; its security-control
 handle now requests READ_CONTROL together with WRITE_DAC. Runtime retained rights
-and the restricted effective token are unchanged. Native green results must be
-recorded for the corrected revision.
+and the restricted effective token are unchanged. The corrected native suite
+passed in [run 43653030714](https://github.com/versatileisonline/codeward/actions/runs/43653030714)
+and again in the final combined run linked above.

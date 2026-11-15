@@ -1,8 +1,10 @@
-# macOS storage foundation
+# macOS experimental managed storage
 
 Experimental native path resolution, bounded unauthenticated reads, stable
-directory-level exclusion, encrypted staging and atomic publication for synthetic
-data. Rust 1.99.1 is pinned.
+directory-level exclusion, encrypted staging, atomic publication and persistence
+barriers for synthetic data. Rust 1.99.1 is pinned. The bounded storage evidence
+is part of [Milestone 2's accepted scope](../../docs/milestone-2-acceptance.md),
+recorded on 2026-11-15; product admission and packaging remain pending.
 
 `VaultPath::managed()` prepares the current OS account's fixed
 `Library/Application Support/Codeward/Vaults/vault.cw` destination. It has no UI

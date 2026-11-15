@@ -1,9 +1,10 @@
 # Linux capacity and managed-location experiment
 
-This proposed bounded Linux policy and synthetic failure harness address
-ADR-0003/0006 and FR-01/02/09. They do not accept an adapter, a product runtime,
-Milestone 2 completion, or OS-crash/power-loss support. Native results must be
-recorded against the reviewed PR revision.
+This bounded Linux policy and synthetic failure harness address ADR-0003/0006 and
+FR-01/02/09. The owner accepted them for synthetic Milestone 2 evidence on
+2026-11-15; see the [acceptance record](milestone-2-acceptance.md) for final
+combined CI and reviewed revisions. Product admission and OS-crash/power-loss
+support remain outside the accepted scope.
 
 ## Bounded managed admission
 
@@ -42,10 +43,10 @@ managed entry has no environment-variable bypass for device policy. Its loop tes
 checks refusal without app-directory creation; fixture tests exercise successful
 fixed-tree preparation and the shared writer independently.
 
-Owner review must decide whether this narrow device topology and recognized-root
-policy is sufficient for the synthetic milestone and whether its exclusions are
-acceptable for later real-vault admission. Native successful admission on a
-qualifying fixed-device ext4 home/XDG base remains separate from loop CI evidence.
+Owner review accepted this narrow device topology and recognized-root policy for
+the synthetic milestone. Later real-vault admission requires its own review.
+Native successful admission on a qualifying fixed-device ext4 home/XDG base
+remains separate from loop CI evidence and remains unverified.
 Do not describe the recognized-name list as universal cloud-sync detection.
 
 ## Real capacity and residue cases
@@ -137,7 +138,6 @@ leaving native fixtures explicitly ignored. Rust 1.99.1 used head
 
 An independent read-only review found no Critical, Important or Minor code
 findings. The bounded topology/sync-name and absent successful fixed-device home
-admission evidence remain explicit review limits. The branch subsequently
-incorporates merged PR #51/main and this evidence-only documentation; its final
-head must pass its own current-base CI before merge. Native success above is not
-misrepresented as a test run for that later documentation revision.
+admission evidence remain accepted M2 limits. The final combined revision
+subsequently passed all three platform jobs and merged in PR #53; exact revisions
+and run links are recorded in the [acceptance record](milestone-2-acceptance.md).

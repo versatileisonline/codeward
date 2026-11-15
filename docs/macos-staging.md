@@ -91,6 +91,7 @@ No file permissions were weakened to make progress. The later
 [ACL admission experiment](macos-acl-admission.md) extends conservative refusal to
 read/exclusion admission and lease revalidation. The subsequent
 [publication experiment](macos-publication.md) adds synthetic atomic creation and
-replacement. Cloud-location policy, namespace barriers, authoritative residue
-handling and core transaction integration remain native work. Full
-macOS/Windows/Linux storage acceptance and packaged runtime evidence remain absent.
+replacement. Later managed-location, namespace, residue and core integration
+evidence is collected in [M2's acceptance record](milestone-2-acceptance.md),
+approved on 2026-11-15 for bounded synthetic macOS/Linux/Windows storage.
+Real-vault admission and packaged runtime evidence retain later gates.

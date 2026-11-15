@@ -3,6 +3,11 @@
 Status: Accepted initial validation plan, 2026-10-29; no support claims verified.
 Scope: ADR-0001/0003/0005 and NFR-03/04/06/08/09.
 
+Milestone 2's bounded synthetic core/storage evidence was accepted on 2026-11-15.
+The [acceptance record](milestone-2-acceptance.md) identifies final combined CI,
+tested revisions and remaining real-device/desktop validation. Milestone 3 entry
+is authorized; the desktop matrix below retains its later validation gate.
+
 The [macOS foundation evidence](macos-storage-foundation.md) now covers bounded
 synthetic reads, descriptor-rooted path checks and native writer exclusion. It
 does not establish writable-adapter acceptance, persistence or packaged support.
@@ -61,8 +66,9 @@ device/sync policy, real disk-full retry and submount evidence.
 The [Windows foundation](windows-storage-foundation.md) exercises synthetic
 NTFS reads and exclusion. A synthetic managed read path resolves LocalAppData
 and checks ACLs on the base and app-owned objects. The [Windows writer](windows-core-writer.md)
-adds synthetic namespace barriers and core composition. Production admission and
-formal adapter/milestone acceptance remain pending.
+adds synthetic namespace barriers and core composition. Bounded synthetic
+macOS/Linux/Windows storage evidence and policies are accepted for M2.
+Production admission and full desktop validation remain pending.
 Do not infer real-vault or packaged support from those experiments.
 
 Support only regular files in user-controlled local directories on the declared
