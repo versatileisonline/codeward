@@ -1,6 +1,8 @@
 # ADR-0002: Vault security and format
 
-Status: Accepted — in-memory authenticated core tested; committed/application workflows pending.
+Status: Accepted — authenticated core and bounded native commits accepted for
+Milestone 2; complete application workflows remain pending. See the
+[M2 acceptance record](../milestone-2-acceptance.md), approved on 2026-11-15.
 Decision dates: 2026-10-28; concrete handoff approved 2026-10-29.
 Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2). Target: Milestone 1 design gate.
 
@@ -38,8 +40,8 @@ byte encodings are defined by the normative format document.
 [Dependency review](../dependency-review.md) now records exact crypto patches,
 features and advisories used by the tested primitives. The separate
 [JSON review](../json-dependency-review.md) covers the strict credential codec.
-The authenticated in-memory core now has component evidence. Committed/native
-behavior remains future work; these decisions do not establish
+The authenticated core and bounded native commits have synthetic evidence
+accepted for Milestone 2. These decisions do not establish
 independent audit coverage or complete runtime guarantees for Codeward.
 
 ## Selected starting parameter profile
@@ -78,7 +80,8 @@ see [RFC 5869](https://www.rfc-editor.org/rfc/rfc5869.html#section-3).
 Use fresh securely generated nonces for every new encryption, including retries
 and rewraps; never deliberately reuse a key/nonce pair. Store nonces and full tags
 with ciphertext. The reviewed provider and primitive failure tests are recorded in the dependency
-review and progress evidence; integrated publication behavior remains unverified.
+review and progress evidence. Bounded native publication and coherent slot/payload
+commits are covered by the M2 acceptance record; broader product validation remains.
 
 ## Selected version 1 file structure
 

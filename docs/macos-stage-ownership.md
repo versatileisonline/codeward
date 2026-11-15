@@ -53,6 +53,8 @@ Synthetic data on macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-05:
   or shipping-storage conclusion follows from these checks.
 
 The [transaction experiment](macos-transaction-experiment.md) remains test-only.
-Location/native persistence acceptance, production storage, application sessions,
-Windows/Linux adapters and packaged support remain pending. Managed directories,
-transaction residue and owned markers do not add backups or restoration.
+Subsequent [managed workflows](macos-managed-workflow.md), the
+[headless host](headless-vault-host.md) and Linux/Windows adapters form part of
+[M2's accepted bounded evidence](milestone-2-acceptance.md). Production storage,
+complete desktop sessions and packaged support retain later gates. Managed
+directories, transaction residue and owned markers do not add backups or restoration.

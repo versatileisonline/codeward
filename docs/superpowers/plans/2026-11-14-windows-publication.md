@@ -89,5 +89,7 @@ Formatting, Ubuntu, Windows, macOS and the combined gate passed for head
 [PR #49](https://github.com/versatileisonline/codeward/pull/49) records the independent
 review and approximate 85% Milestone 2 scope estimate. It was subsequently merged
 as `69ede0f679b4b472ef1dd2c19c589f806c60a1e5` on 2026-11-14.
-Milestone acceptance and persistence gates remain
-open. See the [next persistence review](../../windows-persistence-review.md).
+The subsequent [persistence review](../../windows-persistence-review.md) and
+[core writer](../../windows-core-writer.md) closed the bounded implementation gate.
+Final combined CI passed and the owner accepted M2 on 2026-11-15; see the
+[acceptance record](../../milestone-2-acceptance.md) for exact revisions and limits.

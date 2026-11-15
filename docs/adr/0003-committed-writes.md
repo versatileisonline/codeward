@@ -1,8 +1,11 @@
 # ADR-0003: Committed writes and durability
 
-Status: Accepted — logical save contract; platform adapter evidence pending.
+Status: Accepted — logical save contract; bounded synthetic core and native
+macOS/Linux/Windows evidence accepted for Milestone 2 on 2026-11-15. See the
+[acceptance record](../milestone-2-acceptance.md) for final CI and retained limits.
 Decision date: 2026-10-29, concrete handoff approval. Acceptance record: [PR #2](https://github.com/versatileisonline/codeward/pull/2).
-Target: Milestone 1. No implemented persistence guarantee.
+Target: Milestone 1 design; Milestone 2 bounded implementation. Real-vault and
+broader durability claims require later validation.
 
 ## Context and alternatives
 

@@ -96,11 +96,11 @@ This does not establish non-cloud admission or an ancestor access policy.
 The [staging evidence](macos-staging.md) now covers complete writes, checked close,
 file synchronization and pre-publication process kills. The
 [publication evidence](macos-publication.md) adds synthetic atomic operations and
-surrounding process kills; namespace barriers, full commit interruption,
-OS-crash/power-loss and Windows/Linux storage evidence remain absent. No real
-credentials or private vaults were used.
-Further native work must integrate publication/persistence with the transaction
-protocol, preserving uncertain outcomes and artifacts.
+surrounding process kills. Subsequent namespace/core integration and Windows/Linux
+storage evidence is collected in [M2's acceptance record](milestone-2-acceptance.md),
+approved on 2026-11-15 for bounded synthetic storage. No real credentials or
+private vaults were used. Real-vault admission, OS-crash/power-loss and packaged
+support retain later gates.
 
 A subsequent [namespace experiment](macos-namespace.md) now exercises candidate
 file/parent barriers for a checked present or absent state. It does not complete

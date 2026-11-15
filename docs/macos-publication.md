@@ -79,10 +79,11 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
   races do not prove the kill occurred inside the syscall. There is no save
   acknowledgement or namespace/power-loss experiment.
 
-Next implement and validate namespace persistence, authoritative residue handling,
-location/privacy gates and core transaction integration. Milestone 2 remains in
-progress; no usable credential store or native save/durability guarantee exists.
+Subsequent experiments added namespace persistence, authoritative residue handling,
+location/privacy admission and core integration. Their bounded synthetic evidence
+was [accepted for M2](milestone-2-acceptance.md) on 2026-11-15. Real-vault use,
+complete credential UI workflows and broader durability retain later gates.
 
 The subsequent [namespace experiment](macos-namespace.md) adds candidate file/parent
-barriers with expected-state checks. Native transaction and persistence acceptance
-remain outstanding; publication alone still does not acknowledge a save.
+barriers with expected-state checks. The later integrated evidence is linked from
+the acceptance record; publication alone still does not acknowledge a save.

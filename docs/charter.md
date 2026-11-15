@@ -1,7 +1,9 @@
 # Project charter
 
-Status: Milestone 1 design accepted; Milestone 2 entry authorized.
-Updated: 2026-11-01. Rust/Tauri/React, RustCrypto primitives, the starting profile
+Status: Milestone 2 complete within its accepted bounded synthetic scope;
+Milestone 3 entry authorized. Owner acceptance recorded on 2026-11-15 in the
+[Milestone 2 acceptance record](milestone-2-acceptance.md).
+Updated: 2026-11-15. Rust/Tauri/React, RustCrypto primitives, the starting profile
 and format structure are selected. Accepted contracts and the validation sequence
 are recorded in the [Milestone 1 handoff](milestone-1-handoff.md).
 The handoff records design acceptance and core implementation authorization on

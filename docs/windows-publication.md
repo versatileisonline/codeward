@@ -95,11 +95,12 @@ The last reference specifies root-relative names, DELETE access and target
 directory sharing considerations. The [staging review](windows-staging.md)
 records the existing relative-open, ACL and file-flush boundary.
 
-Windows namespace/storage persistence barriers, writable core composition,
-broader native fault/location admission and integrated Milestone 2 acceptance
-remain open. File flushing, close, readback and rename alone do not authorize
-a saved indicator. OS-crash, power-loss and packaged Windows 11 evidence remain
-separate gates.
+The subsequent [Windows writer](windows-core-writer.md) implements namespace
+barriers and core composition, with fault, identity and managed-admission checks.
+Its bounded synthetic scope passed final combined CI and was
+[accepted for M2](milestone-2-acceptance.md) on 2026-11-15. File flushing, close,
+readback and rename alone do not authorize a saved indicator. Real-vault admission,
+OS-crash, power-loss and packaged Windows 11 evidence remain separate gates.
 
 The first native CI run rejected the Win32 `SetFileInformationByHandle` call
 with error 87 despite successful prechecks. A numeric boundary regression

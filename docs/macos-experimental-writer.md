@@ -2,7 +2,9 @@
 
 Scope: one shared implementation of the core `Storage`/`WriterLease` contracts
 for synthetic development under ADR-0003. This replaces the separate test bridge's
-adapter logic; it does not accept real-vault storage or complete Milestone 2.
+adapter logic. Its bounded evidence is included in
+[Milestone 2 acceptance](milestone-2-acceptance.md), recorded on 2026-11-15;
+real-vault storage remains outside the accepted scope.
 
 ## Build and public boundary
 
@@ -72,6 +74,6 @@ The owner accepted the [bounded macOS storage policy](adr/0006-managed-working-l
 on 2026-11-07. The [headless host](headless-vault-host.md) integrates the opt-in writer
 on that same disposable path.
 
-Real-vault admission, quota/media and OS-crash/power-loss evidence, desktop host
-integration, Windows/Linux adapters and full Milestone 2 acceptance remain pending.
-Backup/copy/restore and UI stay deferred.
+Bounded macOS/Linux/Windows storage evidence is accepted for M2. Real-vault
+admission, quota/media and OS-crash/power-loss evidence, and credential UI/desktop
+workflow integration retain later gates. Backup/copy/restore stays deferred.

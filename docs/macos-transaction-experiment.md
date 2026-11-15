@@ -76,8 +76,10 @@ The bridge is test infrastructure, not the writable adapter intended for shippin
 Its thin fault/event wrapper now exercises the shared opt-in implementation rather
 than maintaining duplicate native operations and state. Historical results above
 remain bounded experiment evidence, not default runtime support.
-Complete privacy/location gates, native persistence acceptance, application session
-orchestration and Windows/Linux storage remain outstanding. UI remains deferred.
+Subsequent privacy/location admission, headless session orchestration and
+macOS/Linux/Windows native commits form part of
+[M2's accepted bounded evidence](milestone-2-acceptance.md). Complete desktop
+workflows, credential UI and real-vault admission retain later gates.
 
 The subsequent [kernel write-failure cases](macos-write-failures.md) reuse this
 bridge with managed synthetic homes. Actual child-local EFBIG failures now verify

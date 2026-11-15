@@ -56,5 +56,8 @@ third-party sync is absent.
 Review the supported location and residue policy under
 [ADR-0006](adr/0006-managed-working-location.md) and
 [ADR-0003](adr/0003-committed-writes.md) before real-vault admission.
-Host result dispatch, packaging, Windows/Linux storage and full Milestone 2
-acceptance remain pending. The writer stays default-off and synthetic-only.
+The [headless host](headless-vault-host.md) now dispatches commit and refresh
+results. Bounded macOS/Linux/Windows storage evidence was
+[accepted for Milestone 2](milestone-2-acceptance.md) on 2026-11-15. Packaging,
+credential UI integration and real-vault admission retain later gates.
+The writer stays default-off and synthetic-only.

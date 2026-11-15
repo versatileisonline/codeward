@@ -1,11 +1,17 @@
 # ADR-0006: Managed working vault and portable encrypted copies
 
-Status: Accepted for the bounded macOS storage policy, 2026-11-07. The owner
-accepted the managed location, application-termination and capacity evidence,
+Status: Accepted for bounded synthetic Milestone 2 storage on macOS, Linux and
+Windows, 2026-11-15. The [Milestone 2 acceptance record](../milestone-2-acceptance.md)
+records owner approval following reviewed/merged [PR #53](https://github.com/versatileisonline/codeward/pull/53)
+and passing combined CI. On 2026-11-07 the owner previously
+accepted the macOS managed location, application-termination and capacity evidence,
 and preserve-all leftover-file policy following [PR #28](https://github.com/versatileisonline/codeward/pull/28).
-Windows/Linux implementation details and future copy/reset workflows remain
-proposed. This decision covers the reviewed macOS scope. Product admission,
-packaging, wider durability claims and milestone advancement retain their gates.
+Future copy/reset workflows remain proposed. Linux's narrow device family and
+recognized sync-name exclusions are accepted for synthetic M2 evidence; successful
+real fixed-device home admission remains unverified. Windows Server NTFS and
+restricted-thread evidence is accepted for synthetic storage; ordinary-account
+Windows 11 desktop validation remains pending. Product admission, packaging and
+wider durability claims retain their gates. M2 is complete; M3 entry is authorized.
 
 ## Context and decision
 
@@ -17,8 +23,8 @@ requiring users to manage filenames for ordinary use (FR-01/02, NFR-03/04/08/09)
 | Platform | Working file policy | Native status |
 | --- | --- | --- |
 | macOS, initial nonsandboxed desktop package | OS-account home + `Library/Application Support/Codeward/Vaults/vault.cw` | Bounded policy accepted; shared writer opt-in for synthetic development |
-| Windows | OS-resolved LocalAppData + `Codeward/Vaults/vault.cw` | Synthetic LocalAppData resolution and bounded ACL checks; production admission pending |
-| Linux | Validated XDG_DATA_HOME, normally `~/.local/share`, + `codeward/vaults/vault.cw` | Opt-in synthetic commits on ext4; production admission and validation pending |
+| Windows | OS-resolved LocalAppData + `Codeward/Vaults/vault.cw` | Bounded Server NTFS/restricted-thread synthetic writer evidence accepted; Windows 11 desktop and production admission pending |
+| Linux | Validated XDG_DATA_HOME, normally `~/.local/share`, + `codeward/vaults/vault.cw` | Bounded ext4 synthetic writer/capacity/submount evidence accepted; real fixed-device managed entry and production admission pending |
 
 Resolve these through the platform/account APIs and validate actual storage;
 display strings/environment values are not authorization. A sandboxed package

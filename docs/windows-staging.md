@@ -83,8 +83,9 @@ Native execution and full workspace/doctest checks are supplied by the current
 Rust CI. Cross-compilation alone proves no native behavior.
 
 [Atomic publication](windows-publication.md) now consumes prepared stages with
-no-replace creation and expected-base replacement. Namespace persistence, core
-transaction composition and broader native capacity/fault evidence remain pending. Directory
-creation above the file boundary and ancestor/cloud admission still require
-review. File flush/close/readback is not a durable save; no product writer or
-Milestone 2 acceptance is established here.
+no-replace creation and expected-base replacement. The subsequent
+[Windows writer](windows-core-writer.md) adds namespace persistence, core
+composition, managed ancestor/cloud checks and native fault/reconciliation tests.
+Its bounded synthetic evidence was [accepted for M2](milestone-2-acceptance.md)
+on 2026-11-15. Staging alone does not acknowledge a save; product admission and
+broader device/capacity validation retain later gates.

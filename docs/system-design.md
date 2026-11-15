@@ -7,9 +7,11 @@ The design uses a binary envelope with one encrypted JSON snapshot and a startin
 parameter profile in ADR-0002. The [handoff](milestone-1-handoff.md) now supplies
 accepted contracts, including the [byte specification](vault-format-v1.md).
 Implementation entry was approved on 2026-10-29.
-[Core evidence](milestone-2-progress.md) now includes authenticated in-memory
-operations and fault-injected transaction/session-admission tests; native
-storage/application/desktop validation remains pending. There is no
+[Core evidence](milestone-2-progress.md) includes authenticated operations,
+fault-injected transaction/session-admission tests and bounded native commits
+on macOS/Linux/Windows. [Milestone 2 acceptance](milestone-2-acceptance.md) was
+recorded on 2026-11-15; complete recovery/application/desktop validation remains
+pending. There is no
 KeePassXC format-compatibility commitment.
 
 ## System context

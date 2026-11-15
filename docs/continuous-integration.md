@@ -26,6 +26,11 @@ Windows also runs an explicitly filtered, ignored NTFS flush capability probe
 under a restricted same-user thread token with visible numeric results. This
 diagnostic is test-only and does not authorize a save or a persistence claim.
 See the [probe contract](windows-persistence-review.md#capability-probe).
+Ubuntu also runs the explicitly selected serial ext4 suite on an exclusive
+disposable image, including real ENOSPC retry cases, followed by the privileged
+same-device bind-mount refusal test. macOS runs the synthetic desktop-redaction
+Node tests. Native helper/fixture cases remain explicitly selected rather than
+being counted as executed by the ordinary workspace test command.
 These checks cover the
 default-off experimental writer's feature-enabled exports and documentation while
 also compiling its disabled default boundary. Tests use synthetic destinations;
@@ -60,6 +65,17 @@ or upload vaults/test directories. Tests use synthetic data. Hosted execution is
 development infrastructure, not a hosted runtime requirement for Codeward.
 
 ## Verified adoption
+
+Milestone 2's final combined [PR #53 run](https://github.com/versatileisonline/codeward/actions/runs/43653858082)
+passed formatting, Ubuntu, Windows, macOS and the combined gate for head
+`8e55ea8e79dda29237db83a8da5ea585a88bbd8b` against base
+`bd96d5923608e32c477ec4f52b5b3e80638b321c`, with test merge
+`4d8f888b3944ee8ee98ec5079e4d6e3f7cd2021f`. The
+[acceptance record](milestone-2-acceptance.md) records the subsequent merge and
+owner approval on 2026-11-15. This is evidence for that implementation revision;
+later documentation or code PRs require their own current-revision checks.
+
+### Initial adoption evidence
 
 The first successful [PR #12 run](https://github.com/versatileisonline/codeward/actions/runs/41582075095)
 completed on 2026-11-03 for head `8fc0ae570a07420e40dce536d02391569431fa31`

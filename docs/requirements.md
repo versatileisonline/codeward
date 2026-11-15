@@ -1,8 +1,10 @@
 # Requirements
 
-Status: design requirements with confirmed Rust/desktop scope updates.
-These are intended behaviors, not implemented features.
-All requirements apply to the initial version unless explicitly deferred.
+Status: initial-version requirements with confirmed Rust/desktop scope updates.
+Milestone 2's FR-01/02/09 and NFR-02/03/04/08 gate was accepted within the bounded
+synthetic scope on 2026-11-15; see the [acceptance record](milestone-2-acceptance.md).
+Full product workflows retain their later validation gates. All requirements
+apply to the initial version unless explicitly deferred.
 
 ## Terms
 
@@ -22,23 +24,20 @@ All requirements apply to the initial version unless explicitly deferred.
 - **Intact vault:** complete, authentic, supported vault data with usable access
   and recovery metadata. The recovery secret alone is insufficient.
 
-The acceptance evidence below remains required. Milestone 2 has envelope handling,
-crypto primitives, paper-code validation, strict credential JSON handling and
-authenticated in-memory creation/access/update preparation.
-[Bounded evidence](milestone-2-progress.md) distinguishes those components from
-native committed storage, complete application sessions and UI workflows still required for full
-requirement acceptance.
-
-Session-bound mutation admission and the logical commit protocol also have
-fault-injected model evidence. These tests do not satisfy native persistence,
-OS locking or packaged application acceptance.
+The acceptance evidence below defines the intended outcomes. Milestone 2's
+accepted evidence includes authenticated vault operations, session-bound mutation
+admission, the fault-injected commit model and bounded native macOS/Linux/Windows
+commits. [Progress evidence](milestone-2-progress.md) and the acceptance record
+distinguish this completed synthetic gate from complete UI workflows, wider
+real-device admission and packaged application validation still required later.
 
 ## Functional requirements
 
 The initial prototype uses a managed working location under the current OS account.
 Rust resolves its destination; arbitrary UI paths are not accepted. The location,
 missing-file and portable-copy boundaries are recorded in
-[ADR-0006](adr/0006-managed-working-location.md). The bounded macOS policy is accepted.
+[ADR-0006](adr/0006-managed-working-location.md). Bounded synthetic macOS, Linux
+and Windows storage policies are accepted for Milestone 2 with the recorded limits.
 FR-01 readiness still requires committed creation.
 
 | ID | Requirement | Acceptance evidence |
@@ -69,7 +68,7 @@ for a disclosed vault key must address newer contents as well as old copies.
 | ID | Requirement | Acceptance evidence |
 | --- | --- | --- |
 | NFR-01 | All initial runtime workflows work offline without required accounts, telemetry, analytics, or remote recovery. | Run creation, CRUD, generation, lock, and recovery with network denied; inspect application-initiated network activity. |
-| NFR-02 | Protect stored contents and both key slots with RustCrypto XChaCha20-Poly1305. Derive master-password and recovery wrapping keys with Argon2id and HKDF-SHA256 respectively. Account for authenticated metadata, temporary files and exposed metadata. | Review ADR-0002's profile/format and compatible releases; verify test vectors, nonce discipline, parameter bounds and tamper failures. Component evidence is recorded in the progress document; integrated evidence remains outstanding. |
+| NFR-02 | Protect stored contents and both key slots with RustCrypto XChaCha20-Poly1305. Derive master-password and recovery wrapping keys with Argon2id and HKDF-SHA256 respectively. Account for authenticated metadata, temporary files and exposed metadata. | Review ADR-0002's profile/format and compatible releases; verify test vectors, nonce discipline, parameter bounds and tamper failures. Component and bounded synthetic native-commit evidence are accepted for M2; complete product validation retains its later gate. |
 | NFR-03 | Acknowledged commits survive app termination. An interrupted update yields the complete previous or new commit, never a partial mixture or destruction of the last good state. | Terminate before/during/after the defined commit boundary; reopen and compare the entire vault to valid states. |
 | NFR-04 | Storage errors preserve the last committed vault; no false success; explicit retry/discard behavior. | Simulate capacity, permission, and I/O failures; verify records and recovery access stay coherent. |
 | NFR-05 | No plaintext credentials, master passwords, or recovery secrets in logs, routine diagnostics, or persistent temp artifacts. Minimize secret lifetime; release session secrets on lock as the chosen stack permits. | Inspect logs/files; review lifetime, crash reporting, and platform limits; document residual exposure. |

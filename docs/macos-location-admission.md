@@ -52,6 +52,7 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-05:
 The transitions above are injected results, not actual remount, read-only-volume,
 network/removable-volume or media-error experiments. Actual native calls exercise
 the host's local APFS. Neither these flags nor retained handles prove that a folder
-is outside cloud synchronization. Cloud admission, ancestor access policy, native
-persistence acceptance and Windows/Linux storage remain outstanding. Use synthetic
-inputs only; no real-vault, saved-state or OS-crash/power-loss guarantee is added.
+is outside cloud synchronization. Subsequent managed-location/cloud admission and
+native macOS/Linux/Windows work form part of
+[M2's accepted bounded evidence](milestone-2-acceptance.md). Use synthetic inputs
+only; real-vault and OS-crash/power-loss guarantees remain outside this experiment.

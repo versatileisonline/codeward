@@ -1,9 +1,11 @@
 # Milestone 2 implementation evidence
 
-Status: in progress, 2026-11-09. Authenticated vault operations now compose with
-session-bound mutation admission and a fault-injected committed-write model.
-The bounded macOS storage policy is accepted for synthetic use. Product storage
-admission and complete application workflows remain pending.
+Status: complete within the bounded synthetic scope, accepted by the owner on
+2026-11-15. The [acceptance record](milestone-2-acceptance.md) records the final
+combined CI, merged implementation and accepted macOS/Linux/Windows evidence
+bounds. Milestone 3 entry is authorized. Product storage admission and complete
+application workflows remain pending. Earlier slice descriptions below retain
+their historical evidence limits; the acceptance record supersedes pending M2 gates.
 Design baseline: [accepted handoff](milestone-1-handoff.md), recorded in
 [PR #2](https://github.com/versatileisonline/codeward/pull/2), which is now merged.
 The parser/metadata step is tracked in [PR #4](https://github.com/versatileisonline/codeward/pull/4),
@@ -653,23 +655,23 @@ a restricted effective token. The existing traversal/metadata handles are denied
 That measured access is now used by the bounded writer/barrier implementation;
 platform/product acceptance remains separate.
 
-## Remaining review gates
+## Accepted closeout and later validation gates
 
-The [bounded acceptance candidate](milestone-2-acceptance.md) supersedes the
+The [bounded acceptance record](milestone-2-acceptance.md) supersedes the
 previous approximate 85% scope estimate. Windows barriers/core composition and
-Linux capacity/submount/managed-policy work are implemented for review. Technical
-closeout requires the final combined PR head's complete CI and the independent
-review regression checks; formal 100% milestone acceptance remains an explicit
-owner decision.
+Linux capacity/submount/managed-policy work were merged in PR #53. Final combined
+[CI run 43653858082](https://github.com/versatileisonline/codeward/actions/runs/43653858082)
+passed all three platforms and the independent-review regression checks. The
+owner accepted Milestone 2 on 2026-11-15 with the documented evidence limits.
 
 | Block | Current closeout state |
 | --- | --- |
 | Windows persistence | Namespace barriers, owned writer, lifecycle/error/reconciliation tests and six core kill cases implemented. The independently identified final-close identity gap has a native failing regression and a corrected identity guard/final reader. |
-| Linux admission and faults | Real ext4 ENOSPC creation/content/password failures and fresh retries, preserve-all authority and same-device bind-mount refusal passed native execution. Proposed location exclusions and untested positive fixed-device admission remain explicit owner review points. |
-| Integrated Milestone 2 review | The final PR includes both reviewed implementations and the seven-requirement acceptance packet. Current combined head/base CI, merge and bounded-policy/milestone approval must be recorded. |
+| Linux admission and faults | Real ext4 ENOSPC creation/content/password failures and fresh retries, preserve-all authority and same-device bind-mount refusal passed native execution. Narrow location exclusions are accepted for bounded synthetic M2 evidence; successful real fixed-device managed-home admission remains unverified. |
+| Integrated Milestone 2 review | Both reviewed implementations passed final combined CI and merged in PR #53. Owner bounded-policy/milestone acceptance was recorded on 2026-11-15; M3 entry is authorized. |
 
 The UI target remains the week of **2026-11-16 through 2026-11-22**. The next
-accepted milestone is offline recovery validation, followed by the macOS-first
+milestone is offline recovery validation, followed by the macOS-first
 credential UI. Existing core, host and Tauri/session-event work can be reused;
 the current desktop pilot still has no credential IPC or persistence. This
 closeout does not promise a finished three-platform UI that week.

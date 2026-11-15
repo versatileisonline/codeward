@@ -1,12 +1,14 @@
 # Milestone roadmap
 
 Numbers indicate order, not dates. Milestone 0's foundation was merged in PR #1.
-Milestone 1 design review is complete; Milestone 2 is in progress. The
+Milestone 1 design review and Milestone 2 are complete. The owner accepted
+Milestone 2's bounded synthetic scope on 2026-11-15; Milestone 3 entry is authorized.
+The [acceptance record](milestone-2-acceptance.md) retains its validation limits. The
 [accepted handoff](milestone-1-handoff.md) records approval on 2026-10-29 and defines
 the Rust core, Tauri/React interface, three desktop target families, exact vault
 format, crypto profiles, reusable recovery, save contract and session policies.
 Exact dependency/security review precedes use; bounded core evidence is recorded
-below, while integrated/native runtime evidence remains pending.
+below, while broader product/runtime validation remains pending.
 
 | Milestone | Deliverable | Completion gate |
 | --- | --- | --- |
@@ -23,10 +25,9 @@ design a vault requiring an incompatible recovery retrofit.
 
 ## Path to desktop integration
 
-1. **Milestone 2 — Vault core and persistence.** Implement Windows native
-   persistence, finish Linux location and fault validation, and run the
-   integrated acceptance tests for the storage gate.
-2. **Milestone 3 — Offline recovery.** After Milestone 2 acceptance, verify paper
+1. **Milestone 2 — Vault core and persistence (complete).** The bounded core and
+   native storage evidence passed combined CI and was accepted on 2026-11-15.
+2. **Milestone 3 — Offline recovery (entry authorized).** Verify paper
    enrollment and confirmation, recovery with an intact vault and committed
    master-password replacement. Exercise invalid codes and interrupted access
    changes, and verify that a paper code cannot restore a missing vault.
@@ -63,20 +64,21 @@ implementation on focused branches from the reviewed baseline. The gate accepts
 the contracts and evidence plan, not runtime results. Native adapters remain
 blocked from real-vault use until platform-specific evidence exists.
 
-## Current Milestone 2 slice
+## Milestone 2 acceptance and Milestone 3 entry
 
-The bounded [Milestone 2 closeout candidate](milestone-2-acceptance.md) now
-collects the core and three experimental native adapters for review. Linux adds
+The bounded [Milestone 2 acceptance record](milestone-2-acceptance.md)
+collects the accepted core and three experimental native adapters. Linux adds
 [real capacity/retry and managed-submount evidence](linux-capacity-and-admission.md)
 to its shared writer. Windows adds [expected-state namespace barriers and the
 owned core writer](windows-core-writer.md), including fresh authenticated
 reconciliation and staged/published/committed termination cases. The earlier
 [flush capability matrix](windows-persistence-review.md) records the access
-candidate used by the Windows barriers. Current combined-revision checks and
-explicit owner policy/milestone acceptance remain required before M3 entry.
+candidate used by the Windows barriers. PR #53 merged both reviewed branches;
+final combined CI passed. Owner policy/milestone acceptance was recorded on
+2026-11-15, authorizing M3 entry with the documented residual limits retained.
 
 The following paragraphs retain the earlier implementation sequence and its
-slice-specific limits; the closeout packet is the current review checklist.
+slice-specific limits; the acceptance record above supersedes their pending M2 gates.
 
 The Rust library implements envelope parsing/encoding, public authentication
 metadata, fixed-profile cryptographic primitives, paper-code handling, strict

@@ -1,7 +1,10 @@
 # Windows persistence API review
 
-Status: research evidence, 2026-11-14. Windows namespace barriers and core writer
-composition remain open. This review does not change ADR-0003 or admit real vaults.
+Status: research evidence, 2026-11-14. The subsequent
+[Windows writer](windows-core-writer.md) implements namespace barriers and core
+composition using the measured access below. Its bounded synthetic evidence was
+[accepted for M2](milestone-2-acceptance.md) on 2026-11-15. This API review retains
+its original experiment scope and does not admit real vaults.
 
 ## Reviewed baseline
 
@@ -155,8 +158,9 @@ passed before reopening the final visible candidate.
 Inference: directory-specific create rights supply a working access combination
 on this tested NTFS system. The earlier access ambiguity is now a measured
 candidate for a barrier design, rather than a reason to assume directory flushing
-is unavailable. Implementing it still requires expected-state binding, guarded
-handle transitions, managed ancestor coverage and failure/reconciliation tests.
+is unavailable. The subsequent [writer](windows-core-writer.md) adds expected-state
+binding, guarded handle transitions, managed ancestor coverage and
+failure/reconciliation tests.
 This experiment does not accept a production writer or prove power-loss durability.
 
 The complete [implementation-head run](https://github.com/versatileisonline/codeward/actions/runs/43650206575)

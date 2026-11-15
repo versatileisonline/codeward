@@ -63,10 +63,14 @@ logged or exposed to a WebView. Keep error/status messages free of secret input.
 
 No dependency, vault bytes/schema, primitive, KDF cost or native writer feature
 changes. No background executor is started. The [core inactivity policy](session-inactivity.md)
-now gates authentication completion and revokes timed-out attempts. Host timer
-scheduling, OS lock/resume adapters, enrollment cancellation orchestration, draft
-management, selected-record replies and UI redaction remain pending.
-Native storage acceptance and Milestone 2 completion remain separate gates.
+now gates authentication completion and revokes timed-out attempts. The
+[headless host](headless-vault-host.md) and [macOS event source](headless-session-events.md)
+provide timer scheduling, enrollment revocation and native lock/resume handling;
+the [desktop pilot](macos-desktop-pilot.md) exercises synthetic redaction.
+Draft management, selected-record replies, credential UI redaction and
+Windows/Linux desktop event integration retain Milestone 4 validation.
+Bounded native storage evidence was [accepted for M2](milestone-2-acceptance.md)
+on 2026-11-15; real-vault admission remains separate.
 
 ## Verification
 

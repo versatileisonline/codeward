@@ -64,9 +64,10 @@ any queued credential page and rechecks it before delivery.
 
 The control loop can open storage on a worker, including managed-path preparation,
 writer acquisition, and the baseline read. Its synchronous host constructors
-remain available for headless tests. Draft ownership, close dialogs, packaged
-desktop event integration, IPC and UI remain pending. The macOS writer remains
-opt-in for synthetic development.
+remain available for headless tests. The [macOS session pilot](macos-desktop-pilot.md)
+now exercises packaged synthetic event/redaction IPC. Draft ownership, close
+dialogs, credential IPC/UI and Windows/Linux desktop events retain later gates.
+The macOS writer remains opt-in for synthetic development.
 
 ## Evidence
 

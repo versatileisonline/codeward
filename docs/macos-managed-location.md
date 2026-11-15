@@ -78,7 +78,8 @@ Synthetic homes on macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-05:
   workspace formatting and whitespace checks pass. Full workspace/doctest and
   three-platform evidence belongs to current-head/base hosted Rust CI.
 
-Windows/Linux native managed resolution, packaged runtime integration and native
-persistence acceptance remain pending. Account/mount/query failures have no HOME or
+Bounded native managed storage on all three platforms was
+[accepted for M2](milestone-2-acceptance.md) on 2026-11-15. Packaged runtime
+integration and real-vault admission retain later gates. Account/mount/query failures have no HOME or
 arbitrary-folder fallback. A managed standard path does not certify absence of
 third-party sync, compromised-OS protection, or OS-crash/power-loss persistence.

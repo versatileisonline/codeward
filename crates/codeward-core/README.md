@@ -7,6 +7,11 @@ credential JSON handling and authenticated in-memory vault operations for the
 [Exact crypto pins/features and advisory review](../../docs/dependency-review.md)
 are recorded; there are no runtime services.
 
+Milestone 2 was accepted on 2026-11-15 for bounded synthetic core and native
+storage evidence. See the [acceptance record](../../docs/milestone-2-acceptance.md)
+for tested revisions and retained limits. Milestone 3 offline recovery validation
+is next; real-vault use and credential UI integration retain their later gates.
+
 `UnauthenticatedEnvelope::parse` borrows already-read bytes without allocating,
 rejects unsupported profiles and malformed lengths, and returns only encrypted
 bytes/public metadata. Native readers enforce the input cap before allocating.
@@ -32,7 +37,8 @@ operations as generic UI commands.
 
 `recovery` encodes/validates the canonical paper code and checks transcription
 confirmation. The vault layer adds volatile enrollment lifetime/confirmation;
-application display rules and native committed recovery remain absent.
+native adapters exercise coherent password replacement and both access routes.
+The full offline enrollment/recovery workflow and messages await Milestone 3.
 
 `credentials` validates record IDs, field byte limits, timestamp order, unique IDs
 and the exact version 1 JSON schema. Its decoder rejects duplicate/unknown/missing
@@ -57,11 +63,12 @@ layer adds the bounded admission/session-generation behavior below.
 `transaction` separates a secret-owning `Session` from an encrypted-only
 `Committer` with a retained exclusive `WriterLease`. The trusted `Storage`
 adapter must acquire stable writer exclusion and implement restrictive staging,
-atomic create/replace and persistence barriers. The default-off macOS writer
-implements these traits for synthetic development. See the
-[writer experiment](../../docs/macos-experimental-writer.md). The
-[Linux experiment](../../docs/linux-storage-foundation.md) covers bounded reads
-and writer exclusion on ext4.
+atomic create/replace and persistence barriers. Default-off experimental writers
+implement these traits for synthetic development on
+[macOS/APFS](../../docs/macos-experimental-writer.md),
+[Linux/ext4](../../docs/linux-capacity-and-admission.md) and
+[Windows/NTFS](../../docs/windows-core-writer.md). Their bounded evidence is
+accepted for Milestone 2; product admission remains pending.
 The worker checks the complete authenticated base's SHA-256, vault ID and revision
 before publication admission. Only final barriers advance the committed revision.
 Ambiguous publication/barrier failure blocks mutations until fresh authentication,
@@ -130,5 +137,5 @@ Run `cargo run --locked --offline --example vault_round_trip` for a synthetic
 in-memory creation/edit/lock/recovery demonstration. It prints no secret values.
 
 Use synthetic data for examples, native experiments and development. See the
-[workspace status](../../README.md#current-status) for application and platform
+[workspace overview](../../README.md#what-works-today) for application and platform
 progress.

@@ -82,9 +82,10 @@ On macOS 26.3.1 (25D2128), Apple silicon/local APFS, 2026-11-04:
   remains. These checkpoints do not establish interruption inside a syscall,
   OS-crash behavior, physical power-loss durability or complete commit acceptance.
 
-Next complete authoritative residue and location/privacy gates, integrate the core
-transaction protocol, and validate the full acknowledgement/reconciliation path.
-Windows/Linux native storage, OS-crash/power-loss and packaged support remain pending.
+Subsequent native integration added residue/location admission and the core
+acknowledgement/reconciliation path. Bounded macOS/Linux/Windows storage evidence
+was [accepted for M2](milestone-2-acceptance.md) on 2026-11-15. Real-vault admission,
+OS-crash/power-loss and packaged support retain later gates.
 
 The subsequent [test-only transaction experiment](macos-transaction-experiment.md)
 now composes these operations with the core worker. Its synthetic integration
