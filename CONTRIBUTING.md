@@ -1,7 +1,7 @@
 # Git and contribution practices
 
-Work in small reviewed milestones. Milestone 1 design is accepted and Milestone 2
-core implementation is in progress. Read the
+Work in small reviewed milestones. Milestone 2 is complete within its accepted
+bounded synthetic scope; Milestone 3 entry is authorized. Read the
 [charter](docs/charter.md) and [ADRs](docs/adr/README.md) before implementation or
 scope expansion.
 

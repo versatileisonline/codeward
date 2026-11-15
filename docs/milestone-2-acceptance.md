@@ -1,9 +1,9 @@
-# Milestone 2 bounded acceptance candidate
+# Milestone 2 bounded acceptance record
 
-Status: proposed closeout packet. Native results, current-head checks and owner
-acceptance must be recorded before this becomes an accepted milestone. Neither
-this document nor a passing build authorizes a merge, real-credential use or UI
-integration.
+Status: complete and accepted by the owner on 2026-11-15. After reviewing the
+bounded evidence and remaining validation limits, the owner confirmed:
+“we can mark milestone 2 as complete for now. i accept.” Milestone 3 entry is
+authorized. Real-credential use and Milestone 4 UI integration retain their gates.
 
 ## Decision scope
 
@@ -13,7 +13,7 @@ gate for FR-01/02/09 and NFR-02/03/04/08 using synthetic data. The accepted
 and [validation plan](platform-validation.md) remain binding. This packet collects
 that gate's implementation and evidence; it does not redefine the requirements.
 
-The candidate consists of the Rust vault/session/commit core and default-off
+The accepted scope consists of the Rust vault/session/commit core and default-off
 macOS, Linux and Windows experimental managed adapters. The core owns access,
 request history, exact-base matching and acknowledgement. Native adapters retain
 exclusion and perform staging, atomic publication and required barriers. No
@@ -35,8 +35,8 @@ until fresh authenticated reconciliation establishes the actual known state.
 Implementation references: [core evidence](milestone-2-progress.md),
 [Linux capacity/admission](linux-capacity-and-admission.md),
 [Windows writer/barriers](windows-core-writer.md) and the existing native macOS
-evidence linked above. The final packet must identify exact tested PR heads,
-bases, test-merge commits and hosted runs rather than treating old runs as current.
+evidence linked above. The review record below identifies the exact tested PR
+head, base, test-merge commit and final combined hosted run.
 
 ## Native evidence boundaries
 
@@ -44,20 +44,20 @@ bases, test-merge commits and hosted runs rather than treating old runs as curre
   managed policy and application-termination/capacity evidence. No expanded
   hardware or filesystem claim is requested.
 - Linux: Ubuntu-hosted disposable ext4 provides native write, ENOSPC and submount
-  evidence. The proposed parameterless managed policy preserves validated XDG
+  evidence. The accepted bounded parameterless managed policy preserves validated XDG
   selection, rejects recognized sync components and fails closed on unknown,
   removable, USB, layered or virtual device topology. Direct PCI NVMe/ATA is the
   initial bounded device family. Test-only loop fixtures are explicit synthetic
   infrastructure; successful real-home/fixed-device admission is not inferred.
 - Windows: hosted Windows Server 2025/local NTFS provides native storage evidence,
-  including verified restricted effective-thread tests. The proposed managed
+  including verified restricted effective-thread tests. The accepted bounded managed
   policy uses OS-resolved LocalAppData, fixed NTFS, retained identities, ACL checks
   and recognized-cloud refusal. It does not establish an ordinary-account
   Windows 11 desktop installation or every external-device topology.
 
-Owner acceptance must explicitly retain these bounds. [ADR-0006](adr/0006-managed-working-location.md)
-currently accepts only the macOS policy; Linux/Windows policy acceptance and the
-bounded hosted Windows storage evidence must not be inferred from this proposal.
+Owner acceptance retains these bounds. [ADR-0006](adr/0006-managed-working-location.md)
+records the macOS policy and the Linux/Windows policies accepted for bounded
+synthetic Milestone 2 evidence.
 Neither OS app-data selection nor recognized folder names prove that another
 program will never synchronize or alter files. OS/device reporting is trusted.
 
@@ -87,17 +87,21 @@ universal sync detection are not claimed here.
   `dfd1f9a1075786e72c99d63511b5f903af0316f6` in
   [run 43653030714](https://github.com/versatileisonline/codeward/actions/runs/43653030714).
   That run is native regression evidence, not a substitute for final combined-head CI.
-- Final combined candidate: PR #53 contains both reviewed branches. Its current
-  head/base/test-merge and successful complete Rust CI must be recorded in the
-  PR before this packet can be accepted; prior component runs do not satisfy it.
+- Final combined validation: [run 43653858082](https://github.com/versatileisonline/codeward/actions/runs/43653858082)
+  passed formatting, Ubuntu, Windows, macOS and the overall Rust CI gate. Tested
+  head `8e55ea8e79dda29237db83a8da5ea585a88bbd8b`, base
+  `bd96d5923608e32c477ec4f52b5b3e80638b321c`, test merge
+  `4d8f888b3944ee8ee98ec5079e4d6e3f7cd2021f`. Both reviewed branches were merged
+  through PR #53 on 2026-11-14 as `a6816fdeb6d274792d840281b00965ffc70c4b5f`.
 - Independent implementation reviews: Linux found no material defects; Windows
   identified a final close/reopen identity gap. The native regression failed before
   correction and passed in the corrected native suite; every file/directory close
   failure position is covered, including the added identity guard/final reader.
-- Owner acceptance: pending. Formal Milestone 2 completion and Milestone 3 entry
-  remain unaccepted until the concrete packet and residual limits are approved.
+- Owner acceptance: recorded on 2026-11-15 in the project conversation, following
+  review of this packet and its residual limits. Milestone 2 is complete within
+  the bounded synthetic scope; Milestone 3 entry is authorized.
 
-The owner decision must explicitly cover all of the following:
+The accepted owner decision covers all of the following:
 
 1. Accept the Linux policy's narrow device family and recognized-name exclusions
    for bounded synthetic M2 evidence, while leaving successful real fixed-device
@@ -108,5 +112,5 @@ The owner decision must explicitly cover all of the following:
 3. Retain the approved Argon2 profile without weakening it; the slowest declared
    machine's timing target remains unmeasured and is part of later validation.
 4. Accept the seven M2 requirements under the precise tested application-termination
-   and storage-failure bounds, then authorize Milestone 3 entry. PR merge approval
-   remains a distinct decision and is not inferred from this packet.
+   and storage-failure bounds, and authorize Milestone 3 entry. PR #53's prior
+   merge is recorded separately above.

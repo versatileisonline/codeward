@@ -8,7 +8,8 @@ and React/TypeScript UI, and targets macOS, Windows and Linux.
 
 ## Current status
 
-Milestone 2 has a bounded implementation/evidence candidate ready for review.
+Milestone 2 is complete and was accepted by the owner on 2026-11-15 within its
+bounded synthetic-data scope. Milestone 3 offline recovery validation is next.
 The Rust core implements authenticated vaults, validated credentials, session
 locking and the commit protocol. All storage evidence uses synthetic data:
 
@@ -21,10 +22,10 @@ locking and the commit protocol. All storage evidence uses synthetic data:
   lifecycle/failure checks and publication/committed-write termination evidence.
   See [the Windows writer](docs/windows-core-writer.md).
 
-The [Milestone 2 acceptance packet](docs/milestone-2-acceptance.md) maps the seven
-requirements to evidence and names the Linux/Windows policy decisions and
-residual limits. Final combined-revision CI, merge and owner acceptance remain
-required; this candidate is not real-vault or desktop-support approval.
+The [Milestone 2 acceptance record](docs/milestone-2-acceptance.md) maps the seven
+requirements to evidence and records passing combined-revision CI, the merged
+implementation, owner acceptance and the retained Linux/Windows validation limits.
+Real-vault use and desktop support require later validation.
 Desktop UI integration starts in Milestone 4, after persistence and offline
 recovery are accepted. See the [milestone sequence](docs/roadmap.md#path-to-desktop-integration).
 Use synthetic data for development and testing.
@@ -42,7 +43,7 @@ Use synthetic data for development and testing.
 | [Roadmap](docs/roadmap.md) | Milestones, dependencies, completion gates |
 | [Architecture decisions](docs/adr/README.md) | Accepted architecture decisions and change process |
 | [Accepted design handoff](docs/milestone-1-handoff.md) | Milestone 1 review record and authorized implementation sequence |
-| [Core progress](docs/milestone-2-progress.md) | Implemented scope, test evidence and remaining Milestone 2 work |
+| [Core progress](docs/milestone-2-progress.md) | Accepted Milestone 2 scope, test evidence and later validation work |
 | [Platform decisions](docs/adr/0001-implementation-platform.md) | Selected Rust/Tauri/React stack and desktop targets |
 | [Git practices](CONTRIBUTING.md) | Branches, reviews, commits, secret handling |
 

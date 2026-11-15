@@ -22,7 +22,7 @@ Root:
 - [roadmap.md](docs/roadmap.md): Milestones and completion gates.
 - [milestone-1-handoff.md](docs/milestone-1-handoff.md): Design review summary and first implementation slice.
 - [milestone-2-progress.md](docs/milestone-2-progress.md): Core implementation scope and evidence.
-- [milestone-2-acceptance.md](docs/milestone-2-acceptance.md): Bounded seven-requirement closeout packet and explicit owner acceptance decisions.
+- [milestone-2-acceptance.md](docs/milestone-2-acceptance.md): Accepted bounded seven-requirement closeout, final CI evidence and retained validation limits.
 - [dependency-review.md](docs/dependency-review.md): Exact crypto package pins, features and advisory review.
 - [json-dependency-review.md](docs/json-dependency-review.md): JSON package pins, feature/advisory review and decoder allocation boundaries.
 - [vault-format-v1.md](docs/vault-format-v1.md): Accepted vault bytes, schema and paper-code encoding.
