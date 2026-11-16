@@ -49,9 +49,9 @@ predictable fallback. Controlled errors carry no password or entropy bytes.
 ## Ownership and integration limits
 
 `GeneratedPassword` owns a zeroizing string and only exposes plaintext through
-the explicit borrowed `as_str()` accessor. Neither the password owner nor its
-private field supports Debug, Clone, Copy or automatic serialization. Entropy
-buffers and partial output are zeroizing and dropped on failure. The output
+the explicit borrowed `as_str()` accessor. The public password owner does not
+implement Debug, Clone, Copy or automatic serialization; its buffer is private.
+Entropy buffers and partial output are zeroizing and dropped on failure. The output
 allocation is reserved before generation and never grows while holding plaintext.
 Caller copies, temporary compiler/allocator copies, swap and OS dumps cannot be
 guaranteed erased.
@@ -84,3 +84,19 @@ cargo test -p codeward-core --doc --locked --offline password
 Use the pinned Rust 1.99.1 toolchain and synthetic data. These checks establish
 bounded generator behavior, not a completed generation/save UI, platform runtime
 acceptance or real-credential readiness.
+
+Local verification on 2026-11-16 used Apple silicon macOS 26.3.1 (25D2128) and
+Rust 1.99.1. The seven generator tests also passed under a macOS sandbox denying
+network access, including the native randomness entry point. The complete
+all-feature workspace suite passed: 144 core unit tests, 22 format integration
+tests, 11 host/pilot unit tests, 110 macOS storage tests and all doctests. Two
+storage tests requiring special execution stayed ignored; live OS-event and
+other-platform native validation were not performed for this slice.
+
+Default workspace check, all-target/all-feature Clippy with warnings denied,
+rustfmt, whitespace and 166 relative documentation links passed. Independent
+read-only review of `7fd7b8e..e803c56` found no Critical or Important issues and
+independently reran all seven generator tests. Its single documentation
+clarification about the public owner versus its private buffer type is corrected
+above. No runtime correction or deferred finding remains. This is local evidence;
+current-head hosted three-platform CI has not been run for this branch.

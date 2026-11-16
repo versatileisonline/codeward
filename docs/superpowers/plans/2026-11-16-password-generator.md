@@ -43,23 +43,23 @@ digits: bool, symbols: bool }`, `Default` as specified above;
 `InvalidOptions`, `RandomnessUnavailable`, `AllocationFailed`. Keep entropy
 injection private in `generate_with(options, fill)`; no production configurable RNG.
 
-- [ ] Write tests first for default and every valid length/class union; exact
+- [x] Write tests first for default and every valid length/class union; exact
   symbols; invalid preferences before entropy; all byte preimages for every union;
   rejected-byte refill; entropy failure at start and after partial output; real OS
   entry point. Compile-fail doctests deny Debug, Clone, Copy and serialization.
-- [ ] Run `cargo test -p codeward-core --lib --locked --offline password::tests`.
+- [x] Run `cargo test -p codeward-core --lib --locked --offline password::tests`.
   Expected initially: missing generator interfaces, then all scenarios pass.
-- [ ] Implement minimal bounded alphabet construction, fallible zeroizing String
+- [x] Implement minimal bounded alphabet construction, fallible zeroizing String
   allocation, private entropy sampling and explicit password accessor. The maximum
   alphabet is 84 distinct ASCII bytes; use a widened 256-based rejection limit.
-- [ ] Document API usage without printing passwords, sampling, failure behavior,
+- [x] Document API usage without printing passwords, sampling, failure behavior,
   plaintext lifetime limits and deferred session/UI integration; update reader maps.
-- [ ] Run focused tests and `cargo test -p codeward-core --doc --locked --offline password`;
+- [x] Run focused tests and `cargo test -p codeward-core --doc --locked --offline password`;
   expected: all generator tests and four negative doctests pass.
-- [ ] Run default workspace check, workspace all-feature tests, rustfmt,
+- [x] Run default workspace check, workspace all-feature tests, rustfmt,
   all-target/all-feature Clippy with warnings denied and `git diff --check`.
   Expected: all checks pass; record native/manual ignored-test limits.
-- [ ] Commit explicit paths, request independent branch review, fix material
+- [x] Commit explicit paths, request independent branch review, fix material
   findings with failing regressions, and leave the branch reviewable without merge.
 
 ## Execution notes
