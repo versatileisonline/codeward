@@ -14,6 +14,7 @@ pub mod credentials;
 pub mod crypto;
 pub mod encoding;
 pub mod envelope;
+pub mod password;
 pub mod recovery;
 pub mod transaction;
 pub mod vault;
