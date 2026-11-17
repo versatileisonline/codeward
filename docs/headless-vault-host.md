@@ -54,6 +54,12 @@ An ordinary save completion includes a separate refresh result. Revocation
 can discard that work and report the proven commit while the refresh worker
 finishes. Refresh never extends the inactivity deadline.
 
+The [targeted write commands](scoped-credential-writes.md) add
+`save_generated_password` from a current draft and `delete_credential` from a
+current selected record. They copy only bounded command inputs on the control
+thread; snapshot rebuilding and encryption use the same background preparation.
+Their completions use the existing commit/status/refresh surface above.
+
 ## Event-loop boundary
 
 The [headless control loop](headless-session-events.md) polls for worker results
@@ -65,8 +71,9 @@ any queued credential page and rechecks it before delivery.
 The control loop can open storage on a worker, including managed-path preparation,
 writer acquisition, and the baseline read. Its synchronous host constructors
 remain available for headless tests. The [macOS session pilot](macos-desktop-pilot.md)
-now exercises packaged synthetic event/redaction IPC. Draft ownership, close
-dialogs, credential IPC/UI and Windows/Linux desktop events retain later gates.
+now exercises packaged synthetic event/redaction IPC. Generated-password draft
+ownership and targeted writes are available in Rust; general edit/close dialogs,
+credential IPC/UI and Windows/Linux desktop events retain later gates.
 The macOS writer remains opt-in for synthetic development.
 
 ## Evidence

@@ -51,7 +51,10 @@ The [session draft layer](../../docs/password-drafts.md) wraps that primitive wi
 one volatile password, an opaque scoped reference, explicit bounded previews,
 queued-response validation and discard. Lock/reload and changed-snapshot adoption
 release the retained draft. Generation returns no plaintext and never saves a
-record; credential edit forms and applying generated drafts to saves remain later work.
+record. The [scoped write layer](../../docs/scoped-credential-writes.md) applies a
+current generated draft to an existing credential or explicitly deletes a selected
+record through the same background commit/refresh protocol. Credential creation,
+general editing and rendered forms remain later work.
 
 `credentials` validates record IDs, field byte limits, timestamp order, unique IDs
 and the exact version 1 JSON schema. Its decoder rejects duplicate/unknown/missing

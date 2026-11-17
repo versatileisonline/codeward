@@ -104,7 +104,9 @@ The [generated-password Rust draft layer](password-drafts.md) now owns one volat
 password under scoped session/headless operations. Generation returns an opaque
 reference, with separate reveal, state-only validation and discard. Stale references
 cannot reveal or discard a replacement draft; lock and changed-snapshot refresh
-release the retained password. Applying a generated draft to a credential save,
+release the retained password. The [scoped Rust write layer](scoped-credential-writes.md)
+now applies a current generated draft to an existing credential and explicitly
+deletes selected records, without bulk UI snapshots. Record creation, general
 edit-form lifecycle and the limited Tauri wire surface remain later integration.
 
 The [selected-record Rust foundation](scoped-credential-reads.md) now supplies
