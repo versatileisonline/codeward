@@ -60,7 +60,10 @@ for state-only queued-delivery checks, with the same controlled errors.
 - [x] Document API, stale/unknown outcomes, returned-copy obligations and later UI.
 - [x] Run default workspace check, all-feature/all-target Clippy, rustfmt,
   documentation/whitespace checks and focused core tests using Rust 1.99.1.
-- [ ] Review the combined branch independently and fix material findings.
+- [x] Review the combined branch independently and fix material findings.
 - [ ] Publish the exact tested tree and create a draft PR; record final current-head
   hosted formatting/macOS/Linux/Windows results. If CI is unavailable, run the full
   equivalent local suite and report its platform limits. Do not merge.
+
+Delivery and current-head CI results are recorded in the PR body, preserving the
+tested source head without a follow-up source commit solely to copy run metadata.

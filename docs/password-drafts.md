@@ -87,3 +87,25 @@ cargo test -p codeward-core --doc --locked --offline transaction::session::draft
 
 Use the pinned Rust 1.99.1 toolchain and synthetic data. Final current-head PR/CI
 evidence distinguishes portable checks from native platform and installed-UI claims.
+
+## Local evidence and review
+
+On 2026-11-16, Apple silicon macOS 26.3.1 and Rust 1.99.1 passed all eight session
+and three host scenarios, six new compile-fail doctests, default workspace check,
+all-target/all-feature Clippy with warnings denied, rustfmt, whitespace checks and
+184 relative documentation links. These focused checks complement the generator's
+[earlier evidence](password-generation.md); final current-head three-platform CI
+is recorded in the combined PR rather than inferred from those earlier runs.
+
+Independent read-only review of `7fd7b8e..6f9eeda` found no Critical or Important
+issues. One minor cleanup-hardening item is deferred: if `copy_text` allocation
+fails during a draft reveal and inactivity expires during that allocation, the
+allocation error returns before the final expiry poll. No plaintext is returned;
+the retained draft is released by the next scheduled deadline poll or privileged
+operation. Successful copying and generation already perform final expiry checks.
+
+Review retained the stated scope: Tauri/UI, clipboard and native event integration;
+save-generated-draft/edit/ordinary-close workflows; real-vault admission; and
+guaranteed erasure of caller/allocator/OS copies require their separate work. The
+additional state-only validation method fulfills queued-delivery obligations
+without copying plaintext. Hosted current-head CI remains the full-suite gate.
