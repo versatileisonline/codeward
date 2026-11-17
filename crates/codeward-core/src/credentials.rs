@@ -51,8 +51,8 @@ impl Error for CredentialError {}
 
 /// Borrowed record fields; callers own the lifetime/cleanup of their inputs.
 ///
-/// IDs must already be 32 lowercase hex characters. ID generation and timestamps
-/// are responsibilities of future authorized mutations, not this schema model.
+/// IDs must already be 32 lowercase hex characters. ID generation and timestamp
+/// choices belong to authorized mutation operations, not this schema model.
 pub struct CredentialInput<'a> {
     /// Opaque record ID, unique within its snapshot.
     pub id: &'a str,

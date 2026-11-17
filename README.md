@@ -21,6 +21,9 @@ Use synthetic data when exploring the project; it is not ready for real password
   configurable length and character classes, and zeroizing ownership. Scoped Rust
   sessions retain, reveal and discard one volatile draft; desktop controls remain
   future integration work.
+- **Targeted Rust credential writes:** explicitly save a generated draft to an
+  existing credential or delete a selected record through background committed
+  writes, with failure/retry and lock handling.
 - **Native persistence experiments:** stage and publish encrypted vault updates
   on APFS, NTFS and ext4, coordinate cooperating writers, and handle failed or
   uncertain saves without premature success acknowledgements.

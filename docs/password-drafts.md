@@ -66,9 +66,10 @@ secret-bearing forms. No clipboard command or browser persistence is introduced.
 
 ## Scope and verification
 
-This slice owns a generated password, not a complete credential edit form. Applying
-a generated draft to an explicit credential save, edit drafts, ordinary-close
-Save/Discard/Cancel dialogs, Tauri transport and rendered UI remain later work under
+This slice owns a generated password, not a complete credential edit form. The
+[targeted write layer](scoped-credential-writes.md) now applies a current draft to
+an existing credential through explicit background saving. General edit drafts,
+ordinary-close Save/Discard/Cancel dialogs, Tauri transport and rendered UI remain later work under
 [ADR-0005](adr/0005-session-and-drafts.md) and the
 [UI/core contract](ui-core-contract.md). No real-vault admission or milestone
 acceptance is inferred.

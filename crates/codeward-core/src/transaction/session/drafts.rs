@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use super::*;
 use crate::{
-    credentials::copy_text,
+    credentials::{copy_text, valid_id},
     password::{GeneratedPassword, GenerationError, PasswordOptions, generate_password},
 };
 
@@ -145,7 +145,7 @@ impl Session {
         expected_revision: u64,
         generate: impl FnOnce() -> Result<GeneratedPassword, GenerationError>,
     ) -> Result<PasswordDraftRef, TransactionError> {
-        let source = self.check_draft_access(worker, caller, generation, expected_revision)?;
+        let source = self.check_current_access(worker, caller, generation, expected_revision)?;
         let result = generate();
         if self.poll_inactivity() {
             return Err(TransactionError::Locked);
@@ -166,7 +166,7 @@ impl Session {
         Ok(reference)
     }
 
-    fn check_draft_access<L: WriterLease>(
+    pub(super) fn check_current_access<L: WriterLease>(
         &mut self,
         worker: &Committer<L>,
         caller: CallerId,
@@ -201,7 +201,7 @@ impl Session {
         if reference.caller != caller || !Arc::ptr_eq(&reference.scope, &self.scope) {
             return Err(TransactionError::Unauthorized);
         }
-        let source = self.check_draft_access(
+        let source = self.check_current_access(
             worker,
             caller,
             reference.generation,
@@ -216,6 +216,34 @@ impl Session {
             return Err(TransactionError::StalePasswordDraft);
         }
         Ok(())
+    }
+
+    pub(in crate::transaction) fn generated_password_input<L: WriterLease>(
+        &mut self,
+        worker: &Committer<L>,
+        caller: CallerId,
+        request: Request,
+        id: &str,
+        reference: &PasswordDraftRef,
+    ) -> Result<super::write::OwnedWrite, TransactionError> {
+        self.validate_password_draft(worker, caller, reference)?;
+        if request.expected_revision != reference.revision() {
+            return Err(VaultError::RevisionConflict.into());
+        }
+        if !valid_id(id) {
+            return Err(TransactionError::InvalidCredentialId);
+        }
+        let input = (|| {
+            let draft = self.password_draft.as_ref().expect("validated draft");
+            Ok(super::write::OwnedWrite::GeneratedPassword {
+                id: copy_text(id).map_err(VaultError::from)?,
+                password: copy_text(draft.password.as_str()).map_err(VaultError::from)?,
+            })
+        })();
+        if self.poll_inactivity() {
+            return Err(TransactionError::Locked);
+        }
+        input
     }
 }
 

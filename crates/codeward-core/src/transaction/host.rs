@@ -213,6 +213,33 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         self.dispatch_preparation(request, OwnedWrite::Contents(snapshot))
     }
 
+    /// Queue replacement of one existing record's password using a current draft.
+    /// Only bounded command inputs are copied here; the worker builds/encrypts the
+    /// complete snapshot. Poll for commit outcome and independent snapshot refresh.
+    pub fn save_generated_password(
+        &mut self,
+        request: Request,
+        id: &str,
+        reference: &PasswordDraftRef,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        let input = session.generated_password_input(worker, caller, request, id, reference)?;
+        self.dispatch_preparation(request, input)
+    }
+
+    /// Queue explicit deletion of one existing credential at the selected current
+    /// generation/revision. This does not imply undo or a committed save yet.
+    pub fn delete_credential(
+        &mut self,
+        generation: u64,
+        request: Request,
+        id: &str,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        let input = session.delete_credential_input(worker, caller, generation, request, id)?;
+        self.dispatch_preparation(request, input)
+    }
+
     /// Queue replacement of the master password from restricted recovery.
     /// Poll for the outcome before reporting recovery complete.
     pub fn replace_master_password(
@@ -627,7 +654,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     ) -> Result<(), HostError> {
         let (session, worker, caller) = self.idle()?;
         let mut authorization = session.begin_preparation(worker, caller, &input)?;
-        let refresh = matches!(input, OwnedWrite::Contents(_));
+        let refresh = input.refreshes_contents();
         let mut worker = self
             .worker
             .take()

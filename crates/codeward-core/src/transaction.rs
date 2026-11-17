@@ -136,7 +136,7 @@ pub enum TransactionError {
     GenerationExhausted,
     /// Authentication belongs to a canceled, replaced or otherwise stale attempt.
     AuthenticationCanceled,
-    /// A monotonic observation regressed or a deadline could not be represented.
+    /// A monotonic observation/deadline or bounded wall-clock timestamp is unavailable.
     ClockUnavailable,
     /// Allocation failed while preparing a core operation or response.
     AllocationFailed,

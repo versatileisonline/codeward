@@ -15,6 +15,7 @@ const PASSWORD: &str = "synthetic password";
 type Host = HeadlessVault<Lease>;
 
 mod drafts;
+mod mutations;
 mod selected;
 
 fn next(host: &mut Host) -> Result<HostCompletion, HostError> {
