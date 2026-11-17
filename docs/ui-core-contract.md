@@ -100,6 +100,13 @@ See [Tauri capabilities](https://v2.tauri.app/security/capabilities/).
 
 ## Secret lifetime and UI limits
 
+The [generated-password Rust draft layer](password-drafts.md) now owns one volatile
+password under scoped session/headless operations. Generation returns an opaque
+reference, with separate reveal, state-only validation and discard. Stale references
+cannot reveal or discard a replacement draft; lock and changed-snapshot refresh
+release the retained password. Applying a generated draft to a credential save,
+edit-form lifecycle and the limited Tauri wire surface remain later integration.
+
 The [selected-record Rust foundation](scoped-credential-reads.md) now supplies
 password-free details and a separately requested password reveal through `Session`
 and `HeadlessVault`. Both require current generation and expected committed revision.

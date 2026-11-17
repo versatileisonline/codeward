@@ -18,8 +18,9 @@ Use synthetic data when exploring the project; it is not ready for real password
 - **Session control:** keep authorization in Rust, lock access, reject stale
   requests and authentication results, and enforce an inactivity deadline.
 - **Rust password generation:** generate unsaved passwords with OS randomness,
-  configurable length and character classes, and zeroizing ownership. Session
-  drafts and the generator interface remain future integration work.
+  configurable length and character classes, and zeroizing ownership. Scoped Rust
+  sessions retain, reveal and discard one volatile draft; desktop controls remain
+  future integration work.
 - **Native persistence experiments:** stage and publish encrypted vault updates
   on APFS, NTFS and ext4, coordinate cooperating writers, and handle failed or
   uncertain saves without premature success acknowledgements.
