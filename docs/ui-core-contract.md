@@ -40,7 +40,7 @@ be refined before implementation without widening privileges silently.
 | `list_credentials` / `search_credentials` | Query and bounded pagination for the selected vault | Only required summaries such as record ID, title, username and revision; no passwords or full-vault dump |
 | `get_credential_details` / `reveal_password` | Record ID and requested details/reveal action | Only the selected fields, including plaintext when authorized for that interaction; sensitive notes are not included in list results |
 | `generate_password` | Validated generation preferences | Volatile draft reference; plaintext only when needed for preview/use; generation does not save |
-| `save_credential` | Changed fields or generated-draft reference, record ID when editing, expected revision and request ID | Committed revision after success, or controlled conflict/failure/unknown-outcome status |
+| `save_credential` | Complete title/username/URL/notes form with explicit password choice (Keep when editing, Provided or Generated); record ID when editing, expected revision and request ID | Committed revision after success, or controlled conflict/failure/unknown-outcome status |
 | `delete_credential` | Record ID, expected revision, request ID and explicit delete intent | Committed revision after deletion commits, or controlled failure; no undelete guarantee |
 | `lock_vault` / `get_session_state` | Lock request or state query | Locked/open state, session generation, and safe operation status; never secret material |
 | `get_operation_status` | Request/operation reference | Proven commit outcome/revision if available, otherwise an explicit unresolved outcome; no credential payload |
@@ -106,8 +106,10 @@ reference, with separate reveal, state-only validation and discard. Stale refere
 cannot reveal or discard a replacement draft; lock and changed-snapshot refresh
 release the retained password. The [scoped Rust write layer](scoped-credential-writes.md)
 now applies a current generated draft to an existing credential and explicitly
-deletes selected records, without bulk UI snapshots. Record creation, general
-edit-form lifecycle and the limited Tauri wire surface remain later integration.
+deletes selected records, without bulk UI snapshots. The
+[credential form API](credential-editing.md) now supplies creation and general
+editing, including password Keep/Provided/Generated choices. Rendered form lifecycle
+and the limited Tauri wire surface remain later integration.
 
 The [selected-record Rust foundation](scoped-credential-reads.md) now supplies
 password-free details and a separately requested password reveal through `Session`

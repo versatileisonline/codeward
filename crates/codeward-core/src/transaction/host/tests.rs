@@ -15,6 +15,7 @@ const PASSWORD: &str = "synthetic password";
 type Host = HeadlessVault<Lease>;
 
 mod drafts;
+mod editing;
 mod mutations;
 mod selected;
 

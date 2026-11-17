@@ -15,6 +15,7 @@ enum Access {
 
 mod authentication;
 mod drafts;
+mod editing;
 mod listing;
 mod mutations;
 mod policy;
@@ -27,6 +28,7 @@ use authentication::Attempt;
 pub use authentication::{AuthenticationJob, AuthenticationResult};
 use drafts::PasswordDraft;
 pub use drafts::{PasswordDraftRef, PasswordDraftReveal};
+pub use editing::{CredentialForm, CredentialPassword};
 pub use listing::{CredentialCursor, CredentialPage, CredentialSummary, MAX_CREDENTIAL_SUMMARIES};
 use policy::Inactivity;
 pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent};

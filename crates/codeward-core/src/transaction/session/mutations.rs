@@ -2,7 +2,10 @@
 
 use super::write::OwnedWrite;
 use super::*;
-use crate::credentials::{Credential, CredentialSnapshot, MAX_TIMESTAMP, copy_text, valid_id};
+use crate::credentials::{
+    Credential, CredentialError, CredentialSnapshot, MAX_CREDENTIALS, MAX_TIMESTAMP, copy_text,
+    valid_id,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 impl Session {
@@ -81,23 +84,53 @@ pub(super) fn changed_snapshot(
     let selected = records
         .binary_search_by(|record| record.fields().id.cmp(id))
         .map_err(|_| TransactionError::CredentialNotFound)?;
+    let replacement = if let Some((password, now)) = replacement {
+        let mut fields = records[selected].fields();
+        fields.password = password;
+        fields.updated_at = fields.updated_at.max(now);
+        Some(Credential::new(fields).map_err(VaultError::from)?)
+    } else {
+        None
+    };
+    snapshot_with_change(snapshot, Some(selected), replacement, permit)
+}
+
+pub(super) fn snapshot_with_change(
+    snapshot: &CredentialSnapshot,
+    selected: Option<usize>,
+    replacement: Option<Credential>,
+    permit: &Permit,
+) -> Result<CredentialSnapshot, TransactionError> {
+    if permit.canceled() {
+        return Err(TransactionError::Locked);
+    }
+    let records = snapshot.credentials();
+    if selected.is_some_and(|index| index >= records.len()) {
+        return Err(TransactionError::CredentialNotFound);
+    }
+    let count =
+        records.len() - usize::from(selected.is_some()) + usize::from(replacement.is_some());
+    if count > MAX_CREDENTIALS {
+        return Err(VaultError::from(CredentialError::LimitExceeded).into());
+    }
     let mut changed = Vec::new();
     changed
-        .try_reserve_exact(records.len() - usize::from(replacement.is_none()))
+        .try_reserve_exact(count)
         .map_err(|_| TransactionError::AllocationFailed)?;
     for (index, record) in records.iter().enumerate() {
         if permit.canceled() {
             return Err(TransactionError::Locked);
         }
-        let mut fields = record.fields();
-        if index == selected {
-            let Some((password, now)) = replacement else {
-                continue;
-            };
-            fields.password = password;
-            fields.updated_at = fields.updated_at.max(now);
+        if Some(index) == selected {
+            continue;
         }
-        changed.push(Credential::new(fields).map_err(VaultError::from)?);
+        changed.push(Credential::new(record.fields()).map_err(VaultError::from)?);
+    }
+    if let Some(record) = replacement {
+        changed.push(record);
+    }
+    if permit.canceled() {
+        return Err(TransactionError::Locked);
     }
     Ok(CredentialSnapshot::new(changed).map_err(VaultError::from)?)
 }

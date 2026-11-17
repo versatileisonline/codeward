@@ -74,16 +74,14 @@ pub struct CredentialInput<'a> {
 
 impl CredentialInput<'_> {
     fn validate(&self) -> Result<(), CredentialError> {
-        let text = [
+        validate_text([
             self.title,
             self.username,
             self.password,
             self.url,
             self.notes,
-        ];
+        ])?;
         if !valid_id(self.id)
-            || self.title.is_empty()
-            || text.iter().zip(TEXT_LIMITS).any(|(s, max)| s.len() > max)
             || self.updated_at > MAX_TIMESTAMP
             || self.created_at > self.updated_at
         {
@@ -170,6 +168,13 @@ pub(crate) fn valid_id(id: &str) -> bool {
         && id
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+pub(crate) fn validate_text(text: [&str; 5]) -> Result<(), CredentialError> {
+    if text[0].is_empty() || text.iter().zip(TEXT_LIMITS).any(|(s, max)| s.len() > max) {
+        return Err(CredentialError::InvalidCredential);
+    }
+    Ok(())
 }
 
 pub(crate) fn copy_text(text: &str) -> Result<Zeroizing<String>, CredentialError> {

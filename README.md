@@ -24,6 +24,9 @@ Use synthetic data when exploring the project; it is not ready for real password
 - **Targeted Rust credential writes:** explicitly save a generated draft to an
   existing credential or delete a selected record through background committed
   writes, with failure/retry and lock handling.
+- **Scoped Rust creation/editing:** save one credential form with Rust-assigned
+  identity/timestamps and keep, entered or generated passwords, without exposing
+  the full vault to the future interface.
 - **Native persistence experiments:** stage and publish encrypted vault updates
   on APFS, NTFS and ext4, coordinate cooperating writers, and handle failed or
   uncertain saves without premature success acknowledgements.

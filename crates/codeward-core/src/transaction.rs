@@ -29,9 +29,9 @@ pub use event_loop::{
 pub use host::{AccessProof, HeadlessVault, HostCompletion, HostError};
 pub use session::{
     ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialDetails,
-    CredentialPage, CredentialSummary, INACTIVITY_TIMEOUT, MAX_CREDENTIAL_SUMMARIES,
-    PASSWORD_REVEAL_DURATION, PasswordDraftRef, PasswordDraftReveal, PasswordReveal, Session,
-    SessionActivity, SessionEvent,
+    CredentialForm, CredentialPage, CredentialPassword, CredentialSummary, INACTIVITY_TIMEOUT,
+    MAX_CREDENTIAL_SUMMARIES, PASSWORD_REVEAL_DURATION, PasswordDraftRef, PasswordDraftReveal,
+    PasswordReveal, Session, SessionActivity, SessionEvent,
 };
 pub use storage::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 pub use worker::Committer;

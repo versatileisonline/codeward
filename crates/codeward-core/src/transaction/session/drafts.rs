@@ -245,6 +245,24 @@ impl Session {
         }
         input
     }
+
+    pub(super) fn copy_password_draft<L: WriterLease>(
+        &mut self,
+        worker: &Committer<L>,
+        caller: CallerId,
+        reference: &PasswordDraftRef,
+    ) -> Result<Zeroizing<String>, TransactionError> {
+        self.validate_password_draft(worker, caller, reference)?;
+        let draft = self
+            .password_draft
+            .as_ref()
+            .expect("validated current draft");
+        let result = copy_text(draft.password.as_str()).map_err(VaultError::from);
+        if self.poll_inactivity() {
+            return Err(TransactionError::Locked);
+        }
+        Ok(result?)
+    }
 }
 
 #[cfg(test)]

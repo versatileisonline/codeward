@@ -53,8 +53,10 @@ queued-response validation and discard. Lock/reload and changed-snapshot adoptio
 release the retained draft. Generation returns no plaintext and never saves a
 record. The [scoped write layer](../../docs/scoped-credential-writes.md) applies a
 current generated draft to an existing credential or explicitly deletes a selected
-record through the same background commit/refresh protocol. Credential creation,
-general editing and rendered forms remain later work.
+record through the same background commit/refresh protocol. The
+[credential form layer](../../docs/credential-editing.md) now completes creation
+and full editing with Rust-owned identity/timestamps and Keep/Provided/Generated
+password choices. Tauri integration and rendered forms are next.
 
 `credentials` validates record IDs, field byte limits, timestamp order, unique IDs
 and the exact version 1 JSON schema. Its decoder rejects duplicate/unknown/missing
