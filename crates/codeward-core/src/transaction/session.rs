@@ -16,6 +16,7 @@ enum Access {
 mod authentication;
 mod drafts;
 mod listing;
+mod mutations;
 mod policy;
 pub(super) mod refresh;
 mod selected;

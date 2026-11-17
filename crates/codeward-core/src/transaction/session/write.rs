@@ -5,10 +5,20 @@ use std::borrow::Borrow;
 use hmac::{Hmac, KeyInit, Mac};
 
 use super::*;
-use crate::{credentials::CredentialSnapshot, recovery::RecoveryError};
+use crate::{
+    credentials::{CredentialSnapshot, valid_id},
+    recovery::RecoveryError,
+};
 
 pub(in crate::transaction) enum WriteInput<S, T> {
     Contents(S),
+    GeneratedPassword {
+        id: T,
+        password: T,
+    },
+    DeleteCredential {
+        id: T,
+    },
     Recovery {
         password: T,
         confirmation: T,
@@ -27,6 +37,12 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
     fn validate(&self, access: &Access) -> Result<(), TransactionError> {
         match (self, access) {
             (Self::Contents(_), Access::Master(_)) => Ok(()),
+            (
+                Self::GeneratedPassword { id, .. } | Self::DeleteCredential { id },
+                Access::Master(_),
+            ) => valid_id(id.as_ref())
+                .then_some(())
+                .ok_or(TransactionError::InvalidCredentialId),
             (
                 Self::Recovery {
                     password,
@@ -55,6 +71,8 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
         mac.update(b"Codeward volatile request v1\0");
         mac.update(match self {
             Self::Contents(_) => b"contents",
+            Self::GeneratedPassword { .. } => b"generated-password",
+            Self::DeleteCredential { .. } => b"delete-credential",
             Self::Recovery { .. } => b"recovery",
             Self::Creation { .. } => b"creation",
         });
@@ -67,6 +85,11 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
             Self::Contents(snapshot) => {
                 field(&snapshot.borrow().encode().map_err(VaultError::from)?)
             }
+            Self::GeneratedPassword { id, password } => {
+                field(id.as_ref().as_bytes());
+                field(password.as_ref().as_bytes());
+            }
+            Self::DeleteCredential { id } => field(id.as_ref().as_bytes()),
             Self::Recovery {
                 password,
                 confirmation,
@@ -85,6 +108,13 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
             }
         }
         Ok(mac.finalize().into_bytes().into())
+    }
+
+    pub(in crate::transaction) fn refreshes_contents(&self) -> bool {
+        matches!(
+            self,
+            Self::Contents(_) | Self::GeneratedPassword { .. } | Self::DeleteCredential { .. }
+        )
     }
 }
 
@@ -139,6 +169,31 @@ impl WritePreparation {
         let candidate = match (input, &mut self.access) {
             (WriteInput::Contents(snapshot), Access::Master(access)) => {
                 access.prepare_contents(request.expected_revision, snapshot.borrow())?
+            }
+            (WriteInput::GeneratedPassword { id, password }, Access::Master(access)) => {
+                let now = super::mutations::unix_millis(std::time::SystemTime::now())?;
+                let snapshot = super::mutations::changed_snapshot(
+                    access.snapshot(),
+                    id.as_ref(),
+                    Some((password.as_ref(), now)),
+                    &self.permit,
+                )?;
+                if self.permit.canceled() {
+                    return Err(TransactionError::Locked);
+                }
+                access.prepare_contents(request.expected_revision, &snapshot)?
+            }
+            (WriteInput::DeleteCredential { id }, Access::Master(access)) => {
+                let snapshot = super::mutations::changed_snapshot(
+                    access.snapshot(),
+                    id.as_ref(),
+                    None,
+                    &self.permit,
+                )?;
+                if self.permit.canceled() {
+                    return Err(TransactionError::Locked);
+                }
+                access.prepare_contents(request.expected_revision, &snapshot)?
             }
             (
                 WriteInput::Recovery {
@@ -228,12 +283,12 @@ impl Session {
         )
     }
 
-    fn prepare_write<L: WriterLease>(
+    pub(super) fn prepare_write<L: WriterLease>(
         &mut self,
         worker: &mut Committer<L>,
         caller: CallerId,
         request: Request,
-        input: BorrowedWrite<'_>,
+        input: WriteInput<impl Borrow<CredentialSnapshot>, impl AsRef<str>>,
     ) -> Result<OperationRef, TransactionError> {
         let mut preparation = self.begin_preparation(worker, caller, &input)?;
         let result = preparation.run(worker, request, input);
