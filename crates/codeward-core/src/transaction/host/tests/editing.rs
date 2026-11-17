@@ -145,11 +145,26 @@ fn headless_generated_creation_failure_retains_draft_and_deduplicates_before_exp
         })
     ));
     assert_eq!(host.validate_password_draft(&draft), Ok(()));
+    let preview = host.reveal_password_draft(&draft).unwrap();
     let events = model.events();
     host.create_credential(
         generation,
         request(1, 1),
         form(CredentialPassword::Generated(&draft)),
+    )
+    .unwrap();
+    assert!(matches!(
+        next(&mut host),
+        Ok(HostCompletion::Transaction {
+            outcome: Ok(OperationStatus::Failed(StorageError::CreateStage)),
+            ..
+        })
+    ));
+    assert_eq!(model.events(), events);
+    host.create_credential(
+        generation,
+        request(1, 1),
+        form(CredentialPassword::Provided(preview.password.as_str())),
     )
     .unwrap();
     assert!(matches!(

@@ -55,6 +55,9 @@ generating IDs/time or rebuilding snapshots, then reuses commit/refresh machiner
 - [x] Add bounded idle-gated host delegates and normal post-commit refresh.
 - [x] Verify focused host tests and document exact source/status/ownership limits.
 - [x] Run default check, Clippy, rustfmt, whitespace/docs and appropriate regressions.
-- [ ] Independently review and fix material findings with failing regressions.
+- [x] Independently review and fix material findings with failing regressions.
 - [ ] Open a draft PR; record current head/base/test-merge and final CI in its body.
   Do not merge. Next implementation phase is the real macOS Tauri/React UI bridge.
+
+Review and exact-head CI delivery evidence is recorded in PR #59's description,
+avoiding a follow-up source commit solely to copy CI metadata.
