@@ -4,6 +4,7 @@ use std::borrow::Borrow;
 
 use hmac::{Hmac, KeyInit, Mac};
 
+use super::editing::OwnedCredentialFields;
 use super::*;
 use crate::{
     credentials::{CredentialSnapshot, valid_id},
@@ -12,6 +13,11 @@ use crate::{
 
 pub(in crate::transaction) enum WriteInput<S, T> {
     Contents(S),
+    CreateCredential(OwnedCredentialFields),
+    UpdateCredential {
+        id: T,
+        fields: OwnedCredentialFields,
+    },
     GeneratedPassword {
         id: T,
         password: T,
@@ -37,6 +43,13 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
     fn validate(&self, access: &Access) -> Result<(), TransactionError> {
         match (self, access) {
             (Self::Contents(_), Access::Master(_)) => Ok(()),
+            (Self::CreateCredential(fields), Access::Master(_)) => fields.validate(true),
+            (Self::UpdateCredential { id, fields }, Access::Master(_)) => {
+                if !valid_id(id.as_ref()) {
+                    return Err(TransactionError::InvalidCredentialId);
+                }
+                fields.validate(false)
+            }
             (
                 Self::GeneratedPassword { id, .. } | Self::DeleteCredential { id },
                 Access::Master(_),
@@ -71,6 +84,8 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
         mac.update(b"Codeward volatile request v1\0");
         mac.update(match self {
             Self::Contents(_) => b"contents",
+            Self::CreateCredential(_) => b"credential-create",
+            Self::UpdateCredential { .. } => b"credential-update",
             Self::GeneratedPassword { .. } => b"generated-password",
             Self::DeleteCredential { .. } => b"delete-credential",
             Self::Recovery { .. } => b"recovery",
@@ -84,6 +99,11 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
         match self {
             Self::Contents(snapshot) => {
                 field(&snapshot.borrow().encode().map_err(VaultError::from)?)
+            }
+            Self::CreateCredential(fields) => fields.intent(&mut field),
+            Self::UpdateCredential { id, fields } => {
+                field(id.as_ref().as_bytes());
+                fields.intent(&mut field);
             }
             Self::GeneratedPassword { id, password } => {
                 field(id.as_ref().as_bytes());
@@ -113,7 +133,11 @@ impl<S: Borrow<CredentialSnapshot>, T: AsRef<str>> WriteInput<S, T> {
     pub(in crate::transaction) fn refreshes_contents(&self) -> bool {
         matches!(
             self,
-            Self::Contents(_) | Self::GeneratedPassword { .. } | Self::DeleteCredential { .. }
+            Self::Contents(_)
+                | Self::CreateCredential(_)
+                | Self::UpdateCredential { .. }
+                | Self::GeneratedPassword { .. }
+                | Self::DeleteCredential { .. }
         )
     }
 }
@@ -169,6 +193,26 @@ impl WritePreparation {
         let candidate = match (input, &mut self.access) {
             (WriteInput::Contents(snapshot), Access::Master(access)) => {
                 access.prepare_contents(request.expected_revision, snapshot.borrow())?
+            }
+            (WriteInput::CreateCredential(fields), Access::Master(access)) => {
+                let snapshot =
+                    super::editing::created_snapshot(access.snapshot(), &fields, &self.permit)?;
+                if self.permit.canceled() {
+                    return Err(TransactionError::Locked);
+                }
+                access.prepare_contents(request.expected_revision, &snapshot)?
+            }
+            (WriteInput::UpdateCredential { id, fields }, Access::Master(access)) => {
+                let snapshot = super::editing::updated_snapshot(
+                    access.snapshot(),
+                    id.as_ref(),
+                    &fields,
+                    &self.permit,
+                )?;
+                if self.permit.canceled() {
+                    return Err(TransactionError::Locked);
+                }
+                access.prepare_contents(request.expected_revision, &snapshot)?
             }
             (WriteInput::GeneratedPassword { id, password }, Access::Master(access)) => {
                 let now = super::mutations::unix_millis(std::time::SystemTime::now())?;
