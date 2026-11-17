@@ -14,6 +14,7 @@ enum Access {
 }
 
 mod authentication;
+mod drafts;
 mod listing;
 mod policy;
 pub(super) mod refresh;
@@ -23,6 +24,8 @@ mod tests;
 pub(super) mod write;
 use authentication::Attempt;
 pub use authentication::{AuthenticationJob, AuthenticationResult};
+use drafts::PasswordDraft;
+pub use drafts::{PasswordDraftRef, PasswordDraftReveal};
 pub use listing::{CredentialCursor, CredentialPage, CredentialSummary, MAX_CREDENTIAL_SUMMARIES};
 use policy::Inactivity;
 pub use policy::{ActivityRef, INACTIVITY_TIMEOUT, SessionActivity, SessionEvent};
@@ -32,7 +35,8 @@ pub use selected::{CredentialDetails, PASSWORD_REVEAL_DURATION, PasswordReveal};
 ///
 /// The core checks inactivity before privileged operations. The host must schedule
 /// deadline polls, deliver trusted security events and redact its own copies;
-/// no background timer, OS adapter, IPC or draft manager is supplied.
+/// no background timer, OS adapter or IPC is supplied. One generated-password
+/// draft may be retained until discard, replacement, revision change or revocation.
 /// After a commit, refresh a current content update or explicitly reload before
 /// preparing a new mutation. The old snapshot never stands in for a new revision.
 pub struct Session {
@@ -49,6 +53,7 @@ pub struct Session {
     authentication: Option<Arc<Attempt>>,
     authentication_job: Weak<()>,
     inactivity: Inactivity,
+    password_draft: Option<PasswordDraft>,
 }
 
 impl Session {
@@ -74,6 +79,7 @@ impl Session {
             authentication: None,
             authentication_job: Weak::new(),
             inactivity,
+            password_draft: None,
         })
     }
 
@@ -133,6 +139,7 @@ impl Session {
             permit.cancel();
         }
         self.access = None;
+        self.password_draft = None;
         self.intent_key = None;
         if let Some(next) = self.generation.checked_add(1) {
             self.generation = next;

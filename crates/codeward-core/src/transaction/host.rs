@@ -110,7 +110,7 @@ enum Pending<L: WriterLease> {
 /// Poll for worker results and schedule `inactivity_deadline` even when idle.
 /// The control loop supplies wakeups, trusted events and asynchronous opening.
 /// Direct constructors are synchronous. The host moves write preparation and
-/// commits to workers and holds no drafts.
+/// commits to workers. Its session may retain one volatile generated-password draft.
 pub struct HeadlessVault<L: WriterLease + Send + 'static> {
     // Drop revokes access before releasing the worker or dropping its receiver.
     session: Session,
@@ -308,6 +308,52 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     ) -> Result<PasswordReveal, HostError> {
         let (session, worker, caller) = self.idle()?;
         Ok(session.reveal_password(worker, caller, generation, expected_revision, id)?)
+    }
+
+    /// Generate one scoped unsaved draft without exposing plaintext or extending idle.
+    pub fn generate_password_draft(
+        &mut self,
+        generation: u64,
+        expected_revision: u64,
+        options: crate::password::PasswordOptions,
+    ) -> Result<PasswordDraftRef, HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.generate_password_draft(
+            worker,
+            caller,
+            generation,
+            expected_revision,
+            options,
+        )?)
+    }
+
+    /// Explicitly preview the current draft. Enforce the returned deadline and
+    /// validate the original reference/context again before queued delivery.
+    pub fn reveal_password_draft(
+        &mut self,
+        reference: &PasswordDraftRef,
+    ) -> Result<PasswordDraftReveal, HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.reveal_password_draft(worker, caller, reference)?)
+    }
+
+    /// Recheck a draft reference without returning plaintext or refreshing idle.
+    /// Pair this with the original reply's deadline before delivering queued data.
+    pub fn validate_password_draft(
+        &mut self,
+        reference: &PasswordDraftRef,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.validate_password_draft(worker, caller, reference)?)
+    }
+
+    /// Discard only the referenced current draft; never undo or reconcile a save.
+    pub fn discard_password_draft(
+        &mut self,
+        reference: &PasswordDraftRef,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.discard_password_draft(worker, caller, reference)?)
     }
 
     /// Current scoped generation. Poll before composing an access-state reply.

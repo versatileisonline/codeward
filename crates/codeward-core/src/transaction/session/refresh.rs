@@ -73,6 +73,9 @@ impl Session {
         if self.source == Some(target) {
             return Ok(None);
         }
+        // A proven changed commit invalidates the old revision's volatile draft,
+        // even if the subsequent snapshot refresh cannot complete.
+        self.password_draft = None;
         let bytes = worker.shared_base()?;
         let permit = Arc::new(Permit::new());
         let Some(Access::Master(access)) = self.access.take() else {

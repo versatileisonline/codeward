@@ -14,6 +14,7 @@ const OWNER: CallerId = CallerId(7);
 const PASSWORD: &str = "synthetic password";
 type Host = HeadlessVault<Lease>;
 
+mod drafts;
 mod selected;
 
 fn next(host: &mut Host) -> Result<HostCompletion, HostError> {

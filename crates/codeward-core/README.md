@@ -40,6 +40,19 @@ confirmation. The vault layer adds volatile enrollment lifetime/confirmation;
 native adapters exercise coherent password replacement and both access routes.
 The full offline enrollment/recovery workflow and messages await Milestone 3.
 
+`password::generate_password` creates an unsaved zeroizing password from native OS
+randomness, using uniform rejection sampling. It defaults to 24 characters and
+allows lengths 12–128 with selectable ASCII lowercase, uppercase, digits and the
+accepted symbol set. No session state, draft reference or save is created. See the
+[generator contract](../../docs/password-generation.md) for preferences, controlled
+failures, plaintext ownership and deferred host/UI integration.
+
+The [session draft layer](../../docs/password-drafts.md) wraps that primitive with
+one volatile password, an opaque scoped reference, explicit bounded previews,
+queued-response validation and discard. Lock/reload and changed-snapshot adoption
+release the retained draft. Generation returns no plaintext and never saves a
+record; credential edit forms and applying generated drafts to saves remain later work.
+
 `credentials` validates record IDs, field byte limits, timestamp order, unique IDs
 and the exact version 1 JSON schema. Its decoder rejects duplicate/unknown/missing
 fields and malformed/oversized input before exposing a complete snapshot. The

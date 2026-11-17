@@ -30,7 +30,8 @@ pub use host::{AccessProof, HeadlessVault, HostCompletion, HostError};
 pub use session::{
     ActivityRef, AuthenticationJob, AuthenticationResult, CredentialCursor, CredentialDetails,
     CredentialPage, CredentialSummary, INACTIVITY_TIMEOUT, MAX_CREDENTIAL_SUMMARIES,
-    PASSWORD_REVEAL_DURATION, PasswordReveal, Session, SessionActivity, SessionEvent,
+    PASSWORD_REVEAL_DURATION, PasswordDraftRef, PasswordDraftReveal, PasswordReveal, Session,
+    SessionActivity, SessionEvent,
 };
 pub use storage::{PublishError, PublishMode, Storage, StorageError, WriterLease};
 pub use worker::Committer;
@@ -121,6 +122,10 @@ pub enum TransactionError {
     CredentialNotFound,
     /// The list cursor belongs to an older session generation or committed revision.
     StaleCursor,
+    /// The generated-password draft was discarded, replaced or became stale.
+    StalePasswordDraft,
+    /// Validated generation preferences, entropy or bounded allocation failed.
+    PasswordGeneration(crate::password::GenerationError),
     /// Another transaction is active, including an uncertain outcome.
     Busy,
     /// A known ID was reused with different arguments or session generation.

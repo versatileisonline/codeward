@@ -15,6 +15,8 @@ Root:
 - [system-design.md](docs/system-design.md): System design and Mermaid diagrams.
 - [ui-core-contract.md](docs/ui-core-contract.md): UI commands, data boundaries, and permissions.
 - [scoped-credential-reads.md](docs/scoped-credential-reads.md): Selected-record detail/reveal payloads, authorization, stale-selection guards and reveal-lifetime obligations.
+- [password-generation.md](docs/password-generation.md): Unsaved Rust generator, character controls, uniform sampling, errors and plaintext ownership.
+- [password-drafts.md](docs/password-drafts.md): Scoped volatile generated passwords, explicit previews, stale references, revocation and delivery checks.
 - [session-authentication.md](docs/session-authentication.md): Split-phase core authentication, revocation, ownership and limits.
 - [session-inactivity.md](docs/session-inactivity.md): Core inactivity deadline, scoped activity, security events and host obligations.
 - [headless-vault-host.md](docs/headless-vault-host.md): Control-side lifecycle, worker outcomes and event-loop obligations.
@@ -75,6 +77,8 @@ Root:
 - [src/envelope.rs](crates/codeward-core/src/envelope.rs): Structural parsing and public authentication metadata.
 - [src/encoding.rs](crates/codeward-core/src/encoding.rs): In-memory envelope encoding from public metadata and encrypted bytes.
 - [src/crypto.rs](crates/codeward-core/src/crypto.rs): Bounded derivation/encryption primitives and secret ownership.
+- [src/password.rs](crates/codeward-core/src/password.rs): OS-backed unsaved password generation with bounded preferences and zeroizing ownership.
+- [src/password/tests.rs](crates/codeward-core/src/password/tests.rs): Exhaustive byte sampling, character-set/length bounds and entropy failure tests.
 - [src/credentials.rs](crates/codeward-core/src/credentials.rs): Validated credential records and snapshots.
 - [src/credentials/bounds.rs](crates/codeward-core/src/credentials/bounds.rs): Nonallocating JSON resource preflight and decoded byte counts.
 - [src/credentials/decoding.rs](crates/codeward-core/src/credentials/decoding.rs): Strict duplicate-rejecting snapshot decoding.
