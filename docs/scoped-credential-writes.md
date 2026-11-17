@@ -90,7 +90,8 @@ cargo test -p codeward-core --lib --locked --offline transaction::host::tests::m
 ```
 
 Use Rust 1.99.1 and synthetic data. Record current-head/base/test-merge CI and
-independent review in the PR. New-record creation, general field editing, ordinary
-close dialogs, Tauri commands and rendered UI remain later integration. No
+independent review in the PR. [Scoped creation and general editing](credential-editing.md)
+now complement these operations. Ordinary close dialogs, Tauri commands and
+rendered UI remain later integration. No
 dependency, vault-format, cryptographic profile, native adapter, clipboard or
 real-vault admission change is included; no milestone acceptance is implied.

@@ -213,6 +213,35 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         self.dispatch_preparation(request, OwnedWrite::Contents(snapshot))
     }
 
+    /// Queue a new credential from a bounded form. Rust assigns identity/time on
+    /// the worker; poll for commit and refresh, then list for the assigned ID.
+    pub fn create_credential(
+        &mut self,
+        generation: u64,
+        request: Request,
+        form: CredentialForm<'_>,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        let input =
+            session.credential_form_input(worker, caller, generation, request, None, form)?;
+        self.dispatch_preparation(request, input)
+    }
+
+    /// Queue full editing of one existing credential without a bulk snapshot.
+    /// Keep preserves its password; replacement may be entered text or a draft ref.
+    pub fn update_credential(
+        &mut self,
+        generation: u64,
+        request: Request,
+        id: &str,
+        form: CredentialForm<'_>,
+    ) -> Result<(), HostError> {
+        let (session, worker, caller) = self.idle()?;
+        let input =
+            session.credential_form_input(worker, caller, generation, request, Some(id), form)?;
+        self.dispatch_preparation(request, input)
+    }
+
     /// Queue replacement of one existing record's password using a current draft.
     /// Only bounded command inputs are copied here; the worker builds/encrypts the
     /// complete snapshot. Poll for commit outcome and independent snapshot refresh.

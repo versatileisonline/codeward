@@ -60,6 +60,11 @@ current selected record. They copy only bounded command inputs on the control
 thread; snapshot rebuilding and encryption use the same background preparation.
 Their completions use the existing commit/status/refresh surface above.
 
+`create_credential` and `update_credential` accept a bounded
+[single-record form](credential-editing.md). They add Rust-owned record identity
+and timestamps, full-field editing and password Keep/Provided/Generated choices,
+while reusing the same worker preparation, commit and refresh paths.
+
 ## Event-loop boundary
 
 The [headless control loop](headless-session-events.md) polls for worker results

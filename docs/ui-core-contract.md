@@ -106,8 +106,10 @@ reference, with separate reveal, state-only validation and discard. Stale refere
 cannot reveal or discard a replacement draft; lock and changed-snapshot refresh
 release the retained password. The [scoped Rust write layer](scoped-credential-writes.md)
 now applies a current generated draft to an existing credential and explicitly
-deletes selected records, without bulk UI snapshots. Record creation, general
-edit-form lifecycle and the limited Tauri wire surface remain later integration.
+deletes selected records, without bulk UI snapshots. The
+[credential form API](credential-editing.md) now supplies creation and general
+editing, including password Keep/Provided/Generated choices. Rendered form lifecycle
+and the limited Tauri wire surface remain later integration.
 
 The [selected-record Rust foundation](scoped-credential-reads.md) now supplies
 password-free details and a separately requested password reveal through `Session`

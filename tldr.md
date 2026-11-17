@@ -18,6 +18,7 @@ Root:
 - [password-generation.md](docs/password-generation.md): Unsaved Rust generator, character controls, uniform sampling, errors and plaintext ownership.
 - [password-drafts.md](docs/password-drafts.md): Scoped volatile generated passwords, explicit previews, stale references, revocation and delivery checks.
 - [scoped-credential-writes.md](docs/scoped-credential-writes.md): Targeted generated-password saves and selected deletion, revocable preparation, retry/status and refresh behavior.
+- [credential-editing.md](docs/credential-editing.md): Scoped record creation/general editing, password choices, Rust-owned identity/time and UI handoff.
 - [session-authentication.md](docs/session-authentication.md): Split-phase core authentication, revocation, ownership and limits.
 - [session-inactivity.md](docs/session-inactivity.md): Core inactivity deadline, scoped activity, security events and host obligations.
 - [headless-vault-host.md](docs/headless-vault-host.md): Control-side lifecycle, worker outcomes and event-loop obligations.

@@ -37,6 +37,20 @@ design a vault requiring an incompatible recovery retrofit.
 
 Each milestone requires explicit acceptance before the next begins.
 
+### Current interface readiness
+
+The Rust session/headless surface now includes scoped listing/details/reveal,
+generation/drafts, [targeted writes/deletion](scoped-credential-writes.md) and
+[credential creation/general editing](credential-editing.md). These complete the
+core record-operation prerequisite for the first credential editor. The next
+implementation phase connects the real managed macOS vault through narrow Tauri
+commands and builds the React setup/unlock/list/editor workflow. Search and
+ordinary-close behavior can be integrated with those screens. The current desktop
+window is still the synthetic session pilot, not that credential interface.
+
+This implementation progress does not itself record formal M3 acceptance or
+advance M4's cross-platform/installed-app acceptance gates.
+
 ### Local Apple silicon demo
 
 The owner selected macOS for the first polished demo on 2026-11-15. Windows and
