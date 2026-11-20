@@ -1,8 +1,37 @@
 # macOS synthetic desktop pilot
 
+## Welcome page preview
+
+The default window now displays the Codeward welcome page: an animated wordmark,
+slim Home/About sidebar and a Get started button. The sidebar starts collapsed,
+and the bottom theme control remains visible. Dark mode is the initial theme;
+the toggle switches between dark and light for the current window.
+This first-page preview does not create
+or save a vault; Get started displays that setup is coming next. Native live probes
+remain separate and retain their synthetic session behavior.
+
+From the repository root, with the pinned Rust toolchain installed:
+
+```sh
+cargo fetch --locked
+cargo run -p codeward-host-macos --features desktop-pilot --bin codeward-desktop-pilot --locked --offline
+```
+
+Quit and rerun after changing bundled assets. No DMG is required. For a browser-only
+layout preview that refreshes without compiling Rust:
+
+```sh
+python3 -m http.server 4173 --bind 127.0.0.1 --directory crates/codeward-host-macos/desktop-assets
+```
+
+Open `http://127.0.0.1:4173` and refresh after edits. This serves the same welcome
+HTML/CSS/JavaScript; native window behavior must be checked in Tauri.
+
+## Synthetic host foundation
+
 The optional `desktop-pilot` feature in
 [`codeward-host-macos`](../crates/codeward-host-macos/Cargo.toml) builds a Tauri
-window with bundled status controls for a volatile synthetic enrollment. Its
+window with a bundled welcome page and separate synthetic enrollment probes. Its
 adapter can only observe an absent destination. It exposes no credential or
 paper-code display, vault paths, or persistent writes. It exercises FR-02 and
 the control-loop and permission foundations of NFR-09 under ADR-0001/0005.
