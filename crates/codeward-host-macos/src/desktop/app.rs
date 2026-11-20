@@ -272,7 +272,13 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
             desktop.reschedule();
             DESKTOP.with(|state| *state.borrow_mut() = Some(desktop));
             WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
-                .title("Codeward Synthetic Pilot")
+                .title(if scenario.is_some() {
+                    "Codeward Session Probe"
+                } else {
+                    "Codeward"
+                })
+                .inner_size(1100.0, 760.0)
+                .min_inner_size(360.0, 540.0)
                 .on_navigation(move |url| local_page(url, page))
                 .on_new_window(|_, _| NewWindowResponse::Deny)
                 .disable_drag_drop_handler()
@@ -347,7 +353,14 @@ mod tests {
     #[test]
     fn generated_acl_and_command_checks_confine_pilot_ipc() {
         let context = context::<MockRuntime>();
-        for asset in [ASSET, "pilot.js", PROBE_PAGE, "probe.js"] {
+        for asset in [
+            ASSET,
+            "welcome.css",
+            "welcome.js",
+            "pilot.js",
+            PROBE_PAGE,
+            "probe.js",
+        ] {
             assert!(context.assets().get(&asset.into()).is_some());
         }
         let app = mock_builder()
