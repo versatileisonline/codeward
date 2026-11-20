@@ -44,15 +44,13 @@
       <button id="setup-back" class="back-button" type="button"><span aria-hidden="true">←</span> Back</button>
       <p class="step-label">01 <span aria-hidden="true">/</span> PASSWORD</p>
       <h2 id="setup-heading" tabindex="-1">Create your vault</h2>
-      <p class="setup-intro">One password to unlock your space.</p>
       <form id="setup-form" novalidate>
         <div class="form-field">
           <label for="master-password">Master password</label>
           <div class="password-field">
-            <input id="master-password" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="none" aria-describedby="password-hint setup-error" required>
+            <input id="master-password" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="none" aria-describedby="setup-error" required>
             <button class="reveal-button" type="button" data-reveal="master-password" aria-label="Show master password" aria-pressed="false">Show</button>
           </div>
-          <p id="password-hint" class="field-hint">A long, memorable passphrase works well.</p>
         </div>
         <div class="form-field">
           <label for="confirm-password">Confirm password</label>
