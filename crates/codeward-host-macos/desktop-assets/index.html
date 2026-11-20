@@ -63,7 +63,33 @@
         <button class="primary-button continue-button" type="submit">Continue</button>
         <p id="setup-status" class="setup-status" role="status"></p>
       </form>
-      <p class="preview-note">Preview only. Use a sample password; nothing is saved.</p>
+      <p class="preview-note">Development build. Use sample passwords only.</p>
+    </section>
+    <section id="recovery" class="setup-panel" aria-labelledby="recovery-heading" hidden>
+      <button id="recovery-back" class="back-button" type="button"><span aria-hidden="true">←</span> Cancel setup</button>
+      <p class="step-label">02 <span aria-hidden="true">/</span> RECOVERY</p>
+      <h2 id="recovery-heading" tabindex="-1">Keep a way back in</h2>
+      <div id="code-display">
+        <p class="recovery-hint">Write down this code. Keep it somewhere safe.</p>
+        <p id="recovery-code" class="recovery-code" aria-label="Recovery code"></p>
+        <p class="field-hint">It restores access to an intact vault if you forget your password. It cannot restore a lost vault file.</p>
+        <button id="code-written" class="primary-button continue-button" type="button" disabled>I've written it down</button>
+      </div>
+      <form id="recovery-form" novalidate hidden>
+        <div class="form-field">
+          <label for="paper-code">Type your recovery code</label>
+          <textarea id="paper-code" rows="3" maxlength="256" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="recovery-error" required></textarea>
+        </div>
+        <p id="recovery-error" class="form-error" role="alert"></p>
+        <button id="create-vault" class="primary-button continue-button" type="submit">Create vault</button>
+        <button id="view-code" class="back-button view-code" type="button">View code again</button>
+      </form>
+      <p id="recovery-status" class="setup-status" role="status"></p>
+    </section>
+    <section id="setup-result" class="setup-panel" aria-labelledby="result-heading" hidden>
+      <h2 id="result-heading" tabindex="-1"></h2>
+      <p id="result-description" class="recovery-hint"></p>
+      <button id="result-home" class="primary-button" type="button">Back to home</button>
     </section>
     <section id="about" class="about-panel" aria-labelledby="about-heading" hidden>
       <h2 id="about-heading" tabindex="-1">About Codeward</h2>

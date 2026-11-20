@@ -63,7 +63,7 @@ main { margin-left: var(--sidebar-width); min-height: 100vh; min-height: 100svh;
 @keyframes rainbow-dark { 0%, 100% { color: #79a7ff; } 17% { color: #b698ff; } 33% { color: #ed91b9; } 50% { color: #f69e88; } 67% { color: #e4c775; } 83% { color: #7bc7a2; } }
 
 .setup-panel { width: 100%; max-width: 400px; }
-main:has(#setup:not([hidden])) { place-items: start; padding-top: 20px; }
+main:has(#setup:not([hidden]), #recovery:not([hidden]), #setup-result:not([hidden])) { place-items: start; padding-top: 20px; }
 .back-button { display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 8px 0; margin: 0 0 38px; background: transparent; border: 0; color: var(--muted); font-size: 13px; }
 .back-button:hover { color: var(--ink); }
 .step-label { color: var(--muted); font-size: 10px; letter-spacing: .15em; margin: 0 0 16px; }
@@ -83,3 +83,13 @@ main:has(#setup:not([hidden])) { place-items: start; padding-top: 20px; }
 .setup-status { color: var(--muted); font-size: 12px; line-height: 1.6; }
 .setup-status:empty { display: none; }
 .preview-note { margin: 22px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+.field-hint, .recovery-hint { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.recovery-hint { margin: 20px 0 28px; }
+.recovery-code { min-height: 82px; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-family: ui-monospace, monospace; font-size: 17px; line-height: 1.9; letter-spacing: .08em; overflow-wrap: anywhere; }
+#code-display .continue-button { margin-top: 24px; }
+#paper-code { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: 15px/1.7 ui-monospace, monospace; }
+#paper-code:focus-visible { outline: 2px solid var(--button); outline-offset: 2px; }
+#paper-code[aria-invalid="true"] { border-color: #c87676; }
+.view-code { margin: 12px 0 0; }
+button:disabled { cursor: default; opacity: .5; transform: none !important; }
