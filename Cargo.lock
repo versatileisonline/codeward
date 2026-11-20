@@ -413,10 +413,12 @@ name = "codeward-host-macos"
 version = "0.1.0"
 dependencies = [
  "codeward-core",
+ "codeward-storage-macos",
  "serde",
  "tauri",
  "tauri-build",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]

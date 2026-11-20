@@ -6,6 +6,8 @@ mod app;
 mod pilot;
 #[cfg(target_os = "macos")]
 mod probe;
+#[cfg(target_os = "macos")]
+mod setup;
 
 fn main() -> std::process::ExitCode {
     #[cfg(target_os = "macos")]

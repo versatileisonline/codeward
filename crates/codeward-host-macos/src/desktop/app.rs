@@ -1,5 +1,8 @@
 use std::{cell::RefCell, time::Instant};
 
+use super::setup::{CodeReply, Setup, SetupError, Status as SetupStatus};
+use codeward_core::transaction::{StorageError, TransactionError};
+use codeward_storage_macos::{ExperimentalStorage, ExperimentalWriterLease};
 use serde::Serialize;
 use tauri::{
     AppHandle, RunEvent, Runtime, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
@@ -24,6 +27,7 @@ thread_local! {
 
 struct Desktop {
     pilot: Pilot<DesktopSource>,
+    setup: Setup<ExperimentalWriterLease, DesktopSource>,
     probe: Option<Probe>,
     deadline: watch::Sender<Option<Instant>>,
 }
@@ -34,6 +38,21 @@ enum CommandError {
     Unauthorized,
     InvalidInput,
     Unavailable,
+    Busy,
+    Stale,
+    InvalidCode,
+}
+
+impl From<SetupError> for CommandError {
+    fn from(error: SetupError) -> Self {
+        match error {
+            SetupError::InvalidInput => Self::InvalidInput,
+            SetupError::InvalidCode => Self::InvalidCode,
+            SetupError::Busy => Self::Busy,
+            SetupError::Stale => Self::Stale,
+            _ => Self::Unavailable,
+        }
+    }
 }
 
 fn local_page(url: &Url, page: &str) -> bool {
@@ -48,9 +67,9 @@ fn local_page(url: &Url, page: &str) -> bool {
         && url.fragment().is_none()
 }
 
-fn check_command<R: Runtime>(
+fn check_origin<R: Runtime>(
     window: &WebviewWindow<R>,
-    request: &Request<'_>,
+    _request: &Request<'_>,
 ) -> Result<(), CommandError> {
     let probe = DESKTOP
         .with(|state| {
@@ -71,6 +90,14 @@ fn check_command<R: Runtime>(
     {
         return Err(CommandError::Unauthorized);
     }
+    Ok(())
+}
+
+fn check_command<R: Runtime>(
+    window: &WebviewWindow<R>,
+    request: &Request<'_>,
+) -> Result<(), CommandError> {
+    check_origin(window, request)?;
     let empty = match request.body() {
         InvokeBody::Json(value) => value.as_object().is_some_and(|fields| fields.is_empty()),
         InvokeBody::Raw(bytes) => bytes.is_empty(),
@@ -90,10 +117,15 @@ impl Desktop {
             (Some(pilot), Some(probe)) => Some(pilot.min(probe)),
             (pilot, probe) => pilot.or(probe),
         };
+        let deadline = match (deadline, self.setup.next_tick()) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        };
         self.deadline.send_replace(deadline);
     }
 
     fn tick(&mut self) -> Result<bool, &'static str> {
+        self.setup.advance();
         let state = self.pilot.tick();
         let result = self
             .probe
@@ -118,6 +150,116 @@ fn with_desktop<T>(
         desktop.reschedule();
         result
     })
+}
+
+fn with_setup<T>(
+    action: impl FnOnce(&mut Setup<ExperimentalWriterLease, DesktopSource>) -> Result<T, CommandError>,
+) -> Result<T, CommandError> {
+    with_desktop(|desktop| {
+        if desktop.probe.is_some() {
+            return Err(CommandError::Unauthorized);
+        }
+        action(&mut desktop.setup)
+    })
+}
+
+fn epoch(request: &Request<'_>) -> Result<u64, CommandError> {
+    let InvokeBody::Json(body) = request.body() else {
+        return Err(CommandError::InvalidInput);
+    };
+    let fields = body.as_object().ok_or(CommandError::InvalidInput)?;
+    if fields.len() != 1 {
+        return Err(CommandError::InvalidInput);
+    }
+    fields
+        .get("epoch")
+        .and_then(|value| value.as_u64())
+        .ok_or(CommandError::InvalidInput)
+}
+
+#[tauri::command]
+fn begin_vault_setup<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let InvokeBody::Json(body) = request.body() else {
+        return Err(CommandError::InvalidInput);
+    };
+    let fields = body.as_object().ok_or(CommandError::InvalidInput)?;
+    if fields.len() != 2 {
+        return Err(CommandError::InvalidInput);
+    }
+    let password = fields
+        .get("password")
+        .and_then(|v| v.as_str())
+        .ok_or(CommandError::InvalidInput)?;
+    let confirmation = fields
+        .get("confirmation")
+        .and_then(|v| v.as_str())
+        .ok_or(CommandError::InvalidInput)?;
+    with_setup(|setup| {
+        let source = DesktopSource::normal().ok_or(CommandError::Unavailable)?;
+        setup
+            .begin(password, confirmation, source, || {
+                ExperimentalStorage::managed()
+                    .map_err(|_| TransactionError::Storage(StorageError::Unsupported))
+            })
+            .map_err(Into::into)
+    })
+}
+
+#[tauri::command]
+fn get_vault_setup_state<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_command(&window, &request)?;
+    with_setup(|setup| Ok(setup.status()))
+}
+
+#[tauri::command]
+fn get_setup_recovery_code<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<CodeReply, CommandError> {
+    check_origin(&window, &request)?;
+    let epoch = epoch(&request)?;
+    with_setup(|setup| setup.code(epoch).map_err(Into::into))
+}
+
+#[tauri::command]
+fn confirm_vault_setup<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let InvokeBody::Json(body) = request.body() else {
+        return Err(CommandError::InvalidInput);
+    };
+    let fields = body.as_object().ok_or(CommandError::InvalidInput)?;
+    if fields.len() != 2 {
+        return Err(CommandError::InvalidInput);
+    }
+    let epoch = fields
+        .get("epoch")
+        .and_then(|v| v.as_u64())
+        .ok_or(CommandError::InvalidInput)?;
+    let paper = fields
+        .get("paper")
+        .and_then(|v| v.as_str())
+        .ok_or(CommandError::InvalidInput)?;
+    with_setup(|setup| setup.confirm(epoch, paper).map_err(Into::into))
+}
+
+#[tauri::command]
+fn cancel_vault_setup<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let epoch = epoch(&request)?;
+    with_setup(|setup| setup.cancel(epoch).map_err(Into::into))
 }
 
 #[tauri::command]
@@ -163,6 +305,8 @@ fn lock_vault<R: Runtime>(
         if desktop.probe.is_some() {
             return Err(CommandError::Unauthorized);
         }
+        let status = desktop.setup.status();
+        let _ = desktop.setup.cancel(status.epoch);
         Ok(desktop.pilot.lock())
     })
 }
@@ -248,6 +392,11 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
     };
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            begin_vault_setup,
+            get_vault_setup_state,
+            get_setup_recovery_code,
+            confirm_vault_setup,
+            cancel_vault_setup,
             open_synthetic_session,
             get_session_state,
             lock_vault,
@@ -266,6 +415,7 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
             }
             let desktop = Desktop {
                 pilot,
+                setup: Setup::new(),
                 probe,
                 deadline,
             };
@@ -346,7 +496,11 @@ mod tests {
                 invoke_key: INVOKE_KEY.into(),
             },
         )
-        .map(|reply| reply.deserialize().unwrap())
+        .map(|reply| {
+            reply
+                .deserialize::<String>()
+                .unwrap_or_else(|_| "<structured>".into())
+        })
         .map_err(|error| error.as_str().unwrap_or("unexpected error shape").into())
     }
 
@@ -365,6 +519,11 @@ mod tests {
         }
         let app = mock_builder()
             .invoke_handler(tauri::generate_handler![
+                begin_vault_setup,
+                get_vault_setup_state,
+                get_setup_recovery_code,
+                confirm_vault_setup,
+                cancel_vault_setup,
                 open_synthetic_session,
                 get_session_state,
                 lock_vault,
@@ -386,6 +545,7 @@ mod tests {
         DESKTOP.with(|state| {
             *state.borrow_mut() = Some(Desktop {
                 pilot: Pilot::new(),
+                setup: Setup::new(),
                 probe: None,
                 deadline,
             })
@@ -403,7 +563,16 @@ mod tests {
             invoke(&main, "lock_vault", LOCAL, vec![0]),
             Err("invalid_input".into())
         );
-        for command in ["open_synthetic_session", "get_session_state", "lock_vault"] {
+        for command in [
+            "open_synthetic_session",
+            "get_session_state",
+            "lock_vault",
+            "begin_vault_setup",
+            "get_vault_setup_state",
+            "get_setup_recovery_code",
+            "confirm_vault_setup",
+            "cancel_vault_setup",
+        ] {
             assert!(
                 invoke(&other, command, LOCAL, vec![])
                     .unwrap_err()
@@ -427,7 +596,15 @@ mod tests {
                     .contains("not allowed")
             );
         }
-        for command in ["open_synthetic_session", "lock_vault"] {
+        for command in [
+            "open_synthetic_session",
+            "lock_vault",
+            "begin_vault_setup",
+            "get_vault_setup_state",
+            "get_setup_recovery_code",
+            "confirm_vault_setup",
+            "cancel_vault_setup",
+        ] {
             assert!(
                 invoke(&probe, command, LOCAL, vec![])
                     .unwrap_err()
@@ -438,6 +615,21 @@ mod tests {
             invoke(&probe, "get_session_state", LOCAL, vec![]),
             Err("unauthorized".into())
         );
+        assert_eq!(
+            invoke(&main, "get_vault_setup_state", LOCAL, vec![]),
+            Ok("<structured>".into())
+        );
+        for command in [
+            "begin_vault_setup",
+            "get_setup_recovery_code",
+            "confirm_vault_setup",
+            "cancel_vault_setup",
+        ] {
+            assert_eq!(
+                invoke(&main, command, LOCAL, vec![]),
+                Err("invalid_input".into())
+            );
+        }
         assert!(invoke(&main, "plugin:app|version", LOCAL, vec![]).is_err());
         assert!(invoke(&main, "save_credential", LOCAL, vec![]).is_err());
         assert!(invoke(&main, "open_synthetic_session", LOCAL, vec![]).is_ok());

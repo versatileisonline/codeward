@@ -4,6 +4,11 @@
   "platforms": ["macOS"],
   "webviews": ["main"],
   "permissions": [
+    "allow-begin-vault-setup",
+    "allow-get-vault-setup-state",
+    "allow-get-setup-recovery-code",
+    "allow-confirm-vault-setup",
+    "allow-cancel-vault-setup",
     "allow-open-synthetic-session",
     "allow-get-session-state",
     "allow-lock-vault"
