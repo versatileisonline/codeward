@@ -43,10 +43,12 @@ The Rust session/headless surface now includes scoped listing/details/reveal,
 generation/drafts, [targeted writes/deletion](scoped-credential-writes.md) and
 [credential creation/general editing](credential-editing.md). These complete the
 core record-operation prerequisite for the first credential editor. The next
-implementation phase connects the real managed macOS vault through narrow Tauri
-commands and builds the React setup/unlock/list/editor workflow. Search and
-ordinary-close behavior can be integrated with those screens. The current desktop
-window is still the synthetic session pilot, not that credential interface.
+implementation slice now connects the managed macOS vault through narrow Tauri
+commands for master-password setup, paper-code display/transcription and committed
+creation. The themed window still uses bundled HTML/CSS/JavaScript; no React
+migration is included. Unlock/list/editor workflows, generation, search and
+ordinary-close behavior remain next. See the [desktop guide](macos-desktop-pilot.md)
+for synthetic-only use and verification limits.
 
 This implementation progress does not itself record formal M3 acceptance or
 advance M4's cross-platform/installed-app acceptance gates.

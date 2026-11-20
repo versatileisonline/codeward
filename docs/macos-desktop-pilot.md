@@ -6,13 +6,28 @@ The default window now displays the Codeward welcome page: an animated wordmark,
 slim Home/About sidebar and a Get started button. The sidebar starts collapsed,
 and the bottom theme control remains visible. Dark mode is the initial theme;
 the toggle switches between dark and light for the current window.
-Get started opens a master-password setup preview with confirmation and explicit
-show/hide controls. Empty, oversized (over 4,096 UTF-8 bytes) and mismatched values
-are rejected without trimming or normalization. Use sample input: this preview
-does not create or save a vault. Continue clears the inputs and explains that
-recovery-code setup comes next. Leaving setup, hiding the document or unloading
-the page also clears the form and resets password visibility. JavaScript clearing
-does not guarantee erasure of all memory copies. Native live probes remain
+Get started now opens connected setup: enter/confirm a master password, write
+Rust's generated recovery code, transcribe it, then create the encrypted vault.
+The code disappears before transcription and after cancellation/lock. The window
+reports **Vault saved** only after the core returns a committed revision, then
+leaves the vault locked. Unlocking and credential screens are the next slice.
+
+Use synthetic input only. The opt-in desktop feature now enables the existing
+experimental APFS writer at the fixed account location:
+`~/Library/Application Support/Codeward/Vaults/vault.cw`. An existing vault is
+refused and preserved; the renderer cannot choose another path. This does not
+admit real credentials or complete installed-app/milestone acceptance. A browser
+layout preview cannot create a vault; use the Tauri application for setup.
+
+Master passwords accept exact UTF-8 bytes (1–4,096), without normalization. The
+renderer clears password fields immediately after dispatch; Rust retains the
+bounded zeroizing enrollment password until the attempt completes or is revoked.
+Canceling/navigation/hidden-document handling clears renderer secrets and sends
+an epoch-scoped cancellation. Late code/opening replies are discarded. An
+already admitted save can still finish; cancellation never claims rollback.
+Unknown outcomes block new creation in that process. Keep the paper code and
+reopen to inspect actual state; no automatic retry or reconciliation UI is added.
+JavaScript/IPC/OS copies cannot be proven erased. Native live probes remain
 separate and retain their synthetic session behavior.
 
 From the repository root, with the pinned Rust toolchain installed:
@@ -37,9 +52,9 @@ HTML/CSS/JavaScript; native window behavior must be checked in Tauri.
 The optional `desktop-pilot` feature in
 [`codeward-host-macos`](../crates/codeward-host-macos/Cargo.toml) builds a Tauri
 window with a bundled welcome page and separate synthetic enrollment probes. Its
-adapter can only observe an absent destination. It exposes no credential or
-paper-code display, vault paths, or persistent writes. It exercises FR-02 and
-the control-loop and permission foundations of NFR-09 under ADR-0001/0005.
+probe adapter can only observe an absent destination. The separate enrollment
+bridge uses the experimental managed writer for synthetic encrypted creation.
+Neither surface exposes arbitrary filesystem operations or full-vault contents.
 
 This window provides synthetic session-event evidence for Milestone 2.
 The [local Apple silicon credential demo](roadmap.md#local-apple-silicon-demo)
@@ -61,19 +76,51 @@ can start another enrollment. Window destruction and app exit release the loop.
 
 The generated Tauri application-command manifest and
 [capability](../crates/codeward-host-macos/capabilities/desktop-pilot.json) allow
-three commands for the single local `main` WebView:
-`open_synthetic_session`, `get_session_state`, and `lock_vault`.
-Rust checks the trusted invoking window and WebView and their current bundled
-document. Commands take no arguments and return only a status or a fixed
-error. The request guard rejects every nonempty raw body and every JSON
-value other than an empty object. Tauri decodes its JSON transport before the
-command guard. This pilot establishes no predecode bound for future payloads.
+the existing synthetic commands plus five enrollment operations for the local
+`main` WebView:
 
-The window denies external navigation and additional windows. Its policy
-allows bundled scripts and local IPC connections. The capability grants no
-plugin or core event permissions. The bundled page polls status and ignores
-older replies after a newer command. No secret-bearing replies cross this
-boundary.
+| Command | Input | Output |
+| --- | --- | --- |
+| `begin_vault_setup` | Exactly password and confirmation strings | Epoch and safe opening state |
+| `get_vault_setup_state` | Empty body | Epoch, state, fixed error category |
+| `get_setup_recovery_code` | Current epoch | Targeted temporary recovery code |
+| `confirm_vault_setup` | Current epoch and paper transcription | Safe saving state; completion is polled |
+| `cancel_vault_setup` | Current epoch | Safe state after revocation |
+
+Rust checks the trusted invoking window/WebView and bundled document. Enrollment
+commands are denied to the live-probe view, other windows and remote origins.
+Input shapes reject extra keys and enforce core-compatible bounds before copying;
+Tauri decodes JSON first, so this is not a predecode allocation limit. Rust owns
+request identity, expected creation revision, native events, deadlines and outcomes.
+The main-thread scheduler polls pending workers independently of renderer polling.
+Secret replies are targeted, not broadcast; epoch and renderer sequence guards
+reject stale deliveries after navigation/cancellation. Error/status payloads never
+include user inputs or native paths.
+
+Navigation and new windows remain denied. CSP admits only bundled scripts/styles
+and local IPC. No plugin/event permissions, clipboard commands, browser persistence
+or network calls are added. The storage adapter and zeroize reuse existing pinned
+workspace dependencies; no registry version or vault format changes.
+
+### Connected setup verification
+
+```sh
+cargo test -p codeward-host-macos --all-features --locked --offline
+cargo clippy -p codeward-host-macos --all-targets --all-features --locked --offline -- -D warnings
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
+```
+
+The setup bridge tests use a synthetic in-memory storage model with real core
+cryptography. They cover confirmation/no early readiness, exact encrypted reopening,
+invalid codes, existing-byte preservation, stale epochs, event revocation, bounded
+input, definite/unknown failure and cancellation on both sides of publication
+admission. IPC tests exercise generated ACLs/origin checks and invalid bodies.
+Local browser checks use mocked IPC for recovery/transcription/retry, distinct
+committed/unknown/existing results, delayed begin/code cancellation, secret clearing
+and dark/light desktop/narrow layouts. Those browser checks do not establish a
+live end-to-end native save or new live sleep/redaction evidence. Existing native
+APFS recovery tests remain the native writer evidence; run the actual desktop flow
+with synthetic inputs for installed-app acceptance.
 
 ## Pinned dependencies
 
@@ -126,7 +173,7 @@ The WebView assets are embedded in the release executable.
 app=$(sh crates/codeward-host-macos/tests/package-desktop-pilot.sh)
 "$app/Contents/MacOS/codeward-desktop-pilot" --live-lock
 "$app/Contents/MacOS/codeward-desktop-pilot" --live-sleep
-node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
 ```
 
 After `ARMED Lock`, the operator locks and unlocks the Mac. After
