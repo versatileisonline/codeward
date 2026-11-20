@@ -26,7 +26,7 @@ main { margin-left: var(--sidebar-width); min-height: 100vh; min-height: 100svh;
 .primary-button { display: inline-flex; justify-content: center; align-items: center; border: 1px solid var(--button); border-radius: 11px; background: var(--button); color: var(--page); padding: 13px 25px; font-size: 13px; line-height: 20px; text-align: center; transition: transform 180ms, background 180ms, box-shadow 180ms; }
 .primary-button:hover { transform: translateY(-2px); background: var(--button-hover); box-shadow: 0 5px 14px #1d1e1b16; }
 .primary-button:active { transform: translateY(0); }
-#setup-message { min-height: 20px; margin: 17px 0 0; color: var(--muted); font-size: 13px; }
+.action-area { padding-bottom: 37px; }
 .about-panel { width: 100%; max-width: 440px; padding: 28px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); animation: arrive 300ms ease-out both; }
 .about-panel h2 { font-size: 25px; letter-spacing: -.04em; font-weight: 600; }
 .about-panel p { color: var(--muted); line-height: 1.7; font-size: 15px; }
@@ -61,3 +61,26 @@ main { margin-left: var(--sidebar-width); min-height: 100vh; min-height: 100svh;
 [data-theme="dark"] .moon-icon { display: none; }
 [data-theme="dark"] .code { animation-name: rainbow-dark; color: #79a7ff; }
 @keyframes rainbow-dark { 0%, 100% { color: #79a7ff; } 17% { color: #b698ff; } 33% { color: #ed91b9; } 50% { color: #f69e88; } 67% { color: #e4c775; } 83% { color: #7bc7a2; } }
+
+.setup-panel { width: 100%; max-width: 400px; }
+.back-button { display: inline-flex; align-items: center; gap: 10px; padding: 8px 0; margin: 0 0 38px; background: transparent; border: 0; color: var(--muted); font-size: 13px; }
+.back-button:hover { color: var(--ink); }
+.step-label { color: var(--muted); font-size: 10px; letter-spacing: .15em; margin: 0 0 16px; }
+.step-label span { padding: 0 8px; opacity: .5; }
+.setup-panel h2 { font-size: clamp(28px, 3.5vw, 38px); letter-spacing: -.045em; font-weight: 650; margin: 0; }
+.setup-intro { font-size: 14px; color: var(--muted); margin: 13px 0 34px; line-height: 1.6; }
+.form-field { margin-top: 24px; }
+.form-field label { display: block; margin-bottom: 10px; color: var(--ink); font-size: 13px; }
+.password-field { display: flex; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.password-field:focus-within { border-color: var(--button); outline: 2px solid var(--button); outline-offset: 2px; }
+.password-field:has(input[aria-invalid="true"]) { border-color: #c87676; }
+.password-field input { width: 100%; min-width: 0; padding: 14px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; outline: none; border-radius: 10px; }
+.reveal-button { padding: 0 14px; background: transparent; color: var(--muted); border: 0; border-radius: 8px; font-size: 11px; }
+.reveal-button:hover { color: var(--ink); }
+.field-hint { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.form-error { min-height: 18px; margin: 14px 0; font-size: 12px; color: #e59999; line-height: 1.5; }
+[data-theme="light"] .form-error { color: #a33e3e; }
+.continue-button { width: 100%; }
+.setup-status { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.setup-status:empty { display: none; }
+.preview-note { margin: 22px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
