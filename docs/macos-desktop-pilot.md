@@ -6,9 +6,14 @@ The default window now displays the Codeward welcome page: an animated wordmark,
 slim Home/About sidebar and a Get started button. The sidebar starts collapsed,
 and the bottom theme control remains visible. Dark mode is the initial theme;
 the toggle switches between dark and light for the current window.
-This first-page preview does not create
-or save a vault; Get started displays that setup is coming next. Native live probes
-remain separate and retain their synthetic session behavior.
+Get started opens a master-password setup preview with confirmation and explicit
+show/hide controls. Empty, oversized (over 4,096 UTF-8 bytes) and mismatched values
+are rejected without trimming or normalization. Use sample input: this preview
+does not create or save a vault. Continue clears the inputs and explains that
+recovery-code setup comes next. Leaving setup, hiding the document or unloading
+the page also clears the form and resets password visibility. JavaScript clearing
+does not guarantee erasure of all memory copies. Native live probes remain
+separate and retain their synthetic session behavior.
 
 From the repository root, with the pinned Rust toolchain installed:
 
