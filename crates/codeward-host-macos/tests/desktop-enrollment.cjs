@@ -113,3 +113,61 @@ test("a lost confirmation reply checks actual status instead of claiming failure
   const poll = view.tick(); view.take("get_vault_setup_state").resolve({ epoch: 5, state: "created" }); await poll;
   assert.equal(view.element("#result-heading").textContent, "Vault saved");
 });
+
+test("unlocking clears its password, retries a wrong password, and follows native locking", async () => {
+  const view = renderer();
+  const opened = view.click("#open-vault");
+  view.take("open_managed_vault").resolve({ epoch: 6, state: "locked" }); await opened;
+  view.element("#unlock-password").value = "wrong synthetic password";
+  const attempt = view.submit("#unlock-form");
+  assert.equal(view.element("#unlock-password").value, "");
+  view.take("unlock_managed_vault").resolve({ epoch: 6, state: "unlocking" }); await attempt;
+  assert.equal(view.element("#vault").hidden, true);
+  const failure = view.tick();
+  view.take("get_vault_setup_state").resolve({ epoch: 6, state: "locked", error: "wrong_password" }); await failure;
+  assert.equal(view.element("#unlock-error").textContent, "Incorrect password. Try again.");
+  view.element("#unlock-password").value = "synthetic password";
+  const retry = view.submit("#unlock-form");
+  view.take("unlock_managed_vault").resolve({ epoch: 6, state: "unlocking" }); await retry;
+  const success = view.tick(); view.take("get_vault_setup_state").resolve({ epoch: 6, state: "unlocked" }); await success;
+  assert.equal(view.element("#vault").hidden, false);
+  const lock = view.tick(); view.take("get_vault_setup_state").resolve({ epoch: 6, state: "locked" }); await lock;
+  assert.equal(view.element("#vault").hidden, true);
+  assert.equal(view.element("#unlock").hidden, false);
+  assert.equal(view.element("#unlock-password").value, "");
+});
+
+test("navigation while authenticating ignores a late unlocked reply", async () => {
+  const view = renderer(); const opened = view.click("#open-vault");
+  view.take("open_managed_vault").resolve({ epoch: 7, state: "locked" }); await opened;
+  view.element("#unlock-password").value = "synthetic password";
+  const attempt = view.submit("#unlock-form"); const command = view.take("unlock_managed_vault");
+  view.click("#unlock-back"); view.take("cancel_vault_setup").resolve();
+  command.resolve({ epoch: 7, state: "unlocked" }); await attempt;
+  assert.equal(view.element("#vault").hidden, true);
+  assert.equal(view.element(".welcome").hidden, false);
+  assert.equal(view.element("#unlock-password").value, "");
+});
+
+test("a missing vault never starts enrollment without an explicit create action", async () => {
+  const view = renderer(); const opened = view.click("#open-vault");
+  view.take("open_managed_vault").resolve({ epoch: 8, state: "missing" }); await opened;
+  assert.equal(view.element("#result-heading").textContent, "No vault found");
+  assert.equal(view.element("#setup").hidden, true);
+  assert.equal(view.calls.length, 0);
+});
+
+test("a native revocation clears typed input even when the screen was already locked", async () => {
+  const view = renderer(); const opened = view.click("#open-vault");
+  view.take("open_managed_vault").resolve({ epoch: 9, state: "locked", revocation: 0 }); await opened;
+  view.element("#unlock-password").value = "synthetic pre-auth input";
+  const poll = view.tick();
+  view.take("get_vault_setup_state").resolve({ epoch: 9, state: "locked", revocation: 1 }); await poll;
+  assert.equal(view.element("#unlock-password").value, "");
+  assert.equal(view.element("#unlock").hidden, false);
+  view.element("#unlock-password").value = "synthetic new input";
+  const attempt = view.submit("#unlock-form");
+  const command = view.take("unlock_managed_vault");
+  assert.equal(command.body.revocation, 1);
+  command.resolve({ epoch: 9, state: "unlocking", revocation: 1 }); await attempt;
+});

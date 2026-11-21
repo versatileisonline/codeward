@@ -63,7 +63,7 @@ main { margin-left: var(--sidebar-width); min-height: 100vh; min-height: 100svh;
 @keyframes rainbow-dark { 0%, 100% { color: #79a7ff; } 17% { color: #b698ff; } 33% { color: #ed91b9; } 50% { color: #f69e88; } 67% { color: #e4c775; } 83% { color: #7bc7a2; } }
 
 .setup-panel { width: 100%; max-width: 400px; }
-main:has(#setup:not([hidden]), #recovery:not([hidden]), #setup-result:not([hidden])) { place-items: start; padding-top: 20px; }
+main:has(#setup:not([hidden]), #recovery:not([hidden]), #setup-result:not([hidden]), #unlock:not([hidden]), #vault:not([hidden])) { place-items: start; padding-top: 20px; }
 .back-button { display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 8px 0; margin: 0 0 38px; background: transparent; border: 0; color: var(--muted); font-size: 13px; }
 .back-button:hover { color: var(--ink); }
 .step-label { color: var(--muted); font-size: 10px; letter-spacing: .15em; margin: 0 0 16px; }
@@ -93,3 +93,7 @@ main:has(#setup:not([hidden]), #recovery:not([hidden]), #setup-result:not([hidde
 #paper-code[aria-invalid="true"] { border-color: #c87676; }
 .view-code { margin: 12px 0 0; }
 button:disabled { cursor: default; opacity: .5; transform: none !important; }
+
+.welcome-unlock { display: block; margin: 16px auto 0; padding: 8px 14px; color: var(--muted); background: transparent; border: 0; border-radius: 8px; font-size: 12px; }
+.welcome-unlock:hover { color: var(--ink); background: var(--hover); }
+#result-unlock:not([hidden]) + #result-home { margin-left: 12px; background: transparent; border-color: var(--line); color: var(--ink); }

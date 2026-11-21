@@ -38,6 +38,7 @@
       <p class="byline entrance">Your local password manager</p>
       <div class="action-area entrance">
         <button id="get-started" class="primary-button" type="button">Get started</button>
+        <button id="open-vault" class="welcome-unlock" type="button">Unlock vault</button>
       </div>
     </section>
     <section id="setup" class="setup-panel" aria-labelledby="setup-heading" hidden>
@@ -89,7 +90,29 @@
     <section id="setup-result" class="setup-panel" aria-labelledby="result-heading" hidden>
       <h2 id="result-heading" tabindex="-1"></h2>
       <p id="result-description" class="recovery-hint"></p>
+      <button id="result-unlock" class="primary-button" type="button" hidden>Unlock vault</button>
       <button id="result-home" class="primary-button" type="button">Back to home</button>
+    </section>
+    <section id="unlock" class="setup-panel" aria-labelledby="unlock-heading" hidden>
+      <button id="unlock-back" class="back-button" type="button"><span aria-hidden="true">←</span> Back</button>
+      <h2 id="unlock-heading" tabindex="-1">Unlock your vault</h2>
+      <form id="unlock-form" novalidate>
+        <div class="form-field">
+          <label for="unlock-password">Master password</label>
+          <div class="password-field">
+            <input id="unlock-password" type="password" autocomplete="current-password" spellcheck="false" autocapitalize="none" aria-describedby="unlock-error" required>
+            <button class="reveal-button" type="button" data-reveal="unlock-password" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <p id="unlock-error" class="form-error" role="alert"></p>
+        <button id="unlock-submit" class="primary-button continue-button" type="submit">Unlock</button>
+        <p id="unlock-status" class="setup-status" role="status"></p>
+      </form>
+    </section>
+    <section id="vault" class="setup-panel" aria-labelledby="vault-heading" hidden>
+      <h2 id="vault-heading" tabindex="-1">Your vault</h2>
+      <p class="recovery-hint">Unlocked. Credential management comes next.</p>
+      <button id="lock-open-vault" class="primary-button" type="button">Lock vault</button>
     </section>
     <section id="about" class="about-panel" aria-labelledby="about-heading" hidden>
       <h2 id="about-heading" tabindex="-1">About Codeward</h2>

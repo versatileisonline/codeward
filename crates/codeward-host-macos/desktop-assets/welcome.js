@@ -7,6 +7,11 @@ const about = $("#about");
 const setup = $("#setup");
 const recovery = $("#recovery");
 const result = $("#setup-result");
+const unlock = $("#unlock");
+const vault = $("#vault");
+const unlockPassword = $("#unlock-password");
+let sessionMode = false;
+let lastRevocation = null;
 const setupForm = $("#setup-form");
 const masterPassword = $("#master-password");
 const confirmPassword = $("#confirm-password");
@@ -34,11 +39,12 @@ function resetSetupFeedback() {
 }
 function clearPasswords() {
   setupForm.reset();
+  unlockPassword.value = "";
   for (const button of document.querySelectorAll("[data-reveal]")) {
     document.getElementById(button.dataset.reveal).type = "password";
     button.textContent = "Show";
     button.setAttribute("aria-pressed", "false");
-    button.setAttribute("aria-label", button.dataset.reveal === "master-password" ? "Show master password" : "Show confirmation password");
+    button.setAttribute("aria-label", button.dataset.reveal === "master-password" ? "Show master password" : button.dataset.reveal === "confirm-password" ? "Show confirmation password" : "Show password");
   }
 }
 function clearRecovery() {
@@ -52,13 +58,16 @@ function clearRecovery() {
 function leaveEnrollment() {
   const previous = epoch;
   ++sequence; active = false; epoch = null; submitting = false;
-  fetchingCode = false; polling = false; transcribing = false; currentState = "idle";
+  fetchingCode = false; polling = false; transcribing = false; currentState = "idle"; sessionMode = false; lastRevocation = null;
   clearPasswords(); clearRecovery(); resetSetupFeedback();
   $("#setup-form button[type=submit]").disabled = false;
+  $("#unlock-error").textContent = "";
+  $("#unlock-status").textContent = "";
+  $("#result-unlock").hidden = true;
   if (previous !== null) invoke("cancel_vault_setup", { epoch: previous }).catch(() => {});
 }
 function showOnly(section) {
-  for (const view of [welcome, about, setup, recovery, result]) view.hidden = view !== section;
+  for (const view of [welcome, about, setup, recovery, result, unlock, vault]) view.hidden = view !== section;
 }
 function showHome() {
   leaveEnrollment(); showOnly(welcome);
@@ -77,7 +86,7 @@ aboutButton.addEventListener("click", () => {
   aboutButton.setAttribute("aria-current", "page");
   $("#about-heading").focus();
 });
-for (const selector of ["#about-close", "#setup-back", "#recovery-back", "#result-home"]) {
+for (const selector of ["#about-close", "#setup-back", "#recovery-back", "#result-home", "#unlock-back"]) {
   $(selector).addEventListener("click", () => { showHome(); $("#get-started").focus(); });
 }
 $("#get-started").addEventListener("click", () => {
@@ -90,7 +99,7 @@ for (const button of document.querySelectorAll("[data-reveal]")) {
     input.type = show ? "text" : "password";
     button.textContent = show ? "Hide" : "Show";
     button.setAttribute("aria-pressed", String(show));
-    const field = input === masterPassword ? "master password" : "confirmation password";
+    const field = input === masterPassword ? "master password" : input === confirmPassword ? "confirmation password" : "password";
     button.setAttribute("aria-label", `${show ? "Hide" : "Show"} ${field}`);
   });
 }
@@ -145,8 +154,32 @@ async function fetchCode(token) {
 }
 function renderStatus(status, token) {
   if (token !== sequence || status.epoch !== epoch) return;
+  if (status.revocation !== undefined) {
+    if (lastRevocation !== null && status.revocation < lastRevocation) return;
+    if (lastRevocation !== null && status.revocation !== lastRevocation) { clearPasswords(); clearRecovery(); }
+    lastRevocation = status.revocation;
+  }
+  const previousState = currentState;
   currentState = status.state;
   if (status.state === "opening") return;
+  if (sessionMode && ["locked", "unlocking"].includes(status.state)) {
+    const entering = unlock.hidden;
+    showOnly(unlock);
+    const busy = status.state === "unlocking" || submitting;
+    const wasDisabled = unlockPassword.disabled;
+    unlockPassword.disabled = busy;
+    $("#unlock-submit").disabled = busy;
+    $("#unlock-status").textContent = status.state === "unlocking" ? "Unlocking…" : "";
+    $("#unlock-error").textContent = status.error === "wrong_password" ? "Incorrect password. Try again." : status.error ? "Couldn't unlock. Try again." : "";
+    if (entering || previousState !== status.state || (wasDisabled && !busy)) { clearPasswords(); unlockPassword.focus(); }
+    return;
+  }
+  if (sessionMode && status.state === "unlocked") {
+    const entering = vault.hidden;
+    clearPasswords(); showOnly(vault);
+    if (entering) $("#vault-heading").focus();
+    return;
+  }
   if (status.state === "recovery" || status.state === "saving") {
     const entering = recovery.hidden;
     showOnly(recovery);
@@ -166,11 +199,12 @@ function renderStatus(status, token) {
     return;
   }
   const descriptions = {
-    created: ["Vault saved", "Your vault is saved and locked. Unlocking comes next."],
-    existing: ["Vault already exists", "Your existing vault was left unchanged. Unlocking comes next."],
+    created: ["Vault saved", "Your vault is saved and locked."],
+    existing: ["Vault already exists", "Your existing vault was left unchanged."],
     locked: ["Setup locked", "Start again to continue."],
     unknown: ["Save not confirmed", "Keep your recovery code. Quit and reopen Codeward to check the vault before trying again."],
-    failed: ["Setup couldn't finish", "No successful save was confirmed. Start again to retry."],
+    failed: [sessionMode ? "Vault couldn't be opened" : "Setup couldn't finish", sessionMode ? "The file was left unchanged. Reopen Codeward and try again." : "No successful save was confirmed. Start again to retry."],
+    missing: ["No vault found", "Create a vault to get started."],
   };
   const message = descriptions[status.state];
   if (!message) return;
@@ -178,6 +212,7 @@ function renderStatus(status, token) {
   clearPasswords(); clearRecovery(); showOnly(result);
   $("#result-heading").textContent = message[0];
   $("#result-description").textContent = message[1];
+  $("#result-unlock").hidden = !["created", "existing"].includes(status.state);
   if (entering) $("#result-heading").focus();
 }
 $("#code-written").addEventListener("click", () => {
@@ -249,4 +284,47 @@ themeToggle.addEventListener("click", () => {
   themeToggle.setAttribute("title", label);
   themeToggle.setAttribute("aria-pressed", String(dark));
   $(".theme-label").textContent = dark ? "Light mode" : "Dark mode";
+});
+
+async function openExisting() {
+  leaveEnrollment(); sessionMode = true;
+  showOnly(unlock); unlockPassword.disabled = true; $("#unlock-submit").disabled = true;
+  $("#unlock-status").textContent = "Opening vault…";
+  const token = sequence;
+  submitting = true;
+  try {
+    const status = await invoke("open_managed_vault");
+    if (token !== sequence) { invoke("cancel_vault_setup", { epoch: status.epoch }).catch(() => {}); return; }
+    epoch = status.epoch; active = true; renderStatus(status, token);
+  } catch (error) {
+    if (token === sequence) {
+      $("#unlock-status").textContent = "";
+      $("#unlock-error").textContent = error === "desktop_required" ? "Open the desktop app to unlock your vault." : "Vault unavailable. Reopen Codeward and try again.";
+    }
+  } finally { if (token === sequence) submitting = false; }
+}
+$("#open-vault").addEventListener("click", openExisting);
+$("#result-unlock").addEventListener("click", openExisting);
+$("#unlock-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (submitting || !active || currentState !== "locked") return;
+  if (!unlockPassword.value || new TextEncoder().encode(unlockPassword.value).length > 4096) {
+    $("#unlock-error").textContent = "Enter a password of 1–4,096 UTF-8 bytes."; unlockPassword.focus(); return;
+  }
+  const token = ++sequence; polling = false; submitting = true;
+  $("#unlock-error").textContent = ""; $("#unlock-submit").disabled = true;
+  const pending = invoke("unlock_managed_vault", { epoch, revocation: lastRevocation, password: unlockPassword.value });
+  clearPasswords();
+  try { renderStatus(await pending, token); }
+  catch { if (token === sequence) $("#unlock-error").textContent = "Couldn't confirm unlocking. Checking vault status…"; }
+  finally {
+    if (token === sequence) { submitting = false; $("#unlock-submit").disabled = currentState !== "locked"; }
+  }
+});
+$("#lock-open-vault").addEventListener("click", async () => {
+  if (!active || currentState !== "unlocked") return;
+  const token = ++sequence; polling = false;
+  clearPasswords(); showOnly(unlock); unlockPassword.disabled = true; $("#unlock-submit").disabled = true;
+  try { renderStatus(await invoke("lock_managed_vault", { epoch }), token); }
+  catch { if (token === sequence) { leaveEnrollment(); showOnly(welcome); } }
 });
