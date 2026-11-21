@@ -178,6 +178,63 @@ fn epoch(request: &Request<'_>) -> Result<u64, CommandError> {
 }
 
 #[tauri::command]
+fn open_managed_vault<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_command(&window, &request)?;
+    with_setup(|setup| {
+        let source = DesktopSource::normal().ok_or(CommandError::Unavailable)?;
+        setup
+            .open_existing(source, || {
+                ExperimentalStorage::managed()
+                    .map_err(|_| TransactionError::Storage(StorageError::Unsupported))
+            })
+            .map_err(Into::into)
+    })
+}
+#[tauri::command]
+fn unlock_managed_vault<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let InvokeBody::Json(body) = request.body() else {
+        return Err(CommandError::InvalidInput);
+    };
+    let fields = body.as_object().ok_or(CommandError::InvalidInput)?;
+    if fields.len() != 3 {
+        return Err(CommandError::InvalidInput);
+    }
+    let epoch = fields
+        .get("epoch")
+        .and_then(|v| v.as_u64())
+        .ok_or(CommandError::InvalidInput)?;
+    let revocation = fields
+        .get("revocation")
+        .and_then(|v| v.as_u64())
+        .ok_or(CommandError::InvalidInput)?;
+    let password = fields
+        .get("password")
+        .and_then(|v| v.as_str())
+        .ok_or(CommandError::InvalidInput)?;
+    with_setup(|setup| {
+        setup
+            .unlock(epoch, revocation, password)
+            .map_err(Into::into)
+    })
+}
+#[tauri::command]
+fn lock_managed_vault<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let epoch = epoch(&request)?;
+    with_setup(|setup| setup.lock_existing(epoch).map_err(Into::into))
+}
+
+#[tauri::command]
 fn begin_vault_setup<R: Runtime>(
     window: WebviewWindow<R>,
     request: Request<'_>,
@@ -392,6 +449,9 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
     };
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            open_managed_vault,
+            unlock_managed_vault,
+            lock_managed_vault,
             begin_vault_setup,
             get_vault_setup_state,
             get_setup_recovery_code,
@@ -519,6 +579,9 @@ mod tests {
         }
         let app = mock_builder()
             .invoke_handler(tauri::generate_handler![
+                open_managed_vault,
+                unlock_managed_vault,
+                lock_managed_vault,
                 begin_vault_setup,
                 get_vault_setup_state,
                 get_setup_recovery_code,
@@ -567,6 +630,9 @@ mod tests {
             "open_synthetic_session",
             "get_session_state",
             "lock_vault",
+            "open_managed_vault",
+            "unlock_managed_vault",
+            "lock_managed_vault",
             "begin_vault_setup",
             "get_vault_setup_state",
             "get_setup_recovery_code",
@@ -599,6 +665,9 @@ mod tests {
         for command in [
             "open_synthetic_session",
             "lock_vault",
+            "open_managed_vault",
+            "unlock_managed_vault",
+            "lock_managed_vault",
             "begin_vault_setup",
             "get_vault_setup_state",
             "get_setup_recovery_code",
@@ -620,6 +689,8 @@ mod tests {
             Ok("<structured>".into())
         );
         for command in [
+            "unlock_managed_vault",
+            "lock_managed_vault",
             "begin_vault_setup",
             "get_setup_recovery_code",
             "confirm_vault_setup",

@@ -355,3 +355,227 @@ fn revocation_at_both_command_checks_clears_bridge_secrets_immediately() {
         }
     }
 }
+
+fn saved_disk() -> Memory {
+    let disk = Memory::default();
+    let mut setup = Setup::new();
+    let epoch = begin(&mut setup, &disk, Events::default());
+    wait(&mut setup, State::Recovery);
+    let code = setup.code(epoch).unwrap();
+    setup.confirm(epoch, &code.code).unwrap();
+    wait(&mut setup, State::Created);
+    disk
+}
+#[test]
+fn existing_vault_unlocks_retries_wrong_password_and_locks_without_writes() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let before = disk.0.lock().unwrap().bytes.clone();
+    let storage = disk.clone();
+    let events = Events::default();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    assert!(setup.password.is_none());
+    setup
+        .unlock(epoch, setup.status.revocation, "wrong synthetic password")
+        .unwrap();
+    wait(&mut setup, State::Locked);
+    assert_eq!(setup.status.error, Some(SetupError::WrongPassword));
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    assert!(
+        setup
+            .control
+            .as_mut()
+            .unwrap()
+            .command(|host| {
+                let generation = host.generation();
+                host.list_credentials(generation, 1, None)
+            })
+            .is_ok()
+    );
+    setup.lock_existing(epoch).unwrap();
+    assert_eq!(setup.status.state, State::Locked);
+    assert!(
+        setup
+            .control
+            .as_mut()
+            .unwrap()
+            .command(|host| {
+                let generation = host.generation();
+                host.list_credentials(generation, 1, None)
+            })
+            .is_err()
+    );
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    events.0.store(true, Ordering::SeqCst);
+    assert_eq!(setup.status().state, State::Locked);
+    assert_eq!(disk.0.lock().unwrap().bytes, before);
+    assert_eq!(disk.0.lock().unwrap().publications, 1);
+}
+#[test]
+fn missing_or_corrupt_vaults_are_never_created_by_open_or_unlock() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    for corrupt in [false, true] {
+        let disk = Memory::default();
+        if corrupt {
+            disk.0.lock().unwrap().bytes = Some(vec![0]);
+        }
+        let before = disk.0.lock().unwrap().bytes.clone();
+        let storage = disk.clone();
+        let mut setup = Setup::new();
+        let epoch = setup
+            .open_existing(Events::default(), move || Ok(storage))
+            .unwrap()
+            .epoch;
+        wait(
+            &mut setup,
+            if corrupt {
+                State::Failed
+            } else {
+                State::Missing
+            },
+        );
+        assert!(
+            setup
+                .unlock(epoch, setup.status.revocation, "sample")
+                .is_err()
+        );
+        assert_eq!(disk.0.lock().unwrap().bytes, before);
+        assert_eq!(disk.0.lock().unwrap().publications, 0);
+    }
+}
+#[test]
+fn locking_queued_authentication_rejects_late_success_and_stale_epochs() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let storage = disk.clone();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    setup.lock_existing(epoch).unwrap();
+    for _ in 0..25 {
+        assert_eq!(setup.status().state, State::Locked);
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    setup.cancel(epoch).unwrap();
+    let storage = disk.clone();
+    let newer = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    assert_ne!(newer, epoch);
+    assert!(
+        setup
+            .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+            .is_err()
+    );
+    assert!(setup.lock_existing(epoch).is_err());
+    // A canceled KDF may already be running. Explicit retries must eventually
+    // work, without allowing that canceled completion to install access.
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while setup.status().state != State::Unlocked {
+        if setup.status.state == State::Locked {
+            setup
+                .unlock(newer, setup.status.revocation, "synthetic master phrase")
+                .unwrap();
+        }
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[test]
+fn unlock_command_boundary_revocation_never_installs_late_authentication() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    for offset in [1, 2, 3, 4] {
+        let events = BoundaryEvents::default();
+        let mut setup = Setup::new();
+        let storage = disk.clone();
+        let epoch = setup
+            .open_existing(events.clone(), move || Ok(storage))
+            .unwrap()
+            .epoch;
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while setup.status().state != State::Locked {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let old = setup.status.revocation;
+        events.revoke_at.store(
+            events.observations.load(Ordering::SeqCst) + offset,
+            Ordering::SeqCst,
+        );
+        assert!(
+            setup
+                .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+                .is_err()
+        );
+        assert_eq!(setup.status.state, State::Locked);
+        assert!(!setup.pending);
+        assert!(setup.status.revocation > old);
+        for _ in 0..10 {
+            assert_ne!(setup.status().state, State::Unlocked);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        // Only a new explicit attempt may unlock after cancellation.
+        while setup.status().state != State::Unlocked {
+            if setup.status.state == State::Locked {
+                setup
+                    .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+                    .unwrap();
+            }
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+}
+
+#[test]
+fn timer_revocation_refuses_old_unlock_requests_and_revoked_opening_requires_reopen() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let events = Events::default();
+    let storage = disk.clone();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    let old = setup.status.revocation;
+    events.0.store(true, Ordering::SeqCst);
+    assert_eq!(setup.status().state, State::Locked);
+    assert!(setup.unlock(epoch, old, "synthetic master phrase").is_err());
+    assert!(!setup.pending);
+    setup.cancel(epoch).unwrap();
+    let storage = disk.clone();
+    let events = Events::default();
+    setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap();
+    events.0.store(true, Ordering::SeqCst);
+    assert_eq!(setup.status().state, State::Failed);
+    let storage = disk.clone();
+    setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap();
+    wait(&mut setup, State::Locked);
+}

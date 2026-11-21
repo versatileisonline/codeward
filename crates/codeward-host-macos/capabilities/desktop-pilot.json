@@ -4,6 +4,9 @@
   "platforms": ["macOS"],
   "webviews": ["main"],
   "permissions": [
+    "allow-open-managed-vault",
+    "allow-unlock-managed-vault",
+    "allow-lock-managed-vault",
     "allow-begin-vault-setup",
     "allow-get-vault-setup-state",
     "allow-get-setup-recovery-code",

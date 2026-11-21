@@ -3,9 +3,9 @@ use std::time::{Duration, Instant};
 
 use codeward_core::{
     transaction::{
-        CallerId, ControlError, HeadlessControlLoop, HeadlessEventSource, HostCompletion,
-        HostError, OperationStatus, Request, RequestId, Storage, TransactionError, VaultOpenMode,
-        WriterLease,
+        AccessProof, CallerId, ControlError, HeadlessControlLoop, HeadlessEventSource,
+        HostCompletion, HostError, OperationStatus, Request, RequestId, Storage, TransactionError,
+        VaultOpenMode, WriterLease,
     },
     vault::VaultError,
 };
@@ -23,6 +23,9 @@ pub(super) enum State {
     Locked,
     Failed,
     Existing,
+    Missing,
+    Unlocking,
+    Unlocked,
     Unknown,
 }
 
@@ -31,6 +34,7 @@ pub(super) enum State {
 pub(super) enum SetupError {
     InvalidInput,
     InvalidCode,
+    WrongPassword,
     Busy,
     Storage,
     Unavailable,
@@ -42,6 +46,7 @@ pub(super) struct Status {
     pub epoch: u64,
     pub state: State,
     pub error: Option<SetupError>,
+    pub revocation: u64,
 }
 
 #[derive(Serialize)]
@@ -64,6 +69,7 @@ pub(super) struct Setup<L: WriterLease + Send + 'static, E: HeadlessEventSource>
     pending: bool,
     uncertain: bool,
     next_request: u64,
+    existing: bool,
 }
 impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     pub fn new() -> Self {
@@ -74,10 +80,12 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
                 epoch: 0,
                 state: State::Idle,
                 error: None,
+                revocation: 0,
             },
             pending: false,
             uncertain: false,
             next_request: 0,
+            existing: false,
         }
     }
     pub fn begin<S: Storage<Lease = L>>(
@@ -102,6 +110,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         if let Some(control) = self.control.take() {
             control.close();
         }
+        self.existing = false;
         self.password = Some(Zeroizing::new(password.to_owned()));
         let result = HeadlessControlLoop::begin_open(
             source,
@@ -120,6 +129,85 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
                 self.set(State::Locked, Some(SetupError::Unavailable));
             }
         }
+        Ok(self.status)
+    }
+    pub fn open_existing<S: Storage<Lease = L>>(
+        &mut self,
+        source: E,
+        storage: impl FnOnce() -> Result<S, TransactionError> + Send + 'static,
+    ) -> Result<Status, SetupError> {
+        self.advance();
+        if self.pending || self.uncertain || self.status.state == State::Recovery {
+            return Err(SetupError::Busy);
+        }
+        self.status.epoch = self
+            .status
+            .epoch
+            .checked_add(1)
+            .ok_or(SetupError::Unavailable)?;
+        if let Some(control) = self.control.take() {
+            control.close();
+        }
+        self.password.take();
+        self.existing = true;
+        match HeadlessControlLoop::begin_open(source, CallerId(2), VaultOpenMode::Existing, storage)
+        {
+            Ok(control) => {
+                self.control = Some(control);
+                self.pending = true;
+                self.set(State::Opening, None);
+            }
+            Err(_) => self.set(State::Failed, Some(SetupError::Unavailable)),
+        }
+        Ok(self.status)
+    }
+    pub fn unlock(
+        &mut self,
+        epoch: u64,
+        revocation: u64,
+        password: &str,
+    ) -> Result<Status, SetupError> {
+        self.advance();
+        self.check_epoch(epoch)?;
+        if !self.existing
+            || self.status.state != State::Locked
+            || self.pending
+            || revocation != self.status.revocation
+        {
+            return Err(SetupError::Stale);
+        }
+        if password.is_empty() || password.len() > 4096 {
+            return Err(SetupError::InvalidInput);
+        }
+        let result = self
+            .control
+            .as_mut()
+            .ok_or(SetupError::Unavailable)?
+            .command(|host| host.begin_authentication(AccessProof::Master(password)));
+        if let Err(error) = result {
+            // Authentication is revoked/discarded by the core at a failed
+            // command boundary. It cannot become an active session later.
+            self.pending = false;
+            return Err(self.command_error(error));
+        }
+        self.pending = true;
+        self.set(State::Unlocking, None);
+        Ok(self.status)
+    }
+    pub fn lock_existing(&mut self, epoch: u64) -> Result<Status, SetupError> {
+        self.check_epoch(epoch)?;
+        if !self.existing
+            || !matches!(
+                self.status.state,
+                State::Locked | State::Unlocking | State::Unlocked
+            )
+        {
+            return Err(SetupError::Stale);
+        }
+        self.control.as_mut().ok_or(SetupError::Unavailable)?.lock();
+        self.pending = false;
+        self.status.revocation = self.status.revocation.saturating_add(1);
+        self.set(State::Locked, None);
         Ok(self.status)
     }
     pub fn status(&mut self) -> Status {
@@ -187,7 +275,8 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     }
     pub fn cancel(&mut self, epoch: u64) -> Result<Status, SetupError> {
         self.check_epoch(epoch)?;
-        if self.status.state == State::Opening {
+        self.status.revocation = self.status.revocation.saturating_add(1);
+        if matches!(self.status.state, State::Opening | State::Unlocking) {
             self.pending = false;
         }
         if let Some(control) = &mut self.control {
@@ -216,6 +305,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             return SetupError::InvalidCode;
         }
         self.password.take();
+        self.status.revocation = self.status.revocation.saturating_add(1);
         if let Some(control) = &mut self.control {
             control.lock();
         }
@@ -252,27 +342,57 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             Err(_) => {
                 self.password.take();
                 self.pending = false;
-                self.uncertain = true;
-                self.set(State::Unknown, Some(SetupError::Unavailable));
+                self.uncertain = !self.existing;
+                self.set(
+                    if self.existing {
+                        State::Failed
+                    } else {
+                        State::Unknown
+                    },
+                    Some(SetupError::Unavailable),
+                );
                 return;
             }
         };
         if update.revoked || !update.source_available {
+            self.status.revocation = self.status.revocation.saturating_add(1);
             self.password.take();
-            if self.status.state == State::Opening {
+            let opening_revoked = self.status.state == State::Opening;
+            if matches!(self.status.state, State::Opening | State::Unlocking) {
                 self.pending = false;
             }
             if !self.uncertain && self.status.state != State::Created {
-                self.set(State::Locked, None);
+                self.set(
+                    if self.existing && (!update.source_available || opening_revoked) {
+                        State::Failed
+                    } else {
+                        State::Locked
+                    },
+                    None,
+                );
             }
         }
         if let Some(opening) = update.opening {
             self.pending = false;
             match opening {
-                Ok(()) => self.set(State::Recovery, None),
+                Ok(()) => self.set(
+                    if self.existing {
+                        State::Locked
+                    } else {
+                        State::Recovery
+                    },
+                    None,
+                ),
                 Err(HostError::Transaction(TransactionError::ReloadRequired)) => {
                     self.password.take();
-                    self.set(State::Existing, None);
+                    self.set(
+                        if self.existing {
+                            State::Missing
+                        } else {
+                            State::Existing
+                        },
+                        None,
+                    );
                 }
                 Err(_) => {
                     self.password.take();
@@ -282,6 +402,18 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         }
         if let Some(completion) = update.completion {
             match completion {
+                HostCompletion::Authentication(outcome) if self.existing => {
+                    self.pending = false;
+                    match outcome {
+                        Ok(()) if !update.revoked && update.source_available => {
+                            self.set(State::Unlocked, None)
+                        }
+                        Err(TransactionError::Vault(VaultError::Crypto(
+                            codeward_core::crypto::CryptoError::AuthenticationFailed,
+                        ))) => self.set(State::Locked, Some(SetupError::WrongPassword)),
+                        _ => self.set(State::Locked, Some(SetupError::Unavailable)),
+                    }
+                }
                 HostCompletion::PreparationFailed {
                     error: TransactionError::Vault(VaultError::Recovery(_)),
                     ..
