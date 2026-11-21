@@ -10,7 +10,10 @@ Get started now opens connected setup: enter/confirm a master password, write
 Rust's generated recovery code, transcribe it, then create the encrypted vault.
 The code disappears before transcription and after cancellation/lock. The window
 reports **Vault saved** only after the core returns a committed revision, then
-leaves the vault locked. Unlocking and credential screens are the next slice.
+leaves the vault locked. **Unlock vault** on the welcome/result screen opens the
+managed vault and authenticates the entered password in a Rust worker. The
+unlocked screen currently reports access and offers Lock vault; credential
+management is the next slice.
 
 Use synthetic input only. The opt-in desktop feature now enables the existing
 experimental APFS writer at the fixed account location:
@@ -54,7 +57,10 @@ The optional `desktop-pilot` feature in
 window with a bundled welcome page and separate synthetic enrollment probes. Its
 probe adapter can only observe an absent destination. The separate enrollment
 bridge uses the experimental managed writer for synthetic encrypted creation.
-Neither surface exposes arbitrary filesystem operations or full-vault contents.
+Neither surface exposes arbitrary filesystem operations or full-vault contents. Unlocking never writes, creates or repairs the vault file; absent
+and structurally damaged vaults receive distinct controlled results. Wrong passwords preserve
+the file and permit an explicit retry. Lock, inactivity and trusted OS events
+revoke native access; late authentication results cannot restore it.
 
 This window provides synthetic session-event evidence for Milestone 2.
 The [local Apple silicon credential demo](roadmap.md#local-apple-silicon-demo)
@@ -76,7 +82,7 @@ can start another enrollment. Window destruction and app exit release the loop.
 
 The generated Tauri application-command manifest and
 [capability](../crates/codeward-host-macos/capabilities/desktop-pilot.json) allow
-the existing synthetic commands plus five enrollment operations for the local
+the existing synthetic commands plus enrollment and unlock operations for the local
 `main` WebView:
 
 | Command | Input | Output |
@@ -86,6 +92,9 @@ the existing synthetic commands plus five enrollment operations for the local
 | `get_setup_recovery_code` | Current epoch | Targeted temporary recovery code |
 | `confirm_vault_setup` | Current epoch and paper transcription | Safe saving state; completion is polled |
 | `cancel_vault_setup` | Current epoch | Safe state after revocation |
+| `open_managed_vault` | Empty body | Epoch and read-only opening/locked/missing state |
+| `unlock_managed_vault` | Current epoch, observed revocation counter and master password | Authenticating state, then polled native result |
+| `lock_managed_vault` | Current epoch | Locked state; no wait for a running KDF |
 
 Rust checks the trusted invoking window/WebView and bundled document. Enrollment
 commands are denied to the live-probe view, other windows and remote origins.
@@ -94,7 +103,14 @@ Tauri decodes JSON first, so this is not a predecode allocation limit. Rust owns
 request identity, expected creation revision, native events, deadlines and outcomes.
 The main-thread scheduler polls pending workers independently of renderer polling.
 Secret replies are targeted, not broadcast; epoch and renderer sequence guards
-reject stale deliveries after navigation/cancellation. Error/status payloads never
+reject stale deliveries after navigation/cancellation. A monotonic revocation
+counter also clears typed/revealed inputs when a lock event arrives while the
+form is already in the locked state. Unlock requests must match that observed
+counter after Rust checks pending events; a password submitted before a lock
+cannot start new authentication after that lock. Revocation during opening
+requires explicit reopening rather than offering an unusable password form.
+Authentication returns status only; vault
+keys and decrypted snapshots remain in Rust. Error/status payloads never
 include user inputs or native paths.
 
 Navigation and new windows remain denied. CSP admits only bundled scripts/styles
@@ -114,10 +130,14 @@ The setup bridge tests use a synthetic in-memory storage model with real core
 cryptography. They cover confirmation/no early readiness, exact encrypted reopening,
 invalid codes, existing-byte preservation, stale epochs, event revocation, bounded
 input, definite/unknown failure and cancellation on both sides of publication
-admission. IPC tests exercise generated ACLs/origin checks and invalid bodies.
+admission. Unlock tests cover actual core authentication/list authorization,
+wrong-password retry, explicit/native locks, stale epochs, command-boundary
+revocation and canceled KDF completion, plus missing/corrupt no-write behavior. IPC tests exercise generated ACLs/origin checks and invalid bodies.
 Local browser checks use mocked IPC for recovery/transcription/retry, distinct
 committed/unknown/existing results, delayed begin/code cancellation, secret clearing
-and dark/light desktop/narrow layouts. Those browser checks do not establish a
+and dark/light desktop/narrow layouts. Unlock browser checks likewise use mocked
+IPC for retries, lock events, stale responses and responsive layout; dependency-free
+Node regressions run with the existing redaction checks in CI. Those browser checks do not establish a
 live end-to-end native save or new live sleep/redaction evidence. Existing native
 APFS recovery tests remain the native writer evidence; run the actual desktop flow
 with synthetic inputs for installed-app acceptance.

@@ -45,8 +45,9 @@ generation/drafts, [targeted writes/deletion](scoped-credential-writes.md) and
 core record-operation prerequisite for the first credential editor. The next
 implementation slice now connects the managed macOS vault through narrow Tauri
 commands for master-password setup, paper-code display/transcription and committed
-creation. The themed window still uses bundled HTML/CSS/JavaScript; no React
-migration is included. Unlock/list/editor workflows, generation, search and
+creation. Read-only managed opening and ordinary unlock/lock are connected too;
+keys and decrypted snapshots remain in Rust. The themed window still uses bundled HTML/CSS/JavaScript; no React
+migration is included. List/editor workflows, generation, search and
 ordinary-close behavior remain next. See the [desktop guide](macos-desktop-pilot.md)
 for synthetic-only use and verification limits.
 

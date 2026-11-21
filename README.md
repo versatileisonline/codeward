@@ -35,10 +35,10 @@ Use synthetic data when exploring the project; it is not ready for real password
   vaults and disposable test locations.
 - **macOS desktop setup:** a dark/light Tauri interface connects master-password
   setup, paper-code display/transcription and committed encrypted vault creation
-  through the experimental managed writer. Use sample data; unlocking and
-  credential screens follow next. Separate synthetic lock/sleep probes remain.
+  through the experimental managed writer. Existing vaults can be unlocked and
+  locked through core authentication. Use sample data; credential screens follow next. Separate synthetic lock/sleep probes remain.
 
-The next work connects desktop unlocking, credential management, generation and
+The next work connects desktop credential management, generation and
 forgotten-password recovery, followed by broader desktop validation and packaging. See the
 [roadmap](docs/roadmap.md) for progress and remaining validation.
 
