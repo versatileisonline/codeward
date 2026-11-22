@@ -6,8 +6,8 @@ manage credentials, generate passwords, and recover access after forgetting thei
 master password—all offline, without a required account or hosted recovery service.
 
 The repository currently contains the Rust vault and session core, experimental
-native storage for macOS, Windows and Linux, and a small macOS desktop pilot.
-The complete credential interface and desktop installers are still in development.
+native storage for macOS, Windows and Linux, and a macOS desktop prototype with a bundled React/TypeScript interface.
+Desktop validation and installers are still in development.
 Use synthetic data when exploring the project; it is not ready for real passwords.
 
 ## What works today
@@ -33,19 +33,22 @@ Use synthetic data when exploring the project; it is not ready for real password
 - **Failure testing:** exercise malformed and tampered input, conflicting writes,
   application termination, storage failures and explicit retries using synthetic
   vaults and disposable test locations.
-- **macOS desktop setup:** a dark/light Tauri interface connects master-password
+- **macOS desktop interface:** a dark/light React/TypeScript interface inside
+  Tauri connects master-password
   setup, paper-code display/transcription and committed encrypted vault creation
   through the experimental managed writer. Existing vaults can be unlocked and
-  locked through core authentication. Use sample data; credential screens follow next. Separate synthetic lock/sleep probes remain.
+  locked through core authentication. The credential workspace adds scoped listing,
+  selected details/password reveal, creation, editing and deletion. Use sample
+  data; separate synthetic lock/sleep probes remain.
 
-The next work connects desktop credential management, generation and
-forgotten-password recovery, followed by broader desktop validation and packaging. See the
+The next work connects desktop generation and forgotten-password recovery,
+followed by broader desktop validation and packaging. See the
 [roadmap](docs/roadmap.md) for progress and remaining validation.
 
 ## How it is built
 
 The Rust core owns vault authentication, session authorization and commit outcomes.
-Native adapters handle filesystem operations. The planned credential interface
+Native adapters handle filesystem operations. The credential interface
 uses React/TypeScript inside Tauri, with a limited command surface rather than
 direct access to vault files or keys.
 
@@ -81,7 +84,17 @@ For the optional macOS window, see the [desktop pilot guide](docs/macos-desktop-
 
 ## Development and testing
 
-After fetching dependencies, the standard workspace checks are:
+Build the frontend before feature-enabled native checks (Node/npm are build-time
+requirements, not installed-app runtime requirements):
+
+```sh
+npm ci --prefix crates/codeward-host-macos/frontend
+npm run typecheck --prefix crates/codeward-host-macos/frontend
+npm test --prefix crates/codeward-host-macos/frontend
+npm run build --prefix crates/codeward-host-macos/frontend
+```
+
+After fetching dependencies and building the frontend, the standard workspace checks are:
 
 ```sh
 cargo check --workspace --no-default-features --locked --offline

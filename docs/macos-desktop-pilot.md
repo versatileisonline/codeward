@@ -1,6 +1,6 @@
-# macOS synthetic desktop pilot
+# macOS synthetic desktop prototype
 
-## Welcome page preview
+## Bundled React interface
 
 The default window now displays the Codeward welcome page: an animated wordmark,
 slim Home/About sidebar and a Get started button. The sidebar starts collapsed,
@@ -12,8 +12,11 @@ The code disappears before transcription and after cancellation/lock. The window
 reports **Vault saved** only after the core returns a committed revision, then
 leaves the vault locked. **Unlock vault** on the welcome/result screen opens the
 managed vault and authenticates the entered password in a Rust worker. The
-unlocked screen currently reports access and offers Lock vault; credential
-management is the next slice.
+unlocked screen opens a credential workspace with a list on the left and selected
+entry details/editor on the right. Add, edit and delete use scoped Rust operations;
+password reveal is explicit and temporary. The same dark/light styles apply to
+setup, unlock and credential screens. Generation controls and forgotten-password
+recovery UI remain later slices.
 
 Use synthetic input only. The opt-in desktop feature now enables the existing
 experimental APFS writer at the fixed account location:
@@ -33,22 +36,27 @@ reopen to inspect actual state; no automatic retry or reconciliation UI is added
 JavaScript/IPC/OS copies cannot be proven erased. Native live probes remain
 separate and retain their synthetic session behavior.
 
-From the repository root, with the pinned Rust toolchain installed:
+From the repository root, with Node/npm and the pinned Rust toolchain installed:
 
 ```sh
+npm ci --prefix crates/codeward-host-macos/frontend
+npm run build --prefix crates/codeward-host-macos/frontend
 cargo fetch --locked
 cargo run -p codeward-host-macos --features desktop-pilot --bin codeward-desktop-pilot --locked --offline
 ```
 
-Quit and rerun after changing bundled assets. No DMG is required. For a browser-only
-layout preview that refreshes without compiling Rust:
+After changing frontend source, rebuild the assets and quit/rerun the native app.
+The production build writes locally bundled files to `desktop-dist`; no localhost
+server is needed when the installed app runs. For a browser-only layout preview:
 
 ```sh
-python3 -m http.server 4173 --bind 127.0.0.1 --directory crates/codeward-host-macos/desktop-assets
+npm run dev --prefix crates/codeward-host-macos/frontend -- --host 127.0.0.1
 ```
 
-Open `http://127.0.0.1:4173` and refresh after edits. This serves the same welcome
-HTML/CSS/JavaScript; native window behavior must be checked in Tauri.
+Use the URL printed by Vite. Browser preview has no native vault access; setup,
+unlock and credential persistence require Tauri. Browser checks with mocked IPC
+can validate UI behavior, but cannot establish native persistence or OS-event
+handling.
 
 ## Synthetic host foundation
 
@@ -123,7 +131,8 @@ workspace dependencies; no registry version or vault format changes.
 ```sh
 cargo test -p codeward-host-macos --all-features --locked --offline
 cargo clippy -p codeward-host-macos --all-targets --all-features --locked --offline -- -D warnings
-node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
+npm test --prefix crates/codeward-host-macos/frontend
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
 ```
 
 The setup bridge tests use a synthetic in-memory storage model with real core
@@ -137,12 +146,21 @@ Local browser checks use mocked IPC for recovery/transcription/retry, distinct
 committed/unknown/existing results, delayed begin/code cancellation, secret clearing
 and dark/light desktop/narrow layouts. Unlock browser checks likewise use mocked
 IPC for retries, lock events, stale responses and responsive layout; dependency-free
-Node regressions run with the existing redaction checks in CI. Those browser checks do not establish a
+React interaction regressions run alongside the separate probe redaction checks
+in CI. Those browser checks do not establish a
 live end-to-end native save or new live sleep/redaction evidence. Existing native
 APFS recovery tests remain the native writer evidence; run the actual desktop flow
 with synthetic inputs for installed-app acceptance.
 
 ## Pinned dependencies
+
+The frontend's `package.json` pins React/React DOM and development tools, while
+`package-lock.json` records the complete npm graph. Use `npm ci` rather than an
+unlocked install when reproducing checks. React executes inside the existing
+Tauri WebView; the migration does not replace Tauri or move vault ownership out
+of Rust. Vite and the test tools are build-time dependencies and are not runtime
+network services.
+
 
 The macOS-only feature uses [Tauri 2.12.5](https://docs.rs/crate/tauri/2.12.5)
 with `custom-protocol` and `wry`, Tauri Build 2.7.4 with `config-json`,
@@ -184,8 +202,12 @@ exercises process-local macOS event delivery separately.
 
 ### Packaged live probes
 
-Build an ad-hoc-signed local `.app` with the pinned toolchain and cached
-dependencies. The script prints its path and verifies the bundle signature.
+Build an ad-hoc-signed local `.app` with Node/npm and the pinned Rust toolchain.
+The script installs locked npm dependencies, builds the React assets, then builds
+Rust with cached Cargo dependencies. npm installation may require network access;
+that build-time access is separate from the offline installed-app requirement.
+Build output goes to stderr; stdout contains only the app path. The script
+verifies the bundle signature.
 The WebView assets are embedded in the release executable.
 [Apple bundle layout](https://developer.apple.com/documentation/bundleresources/placing-content-in-a-bundle)
 
@@ -193,7 +215,8 @@ The WebView assets are embedded in the release executable.
 app=$(sh crates/codeward-host-macos/tests/package-desktop-pilot.sh)
 "$app/Contents/MacOS/codeward-desktop-pilot" --live-lock
 "$app/Contents/MacOS/codeward-desktop-pilot" --live-sleep
-node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
+npm test --prefix crates/codeward-host-macos/frontend
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
 ```
 
 After `ARMED Lock`, the operator locks and unlocks the Mac. After
@@ -201,8 +224,8 @@ After `ARMED Lock`, the operator locks and unlocks the Mac. After
 session. The probe exits after a verified `PASS`, a failure, or a 120-second
 awake timeout. An interrupted run needs to be repeated.
 
-The probe uses a separate local WebView and capability. The normal view has
-its original three commands. The probe view can read cached status and
+The probe uses a separate local WebView and capability. The normal view uses the scoped enrollment, unlock and credential commands.
+The probe view can read cached status and
 acknowledge the initial and redacted renderings. A pass requires that the
 WebView first report visible synthetic preview and draft values, the desktop
 loop revoke on `OsSessionLocked` or `Suspend`, and the matching lock or sleep

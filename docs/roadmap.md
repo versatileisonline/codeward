@@ -42,14 +42,17 @@ Each milestone requires explicit acceptance before the next begins.
 The Rust session/headless surface now includes scoped listing/details/reveal,
 generation/drafts, [targeted writes/deletion](scoped-credential-writes.md) and
 [credential creation/general editing](credential-editing.md). These complete the
-core record-operation prerequisite for the first credential editor. The next
-implementation slice now connects the managed macOS vault through narrow Tauri
-commands for master-password setup, paper-code display/transcription and committed
-creation. Read-only managed opening and ordinary unlock/lock are connected too;
-keys and decrypted snapshots remain in Rust. The themed window still uses bundled HTML/CSS/JavaScript; no React
-migration is included. List/editor workflows, generation, search and
-ordinary-close behavior remain next. See the [desktop guide](macos-desktop-pilot.md)
-for synthetic-only use and verification limits.
+core record-operation prerequisite for the credential editor. The managed macOS
+vault is connected through narrow Tauri commands for setup, paper-code
+confirmation, committed creation and ordinary unlock/lock. The bundled interface
+now uses React/TypeScript and includes a two-pane credential list/details/editor,
+creation, editing, deletion and explicit password reveal. Keys and decrypted
+snapshots remain in Rust; record operations use scoped references and commit
+status. The existing dark/light theme and separate synthetic probes are retained.
+Generation controls and forgotten-password recovery UI remain next, followed by
+integrated native offline, accessibility and packaging validation. See the
+[desktop guide](macos-desktop-pilot.md) for synthetic-only use and verification
+limits.
 
 This implementation progress does not itself record formal M3 acceptance or
 advance M4's cross-platform/installed-app acceptance gates.
@@ -221,4 +224,5 @@ guarantee is inferred from that authorization.
 
 These are future integrated validation targets. The bounded core format,
 crypto/paper-code, credential and in-memory vault components have the evidence
-described above; no committed application workflow exists yet.
+described above; complete installed-app acceptance is not inferred from the
+macOS integration work.
