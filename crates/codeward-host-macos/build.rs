@@ -4,6 +4,14 @@ fn main() {
     #[cfg(all(target_os = "macos", feature = "desktop-pilot"))]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "open_managed_vault",
+            "unlock_managed_vault",
+            "lock_managed_vault",
+            "begin_vault_setup",
+            "get_vault_setup_state",
+            "get_setup_recovery_code",
+            "confirm_vault_setup",
+            "cancel_vault_setup",
             "open_synthetic_session",
             "get_session_state",
             "lock_vault",

@@ -33,11 +33,13 @@ Use synthetic data when exploring the project; it is not ready for real password
 - **Failure testing:** exercise malformed and tampered input, conflicting writes,
   application termination, storage failures and explicit retries using synthetic
   vaults and disposable test locations.
-- **macOS desktop pilot:** a Tauri window exercises synthetic session state,
-  lock/sleep events and field redaction. It does not browse or save credentials.
+- **macOS desktop setup:** a dark/light Tauri interface connects master-password
+  setup, paper-code display/transcription and committed encrypted vault creation
+  through the experimental managed writer. Existing vaults can be unlocked and
+  locked through core authentication. Use sample data; credential screens follow next. Separate synthetic lock/sleep probes remain.
 
-The next work covers the complete offline recovery workflow, followed by the
-credential UI, generator integration, desktop integration and packaging. See the
+The next work connects desktop credential management, generation and
+forgotten-password recovery, followed by broader desktop validation and packaging. See the
 [roadmap](docs/roadmap.md) for progress and remaining validation.
 
 ## How it is built

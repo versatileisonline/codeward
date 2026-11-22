@@ -1,17 +1,124 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Codeward Synthetic Pilot</title>
-    <script src="pilot.js" defer></script>
-  </head>
-  <body>
-    <main>
-      <h1>Codeward Synthetic Pilot</h1>
-      <p id="state" role="status">Connecting</p>
-      <button id="open" type="button" disabled>Start synthetic session</button>
-      <button id="lock" type="button" disabled>Lock session</button>
-    </main>
-  </body>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Codeward</title>
+  <link rel="stylesheet" href="welcome.css">
+  <script src="welcome.js" defer></script>
+</head>
+<body class="sidebar-collapsed">
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="sidebar-top">
+      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Expand sidebar" aria-expanded="false" aria-controls="navigation">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+      </button>
+    </div>
+    <nav id="navigation" aria-label="Main navigation">
+      <button id="home-button" class="nav-button" type="button" aria-label="Home" aria-current="page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg><span class="nav-label">Home</span>
+      </button>
+      <button id="about-button" class="nav-button" type="button" aria-label="About">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.01"/></svg><span class="nav-label">About</span>
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <p class="author">Bryan Torres</p>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="true" title="Switch to light mode">
+        <svg class="moon-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z"/></svg>
+        <svg class="sun-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+        <span class="theme-label">Light mode</span>
+      </button>
+    </div>
+  </aside>
+  <main>
+    <section class="welcome" aria-labelledby="wordmark">
+      <h1 id="wordmark" class="wordmark entrance"><span class="code">Code</span><span class="ward">ward</span></h1>
+      <p class="byline entrance">Your local password manager</p>
+      <div class="action-area entrance">
+        <button id="get-started" class="primary-button" type="button">Get started</button>
+        <button id="open-vault" class="welcome-unlock" type="button">Unlock vault</button>
+      </div>
+    </section>
+    <section id="setup" class="setup-panel" aria-labelledby="setup-heading" hidden>
+      <button id="setup-back" class="back-button" type="button"><span aria-hidden="true">←</span> Back</button>
+      <p class="step-label">01 <span aria-hidden="true">/</span> PASSWORD</p>
+      <h2 id="setup-heading" tabindex="-1">Create your vault</h2>
+      <form id="setup-form" novalidate>
+        <div class="form-field">
+          <label for="master-password">Master password</label>
+          <div class="password-field">
+            <input id="master-password" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="none" aria-describedby="setup-error" required>
+            <button class="reveal-button" type="button" data-reveal="master-password" aria-label="Show master password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="confirm-password">Confirm password</label>
+          <div class="password-field">
+            <input id="confirm-password" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="none" aria-describedby="setup-error" required>
+            <button class="reveal-button" type="button" data-reveal="confirm-password" aria-label="Show confirmation password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <p id="setup-error" class="form-error" role="alert"></p>
+        <button class="primary-button continue-button" type="submit">Continue</button>
+        <p id="setup-status" class="setup-status" role="status"></p>
+      </form>
+      <p class="preview-note">Development build. Use sample passwords only.</p>
+    </section>
+    <section id="recovery" class="setup-panel" aria-labelledby="recovery-heading" hidden>
+      <button id="recovery-back" class="back-button" type="button"><span aria-hidden="true">←</span> Cancel setup</button>
+      <p class="step-label">02 <span aria-hidden="true">/</span> RECOVERY</p>
+      <h2 id="recovery-heading" tabindex="-1">Keep a way back in</h2>
+      <div id="code-display">
+        <p class="recovery-hint">Write down this code. Keep it somewhere safe.</p>
+        <p id="recovery-code" class="recovery-code" aria-label="Recovery code"></p>
+        <p class="field-hint">It restores access to an intact vault if you forget your password. It cannot restore a lost vault file.</p>
+        <button id="code-written" class="primary-button continue-button" type="button" disabled>I've written it down</button>
+      </div>
+      <form id="recovery-form" novalidate hidden>
+        <div class="form-field">
+          <label for="paper-code">Type your recovery code</label>
+          <textarea id="paper-code" rows="3" maxlength="256" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="recovery-error" required></textarea>
+        </div>
+        <p id="recovery-error" class="form-error" role="alert"></p>
+        <button id="create-vault" class="primary-button continue-button" type="submit">Create vault</button>
+        <button id="view-code" class="back-button view-code" type="button">View code again</button>
+      </form>
+      <p id="recovery-status" class="setup-status" role="status"></p>
+    </section>
+    <section id="setup-result" class="setup-panel" aria-labelledby="result-heading" hidden>
+      <h2 id="result-heading" tabindex="-1"></h2>
+      <p id="result-description" class="recovery-hint"></p>
+      <button id="result-unlock" class="primary-button" type="button" hidden>Unlock vault</button>
+      <button id="result-home" class="primary-button" type="button">Back to home</button>
+    </section>
+    <section id="unlock" class="setup-panel" aria-labelledby="unlock-heading" hidden>
+      <button id="unlock-back" class="back-button" type="button"><span aria-hidden="true">←</span> Back</button>
+      <h2 id="unlock-heading" tabindex="-1">Unlock your vault</h2>
+      <form id="unlock-form" novalidate>
+        <div class="form-field">
+          <label for="unlock-password">Master password</label>
+          <div class="password-field">
+            <input id="unlock-password" type="password" autocomplete="current-password" spellcheck="false" autocapitalize="none" aria-describedby="unlock-error" required>
+            <button class="reveal-button" type="button" data-reveal="unlock-password" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <p id="unlock-error" class="form-error" role="alert"></p>
+        <button id="unlock-submit" class="primary-button continue-button" type="submit">Unlock</button>
+        <p id="unlock-status" class="setup-status" role="status"></p>
+      </form>
+    </section>
+    <section id="vault" class="setup-panel" aria-labelledby="vault-heading" hidden>
+      <h2 id="vault-heading" tabindex="-1">Your vault</h2>
+      <p class="recovery-hint">Unlocked. Credential management comes next.</p>
+      <button id="lock-open-vault" class="primary-button" type="button">Lock vault</button>
+    </section>
+    <section id="about" class="about-panel" aria-labelledby="about-heading" hidden>
+      <h2 id="about-heading" tabindex="-1">About Codeward</h2>
+      <p>Your local password manager.</p>
+      <button id="about-close" type="button">Back to home <span aria-hidden="true">↗</span></button>
+    </section>
+  </main>
+</body>
 </html>
