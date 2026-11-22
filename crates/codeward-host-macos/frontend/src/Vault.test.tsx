@@ -189,14 +189,14 @@ test("dirty navigation supports cancel and discard without writing", async () =>
     await screen.findByRole("button", { name: /Sample mail.*sample/ }),
   );
   await screen.findByText("Sample notes");
-  fireEvent.click(screen.getByRole("button", { name: "Edit", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Title"), {
     target: { value: "Changed" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Add credential" }));
   await screen.findByRole("dialog");
   fireEvent.click(
-    screen.getAllByRole("button", { name: "Cancel", exact: true }).at(-1)!,
+    screen.getAllByRole("button", { name: "Cancel" }).at(-1)!,
   );
   expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe(
     "Changed",
@@ -223,7 +223,7 @@ test("save changes on navigation preserves an existing password without reveal",
     await screen.findByRole("button", { name: /Sample mail.*sample/ }),
   );
   await screen.findByText("Sample notes");
-  fireEvent.click(screen.getByRole("button", { name: "Edit", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Title"), {
     target: { value: "Changed" },
   });
@@ -291,7 +291,7 @@ test("native close can be canceled without losing an edit", async () => {
   );
   await screen.findByRole("dialog");
   fireEvent.click(
-    screen.getAllByRole("button", { name: "Cancel", exact: true }).at(-1)!,
+    screen.getAllByRole("button", { name: "Cancel" }).at(-1)!,
   );
   await waitFor(() =>
     expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith(

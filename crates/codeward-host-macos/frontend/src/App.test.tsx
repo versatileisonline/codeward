@@ -280,7 +280,7 @@ test("native security lock clears the credential editor and dirty dialog immedia
   fireEvent.change(screen.getByLabelText("Title"), {
     target: { value: "SENSITIVE EDIT" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Cancel", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   await screen.findByRole("dialog");
   state = "locked";
   await screen.findByRole("heading", { name: "Unlock your vault" });
