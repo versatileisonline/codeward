@@ -18,13 +18,13 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #202020;
-  --rail: #191919;
+  --page: #151515;
+  --rail: #101010;
   --ink: #f3efe6;
   --muted: #b6b1a7;
-  --line: #3b3935;
-  --hover: #33312e;
-  --surface: #292827;
+  --line: #34322e;
+  --hover: #2b2a27;
+  --surface: #20201e;
   --button: #e9ddc5;
   --button-hover: #f5e9d2;
 }
@@ -1000,19 +1000,19 @@ input::placeholder {
 
 .codeward-logo {
   display: block;
-  object-fit: contain;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .welcome-logo {
-  width: clamp(76px, 9vw, 112px);
-  height: auto;
+  width: clamp(128px, 12vw, 160px);
+  height: 100px;
   margin: 0 auto 24px;
 }
 .empty-logo {
-  width: 112px;
-  height: 112px;
+  width: 160px;
+  height: 100px;
   margin: 0 0 24px;
 }
 [data-theme="dark"] .codeward-logo {
-  filter: brightness(1.8);
+  filter: brightness(0) invert(94%) sepia(14%) saturate(500%) hue-rotate(350deg);
 }
