@@ -220,5 +220,5 @@ export function showDemoBadge() {
   banner.setAttribute("aria-label", "Browser demo");
   banner.textContent =
     "Browser demo · Sample data only · Changes reset on reload";
-  document.body.append(banner);
+  document.body.prepend(banner);
 }

@@ -90,3 +90,10 @@ VoiceOver, offline-runtime and installed-app checks instead of claiming them.
   issues or lint. Labels, placeholder contrast, narrow inputs/actions and local
   selection indicators were refined from review. Vite preview runs on localhost
   port 4173 for owner feedback; it is not a hosted deployment.
+
+- Independent oil-ui UX walkthrough (`oil_ux`) completed sample creation,
+  confirmed save, selected retrieval and password reveal in the live demo.
+  The demo notice was moved into normal document flow to avoid covering form
+  actions. Newly created records still require selection after save, consistent
+  with this slice's explicit list-refresh behavior; automatic selection is a
+  possible later refinement.

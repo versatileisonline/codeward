@@ -1,9 +1,8 @@
 .demo-banner {
-  position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: calc(100% - 28px);
+  position: relative;
+  width: calc(100% - 88px);
+  max-width: 520px;
+  margin: 12px 16px 12px 72px;
   padding: 9px 14px;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -17,10 +16,4 @@
   box-shadow: 0 4px 18px #0002;
   text-align: center;
   pointer-events: none;
-}
-
-@media (max-width: 600px) {
-  body:has(.demo-banner) .credential-editor .editor-actions {
-    bottom: 58px;
-  }
 }
