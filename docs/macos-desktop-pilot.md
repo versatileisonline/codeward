@@ -90,7 +90,7 @@ can start another enrollment. Window destruction and app exit release the loop.
 
 The generated Tauri application-command manifest and
 [capability](../crates/codeward-host-macos/capabilities/desktop-pilot.json) allow
-the existing synthetic commands plus enrollment and unlock operations for the local
+the existing synthetic commands plus enrollment, unlock and credential operations for the local
 `main` WebView:
 
 | Command | Input | Output |
@@ -103,9 +103,25 @@ the existing synthetic commands plus enrollment and unlock operations for the lo
 | `open_managed_vault` | Empty body | Epoch and read-only opening/locked/missing state |
 | `unlock_managed_vault` | Current epoch, observed revocation counter and master password | Authenticating state, then polled native result |
 | `lock_managed_vault` | Current epoch | Locked state; no wait for a running KDF |
+| `list_credentials` | Epoch, revocation counter, optional opaque cursor | Up to 100 title/username summaries, decimal-string generation/revision, next cursor |
+| `get_credential_details` | Epoch, revocation, generation, revision and selected ID | One record's non-password fields and timestamps |
+| `reveal_credential_password` | Same selected-record context | One temporary password and remaining display lifetime |
+| `create_credential` | Epoch, revocation, generation, revision and complete form | Opaque operation reference and saving state |
+| `update_credential` | Same form context plus selected ID | Opaque operation reference and saving state |
+| `delete_credential` | Same selected-record context | Opaque operation reference and saving state |
+| `get_credential_operation` | Epoch and operation reference | Saving, saved, failed, conflict, unknown or locked state |
+
+Credential forms include title, username, URL, notes and explicit password intent:
+`keep` preserves an existing password; `provided` supplies a replacement, including
+an explicit empty value. Creation requires a provided password. Record IDs and
+timestamps are assigned by Rust. Generation/revision values are canonical decimal
+strings at the frontend boundary. Cursor tokens are scoped continuations rather
+than renderer-chosen offsets. An uncertain operation blocks further mutation;
+reopening establishes authoritative state rather than automatically replaying a
+save. Success follows the complete core commit result.
 
 Rust checks the trusted invoking window/WebView and bundled document. Enrollment
-commands are denied to the live-probe view, other windows and remote origins.
+and credential commands are denied to the live-probe view, other windows and remote origins.
 Input shapes reject extra keys and enforce core-compatible bounds before copying;
 Tauri decodes JSON first, so this is not a predecode allocation limit. Rust owns
 request identity, expected creation revision, native events, deadlines and outcomes.
