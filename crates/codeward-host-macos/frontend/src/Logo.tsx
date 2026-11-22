@@ -1,4 +1,4 @@
-import logo from "./assets/codeward-logo.png";
+import logo from "./assets/codeward-guarded-brackets.png";
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -6,8 +6,8 @@ export function Logo({ className = "" }: { className?: string }) {
       className={`codeward-logo ${className}`}
       src={logo}
       alt="Codeward lock logo"
-      width={112}
-      height={112}
+      width={160}
+      height={100}
     />
   );
 }
