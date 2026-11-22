@@ -3,7 +3,8 @@
 `codeward_core::password` implements the local generator policy in
 [ADR-0005](adr/0005-session-and-drafts.md) for FR-04. It is a standalone Rust
 primitive. The [session draft layer](password-drafts.md) adds scoped ownership and
-explicit previews; no Tauri command or interface is introduced.
+explicit previews. The [desktop editor](macos-desktop-pilot.md) now connects
+those scoped operations through narrow Tauri commands.
 
 ## API and preferences
 
@@ -60,7 +61,8 @@ guaranteed erased.
 Generation does not read or change a vault, authorize a session, extend inactivity,
 create a draft reference or save a credential. The [session draft layer](password-drafts.md)
 enforces caller/session/draft scope and lock cleanup for its narrow host operations.
-Renderer transport and presentation remain later integration.
+The desktop editor now provides generation controls and temporary explicit
+previews; installed-app acceptance and real-credential admission remain separate.
 The [UI/core contract](ui-core-contract.md) and
 [session/draft policy](adr/0005-session-and-drafts.md) still govern that integration.
 No clipboard, dependency, format or crypto-profile change is included.

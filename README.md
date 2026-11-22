@@ -19,8 +19,8 @@ Use synthetic data when exploring the project; it is not ready for real password
   requests and authentication results, and enforce an inactivity deadline.
 - **Rust password generation:** generate unsaved passwords with OS randomness,
   configurable length and character classes, and zeroizing ownership. Scoped Rust
-  sessions retain, reveal and discard one volatile draft; desktop controls remain
-  future integration work.
+  sessions retain, reveal and discard one volatile draft; the desktop editor
+  generates and explicitly saves by scoped draft reference.
 - **Targeted Rust credential writes:** explicitly save a generated draft to an
   existing credential or delete a selected record through background committed
   writes, with failure/retry and lock handling.
@@ -41,7 +41,7 @@ Use synthetic data when exploring the project; it is not ready for real password
   selected details/password reveal, creation, editing and deletion. Use sample
   data; separate synthetic lock/sleep probes remain.
 
-The next work connects desktop generation and forgotten-password recovery,
+The next work connects forgotten-password recovery,
 followed by broader desktop validation and packaging. See the
 [roadmap](docs/roadmap.md) for progress and remaining validation.
 
