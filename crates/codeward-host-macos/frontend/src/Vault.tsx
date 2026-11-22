@@ -418,7 +418,7 @@ export function Vault({
           </h2>
         </div>
         <button className="secondary-button" onClick={lock}>
-          Lock vault <span aria-hidden="true">↗</span>
+          Lock Vault <span aria-hidden="true">↗</span>
         </button>
       </header>
       <div className="vault-columns">

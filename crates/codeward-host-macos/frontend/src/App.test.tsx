@@ -28,7 +28,7 @@ test("welcome retains theme and setup validation", () => {
   render(<App />);
   fireEvent.click(screen.getByLabelText("Switch to light mode"));
   expect(document.documentElement.dataset.theme).toBe("light");
-  fireEvent.click(screen.getByText("Get started"));
+  fireEvent.click(screen.getByText("Get Started"));
   fireEvent.submit(
     screen.getByRole("button", { name: "Continue" }).closest("form")!,
   );
@@ -42,7 +42,7 @@ test("late opening is canceled after navigation", async () => {
     c === "open_managed_vault" ? new Promise((r) => (done = r)) : {},
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock vault"));
+  fireEvent.click(screen.getByText("Unlock Vault"));
   fireEvent.click(screen.getByText("Back"));
   done({ epoch: 2, revocation: 0, state: "locked" });
   await waitFor(() =>
@@ -51,7 +51,7 @@ test("late opening is canceled after navigation", async () => {
       { epoch: 2 },
     ),
   );
-  expect(screen.getByText("Get started")).toBeTruthy();
+  expect(screen.getByText("Get Started")).toBeTruthy();
 });
 test("unlock dispatch clears password and wrong password allows retry", async () => {
   native((c) =>
@@ -60,7 +60,7 @@ test("unlock dispatch clears password and wrong password allows retry", async ()
       : { epoch: 1, revocation: 0, state: "locked", error: "wrong_password" },
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock vault"));
+  fireEvent.click(screen.getByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic" },
@@ -74,7 +74,7 @@ test("unlock dispatch clears password and wrong password allows retry", async ()
   ).toBe("");
 });
 function setupForm() {
-  fireEvent.click(screen.getByText("Get started"));
+  fireEvent.click(screen.getByText("Get Started"));
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic master" },
   });
@@ -153,7 +153,7 @@ test("navigation clears exposed code and ignores pending status", async () => {
   fireEvent.click(screen.getByText("Cancel setup"));
   polling.resolve({ epoch: 2, revocation: 0, state: "recovery" });
   expect(screen.queryByText("SYNTHETIC CODE")).toBeNull();
-  expect(screen.getByText("Get started")).toBeTruthy();
+  expect(screen.getByText("Get Started")).toBeTruthy();
 });
 test("saving and unknown enrollment never claim committed success", async () => {
   let state = "recovery";
@@ -209,7 +209,7 @@ test("navigation during authentication rejects a late unlocked reply", async () 
         : {},
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock vault"));
+  fireEvent.click(screen.getByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic" },
@@ -217,13 +217,13 @@ test("navigation during authentication rejects a late unlocked reply", async () 
   fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
   fireEvent.click(screen.getByText("Back"));
   attempt.resolve({ epoch: 7, revocation: 0, state: "unlocked" });
-  expect(screen.getByText("Get started")).toBeTruthy();
+  expect(screen.getByText("Get Started")).toBeTruthy();
   expect(screen.queryByText("Your vault")).toBeNull();
 });
 test("missing vault does not start creation", async () => {
   native(() => ({ epoch: 8, revocation: 0, state: "missing" }));
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock vault"));
+  fireEvent.click(screen.getByText("Unlock Vault"));
   await screen.findByText("No vault found");
   expect(window.__TAURI__!.core.invoke).not.toHaveBeenCalledWith(
     "begin_vault_setup",
@@ -238,7 +238,7 @@ test("revocation clears typed password even while already locked", async () => {
       : { epoch: 9, revocation, state: "locked" },
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock vault"));
+  fireEvent.click(screen.getByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic pre-auth" },
@@ -269,7 +269,7 @@ test("native security lock clears the credential editor and dirty dialog immedia
           : { epoch: 1, revocation: state === "locked" ? 1 : 0, state },
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock vault"));
+  fireEvent.click(screen.getByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic" },

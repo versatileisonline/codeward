@@ -341,18 +341,24 @@ export function App() {
             aria-current={view !== "about" ? "page" : undefined}
             onClick={() => navigate()}
           >
-            ⌂ <span className="nav-label">Home</span>
+            <span className="nav-icon" aria-hidden="true">
+              ⌂
+            </span>
+            <span className="nav-label">Home</span>
           </button>
           <button
             className="nav-button"
             aria-current={view === "about" ? "page" : undefined}
             onClick={() => navigate("about")}
           >
-            ⓘ <span className="nav-label">About</span>
+            <span className="nav-icon" aria-hidden="true">
+              ⓘ
+            </span>
+            <span className="nav-label">About</span>
           </button>
         </nav>
         <div className="sidebar-bottom">
-          <p className="author">Bryan Torres</p>
+          <p className="author">Creator: Bryan Torres</p>
           <button
             className="theme-toggle"
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
@@ -374,10 +380,10 @@ export function App() {
             <p className="byline entrance">Your local password manager</p>
             <div className="action-area entrance">
               <button className="primary-button" onClick={() => leave("setup")}>
-                Get started
+                Get Started
               </button>
               <button className="welcome-unlock" onClick={open}>
-                Unlock vault
+                Unlock Vault
               </button>
             </div>
           </section>
@@ -468,14 +474,16 @@ export function App() {
           <section className="setup-panel">
             <h2 tabIndex={-1}>{result[status?.state ?? ""]?.[0]}</h2>
             <p className="recovery-hint">{result[status?.state ?? ""]?.[1]}</p>
-            {["created", "existing"].includes(status?.state ?? "") && (
-              <button className="primary-button" onClick={open}>
-                Unlock vault
+            <div className="result-actions">
+              {["created", "existing"].includes(status?.state ?? "") && (
+                <button className="primary-button" onClick={open}>
+                  Unlock Vault
+                </button>
+              )}
+              <button className="secondary-button" onClick={() => leave()}>
+                Back to Home
               </button>
-            )}
-            <button className="secondary-button" onClick={() => leave()}>
-              Back to home
-            </button>
+            </div>
           </section>
         )}
         {view === "connection" && (
@@ -485,7 +493,7 @@ export function App() {
               Keep your recovery code. Reopen Codeward to check the vault.
             </p>
             <button className="secondary-button" onClick={() => leave()}>
-              Back to home
+              Back to Home
             </button>
           </section>
         )}
@@ -501,7 +509,7 @@ export function App() {
           <section className="about-panel">
             <h2 tabIndex={-1}>About Codeward</h2>
             <p>Your local password manager.</p>
-            <button onClick={() => leave()}>Back to home ↗</button>
+            <button onClick={() => leave()}>Back to Home ↗</button>
           </section>
         )}
       </main>
