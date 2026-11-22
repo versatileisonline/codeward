@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke, type Status } from "./native";
 import { Vault } from "./Vault";
+import { Logo } from "./Logo";
+import { PasswordInput } from "./PasswordInput";
 // Screens share one revocable native session; no browser persistence owns vault state.
 export function App() {
   const [view, setView] = useState("home"),
@@ -373,6 +375,7 @@ export function App() {
       <main>
         {view === "home" && (
           <section className="welcome">
+            <Logo className="welcome-logo" />
             <h1 className="wordmark entrance">
               <span className="code">Code</span>
               <span className="ward">ward</span>
@@ -480,8 +483,11 @@ export function App() {
                   Unlock Vault
                 </button>
               )}
-              <button className="secondary-button" onClick={() => leave()}>
-                Back to Home
+              <button
+                className="secondary-button home-back-button"
+                onClick={() => leave()}
+              >
+                <span aria-hidden="true">←</span> Back to Home
               </button>
             </div>
           </section>
@@ -492,8 +498,11 @@ export function App() {
             <p className="recovery-hint">
               Keep your recovery code. Reopen Codeward to check the vault.
             </p>
-            <button className="secondary-button" onClick={() => leave()}>
-              Back to Home
+            <button
+              className="secondary-button home-back-button"
+              onClick={() => leave()}
+            >
+              <span aria-hidden="true">←</span> Back to Home
             </button>
           </section>
         )}
@@ -509,7 +518,12 @@ export function App() {
           <section className="about-panel">
             <h2 tabIndex={-1}>About Codeward</h2>
             <p>Your local password manager.</p>
-            <button onClick={() => leave()}>Back to Home ↗</button>
+            <button
+              className="back-button home-back-button"
+              onClick={() => leave()}
+            >
+              <span aria-hidden="true">←</span> Back to Home
+            </button>
           </section>
         )}
       </main>
@@ -528,48 +542,6 @@ function Back({
       <span aria-hidden="true">←</span>
       {label}
     </button>
-  );
-}
-function PasswordInput({
-  label,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-}) {
-  const [show, setShow] = useState(false);
-  const id = label.toLowerCase().replaceAll(" ", "-");
-  useEffect(() => {
-    if (!value) setShow(false);
-  }, [value]);
-  return (
-    <div className="form-field">
-      <label htmlFor={id}>{label}</label>
-      <div className="password-field">
-        <input
-          id={id}
-          value={value}
-          type={show ? "text" : "password"}
-          disabled={disabled}
-          autoComplete="off"
-          spellCheck={false}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        <button
-          className="reveal-button"
-          type="button"
-          aria-label={`${show ? "Hide" : "Show"} ${label.toLowerCase()}`}
-          aria-pressed={show}
-          onClick={() => setShow(!show)}
-        >
-          {show ? "Hide" : "Show"}
-        </button>
-      </div>
-    </div>
   );
 }
 function PasswordForm({

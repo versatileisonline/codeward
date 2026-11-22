@@ -957,3 +957,62 @@ input::placeholder {
     box-shadow: 0 6px 24px #0003;
   }
 }
+
+/* Back navigation stays aligned at rest and lifts as one control on hover. */
+.home-back-button {
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+.home-back-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px #0003;
+}
+.danger-button {
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+.danger-button:hover:not(:disabled) {
+  background: #d92332;
+  border-color: #d92332;
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px #d9233240;
+}
+.credential-editor .password-field input {
+  border: 0;
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-back-button,
+  .danger-button {
+    transition: none;
+  }
+  .home-back-button:hover:not(:disabled),
+  .danger-button:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+.codeward-logo {
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.welcome-logo {
+  width: clamp(76px, 9vw, 112px);
+  height: auto;
+  margin: 0 auto 24px;
+}
+.empty-logo {
+  width: 112px;
+  height: 112px;
+  margin: 0 0 24px;
+}
+[data-theme="dark"] .codeward-logo {
+  filter: brightness(1.8);
+}

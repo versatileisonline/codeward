@@ -9,6 +9,8 @@ import {
   type Status,
   type Summary,
 } from "./native";
+import { PasswordInput } from "./PasswordInput";
+import { Logo } from "./Logo";
 type Guard = MutableRefObject<((action: () => void) => void) | null>;
 type Draft = {
   title: string;
@@ -536,9 +538,8 @@ export function Vault({
                   </label>
                 )}
                 {draft.replace ? (
-                  <TextField
+                  <PasswordInput
                     label="Password"
-                    type="password"
                     value={draft.password}
                     onChange={(v) => change("password", v)}
                   />
@@ -623,9 +624,7 @@ export function Vault({
           ) : (
             !loading && (
               <div className="vault-empty">
-                <div className="empty-symbol" aria-hidden="true">
-                  ◇
-                </div>
+                <Logo className="empty-logo" />
                 <h3>
                   {rows.length
                     ? "Everything in its place"

@@ -195,9 +195,7 @@ test("dirty navigation supports cancel and discard without writing", async () =>
   });
   fireEvent.click(screen.getByRole("button", { name: "Add credential" }));
   await screen.findByRole("dialog");
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Cancel" }).at(-1)!,
-  );
+  fireEvent.click(screen.getAllByRole("button", { name: "Cancel" }).at(-1)!);
   expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe(
     "Changed",
   );
@@ -290,9 +288,7 @@ test("native close can be canceled without losing an edit", async () => {
     />,
   );
   await screen.findByRole("dialog");
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Cancel" }).at(-1)!,
-  );
+  fireEvent.click(screen.getAllByRole("button", { name: "Cancel" }).at(-1)!);
   await waitFor(() =>
     expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith(
       "resolve_desktop_close",
@@ -314,4 +310,31 @@ test("search filters actual title and username without artificial separator matc
     target: { value: "n" },
   });
   expect(screen.getByText("No matching credentials.")).toBeTruthy();
+});
+
+test("typed credential password can be shown, hidden and remasked on focus loss", async () => {
+  mount((c) =>
+    c === "list_credentials" ? { ...scope, summaries: [], next: null } : {},
+  );
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: "Add credential" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Add credential" }));
+  const input = screen.getByLabelText("Password", {
+    exact: true,
+  }) as HTMLInputElement;
+  fireEvent.change(input, { target: { value: "synthetic typed password" } });
+  expect(input.type).toBe("password");
+  fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+  expect(input.type).toBe("text");
+  expect(input.value).toBe("synthetic typed password");
+  fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+  expect(input.type).toBe("password");
+  fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+  fireEvent.blur(window);
+  expect(input.type).toBe("password");
 });
