@@ -13,20 +13,20 @@ access, record identity/timestamps, revisions and complete commit outcomes.
 
 ## Tasks and commit boundaries
 
-- [ ] Migrate desktop screens to React/TypeScript and a locked Vite build; preserve
+- [x] Migrate desktop screens to React/TypeScript and a locked Vite build; preserve
   separate session-probe pages and restrictive production CSP.
-- [ ] Add bounded, scoped desktop commands for paginated summaries, selected
+- [x] Add bounded, scoped desktop commands for paginated summaries, selected
   non-password details and explicit password reveal, with stale-context guards.
-- [ ] Build a searchable two-pane list/detail workspace with empty/loading/error
+- [x] Build a searchable two-pane list/detail workspace with empty/loading/error
   states and a stacked narrow-window layout using shared UI styles.
-- [ ] Add desktop create/update/delete commands and operation status; keep
+- [x] Add desktop create/update/delete commands and operation status; keep
   passwords unchanged unless explicit replacement is selected.
-- [ ] Add create/edit/cancel and confirmed deletion with pending, saved, failed,
+- [x] Add create/edit/cancel and confirmed deletion with pending, saved, failed,
   conflict and uncertain feedback. Refresh only authoritative committed data.
-- [ ] Complete dirty navigation/close handling and security redaction. Save,
+- [x] Complete dirty navigation/close handling and security redaction. Save,
   Discard and Cancel apply to ordinary navigation; security locks clear secrets
   immediately and stale replies cannot restore them.
-- [ ] Integrate frontend checks/build before native CI and packaging; update
+- [x] Integrate frontend checks/build before native CI and packaging; update
   launch documentation and record verification and residual limits.
 
 ## Interfaces and constraints
@@ -59,3 +59,20 @@ VoiceOver, offline-runtime and installed-app checks instead of claiming them.
 - Baseline: clean `main` at `059ce39`; 12 existing Node renderer/probe tests passed.
 - Implementation is split between the scoped Rust bridge and frontend; delivery
   integration follows their final paths and scripts.
+
+## Verification record
+
+- Local pinned Rust 1.99.1 workspace all-feature tests and doctests passed on
+  macOS, including 181 core tests and 21 desktop bridge tests. Platform fixtures
+  explicitly marked ignored retain their existing limits.
+- Default-feature workspace check, rustfmt and all-target/all-feature workspace
+  Clippy with warnings denied passed. Native desktop binary build passed.
+- React typecheck, production build and 23 screen interaction regressions passed
+  before adding the separately tested development-only browser demo.
+- Independent code review found no remaining Critical or Important findings.
+- Playwright checked both themes, desktop 1280×900 and narrow 430×932 layouts,
+  editing/dirty navigation and locking without console errors or overflow.
+- Installed-app end-to-end save/restart, live OS lock/sleep, VoiceOver and native
+  Windows/Linux desktop acceptance remain unexecuted; synthetic data only.
+- Owner subsequently installed the project oil-ui skill and requested a local
+  browser demo. Its review and demo are follow-up commits on this same branch.

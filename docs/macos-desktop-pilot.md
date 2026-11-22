@@ -271,3 +271,20 @@ A coalesced batch does not prove arrival order.
 gap fallback remains separately unit-tested. This local bundle has no
 distribution signing or notarization. The probe exercises synthetic DOM
 redaction, with product credential fields and OS memory outside its evidence.
+
+## Interactive browser demo
+
+For UI review with in-memory sample credentials, run:
+
+```sh
+npm ci --prefix crates/codeward-host-macos/frontend
+npm run dev --prefix crates/codeward-host-macos/frontend -- --port 4173
+```
+
+Open `http://127.0.0.1:4173/?demo=1`, choose **Unlock vault**, and enter any
+sample password. The visible demo banner identifies the synthetic session.
+Create, edit, delete and reveal operate only on temporary sample records;
+reloading resets them. This cannot inspect or modify the native vault and does
+not validate encryption or durable saves. The adapter is development-only,
+requires the explicit query flag, never replaces an existing Tauri transport,
+and is excluded from production bundles.
