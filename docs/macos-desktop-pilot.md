@@ -110,6 +110,9 @@ the existing synthetic commands plus enrollment, unlock and credential operation
 | `update_credential` | Same form context plus selected ID | Opaque operation reference and saving state |
 | `delete_credential` | Same selected-record context | Opaque operation reference and saving state |
 | `get_credential_operation` | Epoch and operation reference | Saving, saved, failed, conflict, unknown or locked state |
+| `set_desktop_dirty` | Epoch, revocation and dirty flag | Scoped native close-guard status |
+| `resolve_desktop_close` | Epoch, revocation and explicit allow flag | Close confirmation status |
+| `record_desktop_activity` | Epoch and revocation | Refresh inactivity for permitted user interaction |
 
 Credential forms include title, username, URL, notes and explicit password intent:
 `keep` preserves an existing password; `provided` supplies a replacement, including
@@ -117,8 +120,8 @@ an explicit empty value. Creation requires a provided password. Record IDs and
 timestamps are assigned by Rust. Generation/revision values are canonical decimal
 strings at the frontend boundary. Cursor tokens are scoped continuations rather
 than renderer-chosen offsets. An uncertain operation blocks further mutation;
-reopening establishes authoritative state rather than automatically replaying a
-save. Success follows the complete core commit result.
+quit and restart the app to inspect authoritative state rather than automatically
+replaying a save. Same-process reopening is blocked after an uncertain outcome. Success follows the complete core commit result.
 
 Rust checks the trusted invoking window/WebView and bundled document. Enrollment
 and credential commands are denied to the live-probe view, other windows and remote origins.
