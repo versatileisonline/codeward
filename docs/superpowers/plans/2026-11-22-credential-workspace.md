@@ -76,3 +76,17 @@ VoiceOver, offline-runtime and installed-app checks instead of claiming them.
   Windows/Linux desktop acceptance remain unexecuted; synthetic data only.
 - Owner subsequently installed the project oil-ui skill and requested a local
   browser demo. Its review and demo are follow-up commits on this same branch.
+
+### Browser demo and oil-ui follow-up
+
+- Installed project-local `oil-ui` at owner request and applied its screenshot
+  and independent visual-review workflow. Preserved the agreed visual direction.
+- Development-only `?demo=1` preview supports synthetic in-memory CRUD, reveal
+  and password-preserving edits; reload resets it. Production bundle inspection
+  confirms demo code, sample passwords and banner are excluded.
+- Final frontend typecheck/build and 27 React/demo tests passed. Final native
+  binary rebuild passed after bundling the final frontend assets.
+- Oil screenshot checks at 1440×900 and 390×844 for workspace/editor report no
+  issues or lint. Labels, placeholder contrast, narrow inputs/actions and local
+  selection indicators were refined from review. Vite preview runs on localhost
+  port 4173 for owner feedback; it is not a hosted deployment.
