@@ -58,6 +58,17 @@ unlock and credential persistence require Tauri. Browser checks with mocked IPC
 can validate UI behavior, but cannot establish native persistence or OS-event
 handling.
 
+## Credential workspace validation limits
+
+The search box filters summaries already loaded into the list; use **Load more**
+to include later pages. No vault-wide query API is introduced. Trusted keyboard
+and pointer interactions refresh the scoped inactivity deadline; screen-reader
+activation and VoiceOver behavior still need manual acceptance.
+
+The React interaction suite uses mocked IPC. Native bridge tests use real core
+cryptography with synthetic storage. These checks do not establish a complete
+installed-app create/edit/restart journey or new live OS lock/sleep evidence.
+
 ## Synthetic host foundation
 
 The optional `desktop-pilot` feature in
