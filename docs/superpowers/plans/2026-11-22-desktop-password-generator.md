@@ -37,3 +37,16 @@ Draft PR includes the unmerged credential workspace, branding and generator work
 
 - Baseline: clean feat/credential-workspace at 139d2d8, main 059ce39.
 - Rust bridge and React editor implemented as separate focused changes.
+
+## Local verification
+
+On Apple silicon macOS with pinned Rust 1.99.1, all-feature non-host workspace
+unit tests and doctests passed (181 core tests plus native APFS checks); host
+checks run separately for the changed desktop bridge. Default workspace check,
+warning-denied workspace Clippy, formatting and native desktop build passed.
+Frontend production build/typecheck and 37 React/demo tests passed. A real browser
+smoke of the synthetic demo generated a password, saved it by reference, retrieved
+the exact value and generated again during editing; desktop and 390px views had
+no page errors or horizontal overflow. This is not live native vault UI acceptance.
+Packaged native workflow, VoiceOver, live OS events and Windows/Linux desktop
+acceptance remain outstanding. Draft PR requires hosted current-revision CI.
