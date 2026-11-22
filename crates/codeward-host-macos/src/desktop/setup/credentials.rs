@@ -1,6 +1,8 @@
 //! Targeted credential replies and operation tracking for the desktop caller.
 use super::*;
-use codeward_core::transaction::{CredentialCursor, CredentialForm, CredentialPassword};
+use codeward_core::transaction::{
+    CredentialCursor, CredentialForm, CredentialPassword, PasswordDraftRef,
+};
 use serde::Deserialize;
 use zeroize::Zeroize;
 
@@ -25,6 +27,7 @@ pub(crate) struct Selection {
 pub(crate) struct Password {
     pub(super) mode: String,
     pub(super) value: Option<String>,
+    pub(super) draft: Option<String>,
 }
 impl Drop for Password {
     fn drop(&mut self) {
@@ -51,7 +54,10 @@ impl Drop for Form {
     }
 }
 impl Form {
-    fn borrowed(&self) -> Result<CredentialForm<'_>, SetupError> {
+    fn borrowed<'a>(
+        &'a self,
+        generated: Option<&'a PasswordDraftRef>,
+    ) -> Result<CredentialForm<'a>, SetupError> {
         if self.title.is_empty()
             || self.title.len() > 512
             || self.username.len() > 1024
@@ -60,9 +66,18 @@ impl Form {
         {
             return Err(SetupError::InvalidInput);
         }
-        let password = match (self.password.mode.as_str(), self.password.value.as_deref()) {
-            ("keep", None) => CredentialPassword::Keep,
-            ("provided", Some(value)) if value.len() <= 4096 => CredentialPassword::Provided(value),
+        let password = match (
+            self.password.mode.as_str(),
+            self.password.value.as_deref(),
+            self.password.draft.as_deref(),
+        ) {
+            ("keep", None, None) => CredentialPassword::Keep,
+            ("provided", Some(value), None) if value.len() <= 4096 => {
+                CredentialPassword::Provided(value)
+            }
+            ("generated", None, Some(_)) => {
+                CredentialPassword::Generated(generated.ok_or(SetupError::Stale)?)
+            }
             _ => return Err(SetupError::InvalidInput),
         };
         Ok(CredentialForm {
@@ -151,6 +166,7 @@ pub(super) struct Credentials {
     cursor: Option<(String, CredentialCursor)>,
     serial: u64,
     pub(super) operation: Option<Operation>,
+    draft: Option<(String, PasswordDraftRef)>,
 }
 fn decimal(value: &str) -> Result<u64, SetupError> {
     let number = value.parse::<u64>().map_err(|_| SetupError::InvalidInput)?;
@@ -278,16 +294,23 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             ControlError::Host(HostError::Transaction(
                 TransactionError::Vault(VaultError::RevisionConflict)
                 | TransactionError::ReloadRequired
-                | TransactionError::StaleCursor,
+                | TransactionError::StaleCursor
+                | TransactionError::StalePasswordDraft,
             )) => SetupError::Stale,
             ControlError::Host(HostError::Transaction(
                 TransactionError::Busy | TransactionError::HistoryFull,
             )) => SetupError::Busy,
             ControlError::Host(HostError::Transaction(
-                TransactionError::InvalidCredentialId
+                TransactionError::PasswordGeneration(
+                    codeward_core::password::GenerationError::InvalidOptions,
+                )
+                | TransactionError::InvalidCredentialId
                 | TransactionError::CredentialNotFound
                 | TransactionError::Vault(_),
             )) => SetupError::InvalidInput,
+            ControlError::Host(HostError::Transaction(TransactionError::PasswordGeneration(_))) => {
+                SetupError::Unavailable
+            }
             error => self.command_error(error),
         }
     }
@@ -327,8 +350,27 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         }
         let generation = decimal(&input.generation)?;
         let revision = decimal(&input.revision)?;
-        let form = input.form.borrowed()?;
         let request = self.credential_request(revision)?;
+        let generated = if input.form.password.mode == "generated" {
+            let token = input
+                .form
+                .password
+                .draft
+                .as_deref()
+                .ok_or(SetupError::InvalidInput)?;
+            Some(
+                &self
+                    .credentials
+                    .draft
+                    .as_ref()
+                    .filter(|(key, _)| key == token)
+                    .ok_or(SetupError::Stale)?
+                    .1,
+            )
+        } else {
+            None
+        };
+        let form = input.form.borrowed(generated)?;
         let mut queued = false;
         let result = self
             .control
@@ -420,6 +462,9 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
                 }
             }
             _ => return false,
+        }
+        if operation.state == "saved" {
+            self.credentials.draft = None;
         }
         self.pending = false;
         true
@@ -523,3 +568,6 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         Ok(self.status)
     }
 }
+
+mod generation;
+pub(crate) use generation::*;

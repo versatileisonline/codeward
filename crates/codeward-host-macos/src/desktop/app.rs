@@ -217,6 +217,33 @@ fn reveal_credential_password<R: Runtime>(
     with_setup(|setup| setup.credentials_reveal(input).map_err(Into::into))
 }
 #[tauri::command]
+fn generate_password_draft<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::DraftReply, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::GenerateInput = credential_body(&request)?;
+    with_setup(|setup| setup.generate_draft(input).map_err(Into::into))
+}
+#[tauri::command]
+fn reveal_password_draft<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::DraftReveal, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::DraftInput = credential_body(&request)?;
+    with_setup(|setup| setup.reveal_draft(input).map_err(Into::into))
+}
+#[tauri::command]
+fn discard_password_draft<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::DraftReply, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::DraftInput = credential_body(&request)?;
+    with_setup(|setup| setup.discard_draft(input).map_err(Into::into))
+}
+#[tauri::command]
 fn create_credential<R: Runtime>(
     window: WebviewWindow<R>,
     request: Request<'_>,
@@ -558,6 +585,9 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
     };
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            generate_password_draft,
+            reveal_password_draft,
+            discard_password_draft,
             list_credentials,
             get_credential_details,
             reveal_credential_password,
@@ -707,6 +737,9 @@ mod tests {
         }
         let app = mock_builder()
             .invoke_handler(tauri::generate_handler![
+                generate_password_draft,
+                reveal_password_draft,
+                discard_password_draft,
                 list_credentials,
                 get_credential_details,
                 reveal_credential_password,
@@ -776,6 +809,9 @@ mod tests {
             "get_setup_recovery_code",
             "confirm_vault_setup",
             "cancel_vault_setup",
+            "generate_password_draft",
+            "reveal_password_draft",
+            "discard_password_draft",
             "list_credentials",
             "get_credential_details",
             "reveal_credential_password",
@@ -821,6 +857,9 @@ mod tests {
             "get_setup_recovery_code",
             "confirm_vault_setup",
             "cancel_vault_setup",
+            "generate_password_draft",
+            "reveal_password_draft",
+            "discard_password_draft",
             "list_credentials",
             "get_credential_details",
             "reveal_credential_password",
@@ -853,6 +892,9 @@ mod tests {
             "get_setup_recovery_code",
             "confirm_vault_setup",
             "cancel_vault_setup",
+            "generate_password_draft",
+            "reveal_password_draft",
+            "discard_password_draft",
             "list_credentials",
             "get_credential_details",
             "reveal_credential_password",

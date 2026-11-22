@@ -28,6 +28,9 @@
     "allow-get-credential-operation",
     "allow-set-desktop-dirty",
     "allow-resolve-desktop-close",
-    "allow-record-desktop-activity"
+    "allow-record-desktop-activity",
+    "allow-generate-password-draft",
+    "allow-reveal-password-draft",
+    "allow-discard-password-draft"
   ]
 }

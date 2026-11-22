@@ -342,6 +342,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     fn set(&mut self, state: State, error: Option<SetupError>) {
         self.status.state = state;
         if state != State::Unlocked {
+            self.credentials.clear_draft();
             self.dirty = false;
             self.status.close_requested = false;
         }

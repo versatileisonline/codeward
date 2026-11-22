@@ -607,6 +607,7 @@ fn credential_input(
             notes: "sample notes".into(),
             password: credentials::Password {
                 mode: if keep { "keep" } else { "provided" }.into(),
+                draft: None,
                 value: if keep {
                     None
                 } else {
@@ -937,6 +938,328 @@ fn credential_command_boundary_revocation_never_becomes_enrollment_completion() 
             assert_ne!(setup.status().state, State::Created);
             std::thread::sleep(Duration::from_millis(2));
         }
+        assert_eq!(setup.status().state, State::Locked);
+    }
+}
+
+#[test]
+fn generated_bridge_references_replace_safely_and_create_without_plaintext() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let storage = disk.clone();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    let input = || credentials::GenerateInput {
+        epoch,
+        revocation,
+        generation: page.generation.clone(),
+        revision: page.revision.clone(),
+        options: credentials::GeneratorOptions {
+            length: 24,
+            lowercase: true,
+            uppercase: true,
+            digits: true,
+            symbols: true,
+        },
+    };
+    let first = setup.generate_draft(input()).unwrap();
+    let reference = |draft: &str| credentials::DraftInput {
+        epoch,
+        revocation,
+        generation: page.generation.clone(),
+        revision: page.revision.clone(),
+        draft: draft.into(),
+    };
+    let first_value = setup.reveal_draft(reference(&first.draft)).unwrap();
+    assert_eq!(first_value.password.len(), 24);
+    assert!(first_value.expires_in_ms > 0 && first_value.expires_in_ms <= 30000);
+    let mut invalid = input();
+    invalid.options.length = 11;
+    assert!(setup.generate_draft(invalid).is_err());
+    assert_eq!(
+        setup
+            .reveal_draft(reference(&first.draft))
+            .unwrap()
+            .password
+            .as_str(),
+        first_value.password.as_str()
+    );
+    let second = setup.generate_draft(input()).unwrap();
+    assert_ne!(first.draft, second.draft);
+    assert!(setup.discard_draft(reference(&first.draft)).is_err());
+    let value = setup.reveal_draft(reference(&second.draft)).unwrap();
+    let mut create = credential_input(
+        epoch,
+        revocation,
+        &page.generation,
+        &page.revision,
+        None,
+        false,
+    );
+    create.form.password.mode = "generated".into();
+    create.form.password.value = None;
+    create.form.password.draft = Some(second.draft.clone());
+    let op = setup.credentials_write(create, false).unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    assert!(setup.reveal_draft(reference(&second.draft)).is_err());
+    let current = setup.credentials_list(epoch, revocation, None).unwrap();
+    let id = &current.summaries[0].id;
+    assert_eq!(
+        setup
+            .credentials_reveal(selected(
+                epoch,
+                revocation,
+                &current.generation,
+                &current.revision,
+                id
+            ))
+            .unwrap()
+            .password
+            .as_str(),
+        value.password.as_str()
+    );
+    setup.lock_existing(epoch).unwrap();
+    assert!(setup.generate_draft(input()).is_err());
+    assert!(setup.reveal_draft(reference(&second.draft)).is_err());
+}
+
+#[test]
+fn generated_bridge_failed_save_retains_draft_and_generated_edit_reopens() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let storage = disk.clone();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    let generate = |generation: &str, revision: &str| credentials::GenerateInput {
+        epoch,
+        revocation,
+        generation: generation.into(),
+        revision: revision.into(),
+        options: credentials::GeneratorOptions {
+            length: 36,
+            lowercase: false,
+            uppercase: false,
+            digits: true,
+            symbols: false,
+        },
+    };
+    let generated = setup
+        .generate_draft(generate(&page.generation, &page.revision))
+        .unwrap();
+    let reference = || credentials::DraftInput {
+        epoch,
+        revocation,
+        generation: page.generation.clone(),
+        revision: page.revision.clone(),
+        draft: generated.draft.clone(),
+    };
+    let original = setup.reveal_draft(reference()).unwrap();
+    assert_eq!(original.password.len(), 36);
+    assert!(original.password.bytes().all(|b| b.is_ascii_digit()));
+    let form = |id: Option<String>, generation: &str, revision: &str, token: &str| {
+        let mut input = credential_input(epoch, revocation, generation, revision, id, false);
+        input.form.password.mode = "generated".into();
+        input.form.password.value = None;
+        input.form.password.draft = Some(token.into());
+        input
+    };
+    let mut invalid = form(None, &page.generation, &page.revision, &generated.draft);
+    invalid.form.password.value = Some("no mixed intent".into());
+    assert!(setup.credentials_write(invalid, false).is_err());
+    disk.0.lock().unwrap().fail_stage = true;
+    let op = setup
+        .credentials_write(
+            form(None, &page.generation, &page.revision, &generated.draft),
+            false,
+        )
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "failed");
+    assert_eq!(
+        setup.reveal_draft(reference()).unwrap().password.as_str(),
+        original.password.as_str()
+    );
+    disk.0.lock().unwrap().fail_stage = false;
+    let op = setup
+        .credentials_write(
+            form(None, &page.generation, &page.revision, &generated.draft),
+            false,
+        )
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    let id = page.summaries[0].id.to_string();
+    let edited = setup
+        .generate_draft(generate(&page.generation, &page.revision))
+        .unwrap();
+    let expected = setup
+        .reveal_draft(credentials::DraftInput {
+            epoch,
+            revocation,
+            generation: page.generation.clone(),
+            revision: page.revision.clone(),
+            draft: edited.draft.clone(),
+        })
+        .unwrap();
+    let mut update = form(
+        Some(id.clone()),
+        &page.generation,
+        &page.revision,
+        &edited.draft,
+    );
+    update.form.title = "Generated edit".into();
+    let op = setup.credentials_write(update, true).unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    setup.lock_existing(epoch).unwrap();
+    drop(setup);
+    let storage = disk.clone();
+    let mut reopened = Setup::new();
+    let epoch = reopened
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut reopened, State::Locked);
+    reopened
+        .unlock(epoch, reopened.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut reopened, State::Unlocked);
+    let revocation = reopened.status.revocation;
+    let page = reopened.credentials_list(epoch, revocation, None).unwrap();
+    assert_eq!(page.summaries[0].title.as_str(), "Generated edit");
+    assert_eq!(
+        reopened
+            .credentials_reveal(selected(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                &id
+            ))
+            .unwrap()
+            .password
+            .as_str(),
+        expected.password.as_str()
+    );
+    let generated = reopened
+        .generate_draft(credentials::GenerateInput {
+            epoch,
+            revocation,
+            generation: page.generation.clone(),
+            revision: page.revision.clone(),
+            options: credentials::GeneratorOptions {
+                length: 24,
+                lowercase: true,
+                uppercase: true,
+                digits: true,
+                symbols: true,
+            },
+        })
+        .unwrap();
+    let mut update = credential_input(
+        epoch,
+        revocation,
+        &page.generation,
+        &page.revision,
+        Some(id),
+        false,
+    );
+    update.form.password.mode = "generated".into();
+    update.form.password.value = None;
+    update.form.password.draft = Some(generated.draft.clone());
+    disk.0.lock().unwrap().fail_barrier = true;
+    let op = reopened.credentials_write(update, true).unwrap();
+    assert_eq!(
+        operation_wait(&mut reopened, epoch, &op.operation),
+        "unknown"
+    );
+    assert!(
+        reopened
+            .reveal_draft(credentials::DraftInput {
+                epoch,
+                revocation,
+                generation: page.generation,
+                revision: page.revision,
+                draft: generated.draft
+            })
+            .is_err()
+    );
+}
+
+#[test]
+fn generated_bridge_command_boundary_revocation_never_delivers_a_preview() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    for offset in 1..=4 {
+        let events = BoundaryEvents::default();
+        let storage = disk.clone();
+        let mut setup = Setup::new();
+        let epoch = setup
+            .open_existing(events.clone(), move || Ok(storage))
+            .unwrap()
+            .epoch;
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while setup.status().state != State::Locked {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        setup
+            .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+            .unwrap();
+        while setup.status().state != State::Unlocked {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let revocation = setup.status.revocation;
+        let page = setup.credentials_list(epoch, revocation, None).unwrap();
+        let draft = setup
+            .generate_draft(credentials::GenerateInput {
+                epoch,
+                revocation,
+                generation: page.generation.clone(),
+                revision: page.revision.clone(),
+                options: credentials::GeneratorOptions {
+                    length: 24,
+                    lowercase: true,
+                    uppercase: true,
+                    digits: true,
+                    symbols: true,
+                },
+            })
+            .unwrap();
+        events.revoke_at.store(
+            events.observations.load(Ordering::SeqCst) + offset,
+            Ordering::SeqCst,
+        );
+        assert!(
+            setup
+                .reveal_draft(credentials::DraftInput {
+                    epoch,
+                    revocation,
+                    generation: page.generation,
+                    revision: page.revision,
+                    draft: draft.draft
+                })
+                .is_err()
+        );
         assert_eq!(setup.status().state, State::Locked);
     }
 }
