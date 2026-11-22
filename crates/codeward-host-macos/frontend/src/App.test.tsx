@@ -1,0 +1,9 @@
+// @vitest-environment jsdom
+import { afterEach, expect, test, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { App } from './App';
+afterEach(()=>{cleanup();vi.restoreAllMocks();delete window.__TAURI__;});
+function native(handler:(command:string,body:Record<string,unknown>)=>unknown){window.__TAURI__={core:{invoke:vi.fn(async(command,body={})=>handler(command,body)) as never}};}
+test('welcome retains theme and setup validation',()=>{render(<App/>);fireEvent.click(screen.getByLabelText('Switch to light mode'));expect(document.documentElement.dataset.theme).toBe('light');fireEvent.click(screen.getByText('Get started'));fireEvent.submit(screen.getByRole('button',{name:'Continue'}).closest('form')!);expect(screen.getByRole('alert').textContent).toContain('Enter a master password');});
+test('late opening is canceled after navigation',async()=>{let done!:(x:unknown)=>void;native(c=>c==='open_managed_vault'?new Promise(r=>done=r):{});render(<App/>);fireEvent.click(screen.getByText('Unlock vault'));fireEvent.click(screen.getByText('Back'));done({epoch:2,revocation:0,state:'locked'});await waitFor(()=>expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith('cancel_vault_setup',{epoch:2}));expect(screen.getByText('Get started')).toBeTruthy();});
+test('unlock dispatch clears password and wrong password allows retry',async()=>{native(c=>c==='open_managed_vault'?{epoch:1,revocation:0,state:'locked'}:{epoch:1,revocation:0,state:'locked',error:'wrong_password'});render(<App/>);fireEvent.click(screen.getByText('Unlock vault'));await screen.findByLabelText('Master password');fireEvent.change(screen.getByLabelText('Master password'),{target:{value:'synthetic'}});fireEvent.submit(screen.getByRole('button',{name:'Unlock'}).closest('form')!);await screen.findByText('Incorrect password. Try again.');expect((screen.getByLabelText('Master password') as HTMLInputElement).value).toBe('');});
