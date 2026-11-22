@@ -51,6 +51,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Report frontend build tools
+        run: |
+          node --version
+          npm --version
+      - name: Install locked frontend dependencies
+        run: npm ci --prefix crates/codeward-host-macos/frontend
+      - name: Check frontend types and interactions
+        run: |
+          npm run typecheck --prefix crates/codeward-host-macos/frontend
+          npm test --prefix crates/codeward-host-macos/frontend
+      - name: Build bundled desktop assets before native checks
+        run: npm run build --prefix crates/codeward-host-macos/frontend
       - name: Isolate Cargo registry from checkout and credentials
         run: echo "CARGO_HOME=$RUNNER_TEMP/codeward-cargo" >> "$GITHUB_ENV"
       - name: Install and report the repository-pinned toolchain
@@ -100,9 +112,9 @@ jobs:
           # An unrelated test's fork can retain the companion lock until exec.
           CODEWARD_LINUX_EXT4_FIXTURE="$fixture" cargo test -p codeward-storage-linux --locked --offline -- ext4_ --ignored --test-threads=1
           CODEWARD_LINUX_EXT4_FIXTURE="$fixture" CODEWARD_LINUX_PRIVILEGED_MOUNT_TEST=1 cargo test -p codeward-storage-linux --locked --offline -- tests::admission::privileged_managed_submount_refuses_preparation_reads_and_publication --exact --ignored --test-threads=1
-      - name: Test desktop redaction and enrollment replies
+      - name: Test separate desktop probe redaction
         if: runner.os == 'macOS'
-        run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
+        run: node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
       - name: Verify synthetic recovery with macOS networking denied
         if: runner.os == 'macOS'
         run: |
