@@ -329,32 +329,42 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         let revision = decimal(&input.revision)?;
         let form = input.form.borrowed()?;
         let request = self.credential_request(revision)?;
+        let mut queued = false;
         let result = self
             .control
             .as_mut()
             .ok_or(SetupError::Unavailable)?
             .command(|host| {
                 if let Some(id) = &input.id {
-                    host.update_credential(generation, request, id, form)
+                    host.update_credential(generation, request, id, form)?;
                 } else {
-                    host.create_credential(generation, request, form)
+                    host.create_credential(generation, request, form)?;
                 }
+                queued = true;
+                Ok(())
             });
+        let operation = queued.then(|| self.credentials_started());
         result.map_err(|error| self.credential_error(error))?;
-        Ok(self.credentials_started())
+        operation.ok_or(SetupError::Unavailable)
     }
     pub(crate) fn credentials_delete(&mut self, input: Selection) -> Result<Operation, SetupError> {
         self.credential_scope(input.epoch, input.revocation)?;
         let generation = decimal(&input.generation)?;
         let revision = decimal(&input.revision)?;
         let request = self.credential_request(revision)?;
+        let mut queued = false;
         let result = self
             .control
             .as_mut()
             .ok_or(SetupError::Unavailable)?
-            .command(|host| host.delete_credential(generation, request, &input.id));
+            .command(|host| {
+                host.delete_credential(generation, request, &input.id)?;
+                queued = true;
+                Ok(())
+            });
+        let operation = queued.then(|| self.credentials_started());
         result.map_err(|error| self.credential_error(error))?;
-        Ok(self.credentials_started())
+        operation.ok_or(SetupError::Unavailable)
     }
     pub(crate) fn credentials_operation(
         &mut self,

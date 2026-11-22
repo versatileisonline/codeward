@@ -667,6 +667,40 @@ fn credential_bridge_round_trip_keep_delete_and_dirty_close() {
     let revocation = setup.status.revocation;
     let page = setup.credentials_list(epoch, revocation, None).unwrap();
     assert!(page.summaries.is_empty());
+    assert!(setup.credentials_list(epoch, revocation + 1, None).is_err());
+    let before_activity = setup
+        .control
+        .as_mut()
+        .unwrap()
+        .command(|host| Ok(host.inactivity_deadline()))
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(2));
+    setup
+        .record_activity(credentials::ActivityInput {
+            epoch,
+            revocation,
+            generation: page.generation.clone(),
+            kind: "keyboard".into(),
+        })
+        .unwrap();
+    let after_activity = setup
+        .control
+        .as_mut()
+        .unwrap()
+        .command(|host| Ok(host.inactivity_deadline()))
+        .unwrap();
+    assert!(after_activity > before_activity);
+    let mut malformed = credential_input(
+        epoch,
+        revocation,
+        &page.generation,
+        &page.revision,
+        None,
+        false,
+    );
+    malformed.form.password.mode = "invalid".into();
+    assert!(setup.credentials_write(malformed, false).is_err());
+    assert_eq!(setup.status().state, State::Unlocked);
     let op = setup
         .credentials_write(
             credential_input(
@@ -856,4 +890,53 @@ fn credential_bridge_definite_failure_retries_and_uncertainty_blocks() {
             )
             .is_err()
     );
+}
+
+#[test]
+fn credential_command_boundary_revocation_never_becomes_enrollment_completion() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    for offset in 1..=4 {
+        let events = BoundaryEvents::default();
+        let storage = disk.clone();
+        let mut setup = Setup::new();
+        let epoch = setup
+            .open_existing(events.clone(), move || Ok(storage))
+            .unwrap()
+            .epoch;
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while setup.status().state != State::Locked {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        setup
+            .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+            .unwrap();
+        while setup.status().state != State::Unlocked {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let revocation = setup.status.revocation;
+        let page = setup.credentials_list(epoch, revocation, None).unwrap();
+        events.revoke_at.store(
+            events.observations.load(Ordering::SeqCst) + offset,
+            Ordering::SeqCst,
+        );
+        let _ = setup.credentials_write(
+            credential_input(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                None,
+                false,
+            ),
+            false,
+        );
+        for _ in 0..100 {
+            assert_ne!(setup.status().state, State::Created);
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        assert_eq!(setup.status().state, State::Locked);
+    }
 }
