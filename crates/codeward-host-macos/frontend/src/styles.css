@@ -1,14 +1,14 @@
 :root {
   color-scheme: light;
-  --page: #eef2f5;
-  --rail: #e5eaef;
-  --ink: #232c36;
-  --muted: #626e7b;
-  --line: #d7dfe7;
-  --hover: #dce3eb;
-  --surface: #f8fafc;
-  --button: #4b5e70;
-  --button-hover: #3e5062;
+  --page: #f5f2eb;
+  --rail: #e9e5dd;
+  --ink: #292826;
+  --muted: #68645e;
+  --line: #d9d4ca;
+  --hover: #e2ddd3;
+  --surface: #fcfaf5;
+  --button: #353431;
+  --button-hover: #242321;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   color: var(--ink);
   background: var(--page);
@@ -18,15 +18,15 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #171d25;
-  --rail: #131920;
-  --ink: #edf1f6;
-  --muted: #a2aebb;
-  --line: #28323e;
-  --hover: #252f3b;
-  --surface: #222c38;
-  --button: #a9bfd4;
-  --button-hover: #c2d2e2;
+  --page: #202020;
+  --rail: #191919;
+  --ink: #f3efe6;
+  --muted: #b6b1a7;
+  --line: #3b3935;
+  --hover: #33312e;
+  --surface: #292827;
+  --button: #e9ddc5;
+  --button-hover: #f5e9d2;
 }
 * {
   box-sizing: border-box;
@@ -42,9 +42,11 @@ body {
 button {
   font: inherit;
   cursor: pointer;
+  font-weight: 650;
 }
-button:focus-visible {
-  outline: 3px solid #2866e8;
+button:focus-visible,
+h2:focus-visible {
+  outline: 3px solid var(--button);
   outline-offset: 4px;
 }
 .sidebar {
@@ -92,6 +94,14 @@ button:focus-visible {
   color: var(--muted);
   text-align: left;
   font-size: 14px;
+}
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 20px;
+  line-height: 1;
 }
 .nav-button svg {
   flex-shrink: 0;
@@ -167,7 +177,7 @@ main {
     box-shadow 180ms;
 }
 .primary-button:hover {
-  transform: translateY(-2px);
+  transform: none;
   background: var(--button-hover);
   box-shadow: 0 5px 14px #1d1e1b16;
 }
@@ -176,6 +186,22 @@ main {
 }
 .action-area {
   padding-bottom: 37px;
+}
+.action-area > .primary-button {
+  min-width: 200px;
+  min-height: 54px;
+  font-size: 16px;
+  box-shadow: 0 6px 22px #0002;
+}
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 30px;
+}
+.result-actions > button {
+  min-width: 180px;
 }
 .about-panel {
   width: 100%;
@@ -537,20 +563,16 @@ button:disabled {
   color: var(--ink);
   background: var(--hover);
 }
-#result-unlock:not([hidden]) + #result-home {
-  margin-left: 12px;
-  background: transparent;
-  border-color: var(--line);
-  color: var(--ink);
-}
 .secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 11px 16px;
+  padding: 13px 25px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 20px;
   color: var(--ink);
   background: transparent;
   font-size: 13px;
