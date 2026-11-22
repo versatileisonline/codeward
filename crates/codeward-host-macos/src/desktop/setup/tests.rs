@@ -48,7 +48,7 @@ impl WriterLease for Memory {
     }
     fn publish(&mut self, mode: PublishMode) -> Result<(), PublishError> {
         let mut disk = self.0.lock().unwrap();
-        if mode != PublishMode::Create || disk.bytes.is_some() {
+        if (mode == PublishMode::Create) == disk.bytes.is_some() {
             return Err(PublishError::NotPublished);
         }
         disk.bytes = disk.stage.take();
@@ -578,4 +578,282 @@ fn timer_revocation_refuses_old_unlock_requests_and_revoked_opening_requires_reo
         .open_existing(Events::default(), move || Ok(storage))
         .unwrap();
     wait(&mut setup, State::Locked);
+}
+
+#[test]
+fn credential_bridge_rejects_locked_and_stale_scope() {
+    let mut setup = Setup::<Memory, Events>::new();
+    assert!(setup.credentials_list(0, 0, None).is_err());
+}
+
+fn credential_input(
+    epoch: u64,
+    revocation: u64,
+    generation: &str,
+    revision: &str,
+    id: Option<String>,
+    keep: bool,
+) -> credentials::WriteInput {
+    credentials::WriteInput {
+        epoch,
+        revocation,
+        generation: generation.into(),
+        revision: revision.into(),
+        id,
+        form: credentials::Form {
+            title: "Synthetic account".into(),
+            username: "sample user".into(),
+            url: "https://example.test".into(),
+            notes: "sample notes".into(),
+            password: credentials::Password {
+                mode: if keep { "keep" } else { "provided" }.into(),
+                value: if keep {
+                    None
+                } else {
+                    Some("synthetic credential password".into())
+                },
+            },
+        },
+    }
+}
+fn selected(
+    epoch: u64,
+    revocation: u64,
+    generation: &str,
+    revision: &str,
+    id: &str,
+) -> credentials::Selection {
+    credentials::Selection {
+        epoch,
+        revocation,
+        generation: generation.into(),
+        revision: revision.into(),
+        id: id.into(),
+    }
+}
+fn operation_wait(setup: &mut Setup<Memory, Events>, epoch: u64, operation: &str) -> String {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let state = setup
+            .credentials_operation(credentials::OperationInput {
+                epoch,
+                operation: operation.into(),
+            })
+            .unwrap()
+            .state;
+        if state != "saving" {
+            return state.into();
+        }
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(5));
+    }
+}
+#[test]
+fn credential_bridge_round_trip_keep_delete_and_dirty_close() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let storage = disk.clone();
+    let events = Events::default();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    assert!(page.summaries.is_empty());
+    let op = setup
+        .credentials_write(
+            credential_input(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                None,
+                false,
+            ),
+            false,
+        )
+        .unwrap();
+    assert_eq!(op.state, "saving");
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    assert_eq!(page.summaries.len(), 1);
+    let id = page.summaries[0].id.to_string();
+    let details = setup
+        .credentials_details(selected(
+            epoch,
+            revocation,
+            &page.generation,
+            &page.revision,
+            &id,
+        ))
+        .unwrap();
+    assert_eq!(details.notes.as_str(), "sample notes");
+    let reveal = setup
+        .credentials_reveal(selected(
+            epoch,
+            revocation,
+            &page.generation,
+            &page.revision,
+            &id,
+        ))
+        .unwrap();
+    assert_eq!(reveal.password.as_str(), "synthetic credential password");
+    assert!(reveal.expires_in_ms > 0 && reveal.expires_in_ms <= 30000);
+    let op = setup
+        .credentials_write(
+            credential_input(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                Some(id.clone()),
+                true,
+            ),
+            true,
+        )
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    assert!(
+        setup
+            .credentials_details(selected(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                &id
+            ))
+            .is_err()
+    );
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    assert_eq!(
+        setup
+            .credentials_reveal(selected(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                &id
+            ))
+            .unwrap()
+            .password
+            .as_str(),
+        "synthetic credential password"
+    );
+    setup
+        .set_dirty(credentials::DirtyInput {
+            epoch,
+            revocation,
+            dirty: true,
+        })
+        .unwrap();
+    assert!(setup.request_close());
+    assert!(setup.status().close_requested);
+    setup
+        .resolve_close(&credentials::CloseInput {
+            epoch,
+            revocation,
+            allow: false,
+        })
+        .unwrap();
+    assert!(!setup.status().close_requested);
+    let op = setup
+        .credentials_delete(selected(
+            epoch,
+            revocation,
+            &page.generation,
+            &page.revision,
+            &id,
+        ))
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    assert!(
+        setup
+            .credentials_list(epoch, revocation, None)
+            .unwrap()
+            .summaries
+            .is_empty()
+    );
+    events.0.store(true, Ordering::SeqCst);
+    assert_eq!(setup.status().state, State::Locked);
+    assert!(!setup.request_close());
+    assert!(setup.credentials_list(epoch, revocation, None).is_err());
+}
+#[test]
+fn credential_bridge_definite_failure_retries_and_uncertainty_blocks() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let storage = disk.clone();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    let page = setup.credentials_list(epoch, revocation, None).unwrap();
+    disk.0.lock().unwrap().fail_stage = true;
+    let op = setup
+        .credentials_write(
+            credential_input(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                None,
+                false,
+            ),
+            false,
+        )
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "failed");
+    assert!(
+        setup
+            .credentials_list(epoch, revocation, None)
+            .unwrap()
+            .summaries
+            .is_empty()
+    );
+    disk.0.lock().unwrap().fail_stage = false;
+    disk.0.lock().unwrap().fail_barrier = true;
+    let op = setup
+        .credentials_write(
+            credential_input(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                None,
+                false,
+            ),
+            false,
+        )
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "unknown");
+    assert!(setup.credentials_list(epoch, revocation, None).is_err());
+    assert!(
+        setup
+            .credentials_write(
+                credential_input(
+                    epoch,
+                    revocation,
+                    &page.generation,
+                    &page.revision,
+                    None,
+                    false
+                ),
+                false
+            )
+            .is_err()
+    );
 }

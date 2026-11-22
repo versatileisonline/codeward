@@ -1,8 +1,12 @@
 {
   "identifier": "desktop-pilot",
   "local": true,
-  "platforms": ["macOS"],
-  "webviews": ["main"],
+  "platforms": [
+    "macOS"
+  ],
+  "webviews": [
+    "main"
+  ],
   "permissions": [
     "allow-open-managed-vault",
     "allow-unlock-managed-vault",
@@ -14,6 +18,16 @@
     "allow-cancel-vault-setup",
     "allow-open-synthetic-session",
     "allow-get-session-state",
-    "allow-lock-vault"
+    "allow-lock-vault",
+    "allow-list-credentials",
+    "allow-get-credential-details",
+    "allow-reveal-credential-password",
+    "allow-create-credential",
+    "allow-update-credential",
+    "allow-delete-credential",
+    "allow-get-credential-operation",
+    "allow-set-desktop-dirty",
+    "allow-resolve-desktop-close",
+    "allow-record-desktop-activity"
   ]
 }

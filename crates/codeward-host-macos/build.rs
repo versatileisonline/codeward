@@ -4,6 +4,16 @@ fn main() {
     #[cfg(all(target_os = "macos", feature = "desktop-pilot"))]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "list_credentials",
+            "get_credential_details",
+            "reveal_credential_password",
+            "create_credential",
+            "update_credential",
+            "delete_credential",
+            "get_credential_operation",
+            "set_desktop_dirty",
+            "resolve_desktop_close",
+            "record_desktop_activity",
             "open_managed_vault",
             "unlock_managed_vault",
             "lock_managed_vault",
