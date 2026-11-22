@@ -381,7 +381,7 @@ main:has(
 }
 .step-label {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.15em;
   margin: 0 0 16px;
 }
@@ -587,7 +587,7 @@ main:has(.vault-workspace) {
   display: grid;
   grid-template-columns: minmax(230px, 310px) minmax(0, 1fr);
   min-height: calc(100svh - 170px);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 16px;
   overflow: hidden;
   background: var(--surface);
@@ -789,7 +789,7 @@ h3 {
   font-size: 12px;
 }
 .unsaved-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -817,7 +817,7 @@ h3 {
   line-height: 1.8;
 }
 .vault-empty .preview-note {
-  font-size: 10px;
+  font-size: 11px;
 }
 .load-more {
   margin: 14px 8px;
@@ -895,12 +895,43 @@ h3 {
     padding: 10px;
   }
   .vault-toolbar .step-label {
-    font-size: 8px;
+    font-size: 11px;
   }
   .vault-empty {
     min-height: 260px;
   }
   .detail-heading {
     flex-wrap: wrap;
+  }
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+@media (max-width: 600px) {
+  .list-tools input,
+  .credential-editor input:not([type="checkbox"]),
+  .credential-editor textarea {
+    font-size: 16px;
+  }
+  .vault-columns:has(.credential-editor) .credential-rows {
+    max-height: 110px;
+  }
+  .credential-editor {
+    padding-bottom: 80px;
+  }
+  .credential-editor .editor-actions {
+    position: fixed;
+    bottom: 12px;
+    left: calc(var(--sidebar-width) + 16px);
+    right: 16px;
+    z-index: 3;
+    margin: 0;
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 6px 24px #0003;
   }
 }

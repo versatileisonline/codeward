@@ -18,3 +18,9 @@
   text-align: center;
   pointer-events: none;
 }
+
+@media (max-width: 600px) {
+  body:has(.demo-banner) .credential-editor .editor-actions {
+    bottom: 58px;
+  }
+}

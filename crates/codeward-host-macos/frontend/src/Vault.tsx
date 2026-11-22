@@ -413,7 +413,6 @@ export function Vault({
     >
       <header className="vault-toolbar">
         <div>
-          <p className="step-label">YOUR SPACE, KEPT PRIVATE</p>
           <h2 id="vault-heading" tabIndex={-1}>
             Your vault
           </h2>
@@ -464,7 +463,7 @@ export function Vault({
                   <span>{row.username || "No username"}</span>
                 </span>
                 <span aria-hidden="true" className="row-arrow">
-                  ↗
+                  ›
                 </span>
               </button>
             ))}
