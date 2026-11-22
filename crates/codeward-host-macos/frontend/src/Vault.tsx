@@ -8,7 +8,9 @@ import {
   type Scope,
   type Status,
   type Summary,
+  type GeneratedDraft,
 } from "./native";
+import { PasswordGenerator } from "./PasswordGenerator";
 import { PasswordInput } from "./PasswordInput";
 import { Logo } from "./Logo";
 type Guard = MutableRefObject<((action: () => void) => void) | null>;
@@ -19,6 +21,7 @@ type Draft = {
   notes: string;
   password: string;
   replace: boolean;
+  generated: GeneratedDraft | null;
 };
 const empty: Draft = {
   title: "",
@@ -27,6 +30,7 @@ const empty: Draft = {
   notes: "",
   password: "",
   replace: true,
+  generated: null,
 };
 const failure = (e: unknown) =>
   e === "stale" || e === "conflict"
@@ -52,6 +56,7 @@ export function Vault({
     [draft, setDraft] = useState<Draft | null>(null),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
+    [generatorBusy, setGeneratorBusy] = useState(false),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -208,13 +213,18 @@ export function Vault({
       notes: selected.notes,
       password: "",
       replace: false,
+      generated: null,
     };
     setDraft(value);
     draftRef.current = value;
     setNotice("");
   }
   function change(key: keyof Draft, value: string | boolean) {
-    const next = { ...draftRef.current!, [key]: value };
+    const next = {
+      ...draftRef.current!,
+      [key]: value,
+      ...(key === "replace" && !value ? { generated: null } : {}),
+    };
     draftRef.current = next;
     setDraft(next);
     markDirty(true);
@@ -259,7 +269,8 @@ export function Vault({
     }
   }
   async function mutate(kind: "save" | "delete"): Promise<boolean> {
-    if (sending.current || blocked || !pageRef.current) return false;
+    if (sending.current || generatorBusy || blocked || !pageRef.current)
+      return false;
     const p = pageRef.current,
       detail = selectedRef.current,
       d = draftRef.current;
@@ -291,7 +302,9 @@ export function Vault({
           url: d.url,
           notes: d.notes,
           password: d.replace
-            ? { mode: "provided", value: d.password }
+            ? d.generated
+              ? { mode: "generated", draft: d.generated.draft }
+              : { mode: "provided", value: d.password }
             : { mode: "keep" },
         };
         operation = await invoke(
@@ -511,7 +524,7 @@ export function Vault({
                   <span className="unsaved-label">Unsaved changes</span>
                 )}
               </div>
-              <fieldset disabled={busy || blocked}>
+              <fieldset disabled={busy || blocked || generatorBusy}>
                 <TextField
                   label="Title"
                   value={draft.title}
@@ -538,11 +551,29 @@ export function Vault({
                   </label>
                 )}
                 {draft.replace ? (
-                  <PasswordInput
-                    label="Password"
-                    value={draft.password}
-                    onChange={(v) => change("password", v)}
-                  />
+                  <>
+                    {!draft.generated && (
+                      <PasswordInput
+                        label="Password"
+                        value={draft.password}
+                        onChange={(v) => change("password", v)}
+                      />
+                    )}
+                    {page && (
+                      <PasswordGenerator
+                        scope={page}
+                        disabled={busy || blocked}
+                        onBusy={setGeneratorBusy}
+                        onDraft={(generated) => {
+                          const next = { ...draftRef.current!, generated };
+                          draftRef.current = next;
+                          setDraft(next);
+                          markDirty(true);
+                          setError("");
+                        }}
+                      />
+                    )}
+                  </>
                 ) : (
                   <p className="field-hint">
                     Your current password will be kept.

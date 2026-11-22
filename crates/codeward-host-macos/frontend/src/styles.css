@@ -1016,3 +1016,61 @@ input::placeholder {
 [data-theme="dark"] .codeward-logo {
   filter: brightness(0) invert(94%) sepia(14%) saturate(500%) hue-rotate(350deg);
 }
+
+.password-generator {
+  margin-top: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.generator-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+}
+.generator-heading strong {
+  font-size: 13px;
+}
+.generator-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px 24px;
+  margin: 16px 0;
+}
+.generator-options > label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.generator-options input[type="number"] {
+  width: 96px;
+}
+.generator-classes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(90px, 1fr));
+  gap: 10px 18px;
+}
+.generator-classes .checkbox-field {
+  margin: 0;
+}
+.generator-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.generated-preview {
+  margin-top: 18px;
+}
+.generated-value {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.password-generator .form-error:empty {
+  display: none;
+}

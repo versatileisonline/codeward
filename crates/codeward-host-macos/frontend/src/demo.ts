@@ -1,5 +1,5 @@
 /** Development-only in-memory transport for reviewing the real React screens. */
-import type { Form, Status } from "./native";
+import type { Form, Status, GeneratedDraft, PasswordOptions } from "./native";
 import "./demo.css";
 type RecordEntry = {
   id: string;
@@ -56,6 +56,7 @@ export function createDemoAdapter(): DemoInvoke {
     serial = 0,
     dirty = false,
     close_requested = false;
+  let generated: (GeneratedDraft & { password: string }) | null = null;
   const operations = new Map<string, { state: string; apply: () => void }>();
   const context = () => ({ epoch, revocation });
   const scope = () => ({
@@ -88,6 +89,7 @@ export function createDemoAdapter(): DemoInvoke {
     switch (command) {
       case "open_managed_vault":
         epoch++;
+        generated = null;
         state = "locked";
         return status();
       case "unlock_managed_vault":
@@ -105,6 +107,7 @@ export function createDemoAdapter(): DemoInvoke {
         revocation++;
         generation++;
         dirty = false;
+        generated = null;
         close_requested = false;
         return status();
       case "list_credentials":
@@ -129,6 +132,53 @@ export function createDemoAdapter(): DemoInvoke {
           password: selected(b).password,
           expires_in_ms: 30000,
         };
+      case "generate_password_draft": {
+        authorize(b, true);
+        const options = b.options as PasswordOptions;
+        if (
+          !options ||
+          !Number.isInteger(options.length) ||
+          options.length < 12 ||
+          options.length > 128 ||
+          ![
+            options.uppercase,
+            options.lowercase,
+            options.digits,
+            options.symbols,
+          ].every((x) => typeof x === "boolean")
+        )
+          throw "invalid_input";
+        const alphabet =
+          (options.uppercase ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ" : "") +
+          (options.lowercase ? "abcdefghijklmnopqrstuvwxyz" : "") +
+          (options.digits ? "0123456789" : "") +
+          (options.symbols ? "!@#$%^&*()-_=+[]{}:,.?" : "");
+        if (!alphabet) throw "invalid_input";
+        // This preview transport is synthetic and does not validate Rust cryptography.
+        let password = "";
+        const bytes = new Uint8Array(128),
+          ceiling = 256 - (256 % alphabet.length);
+        while (password.length < options.length) {
+          crypto.getRandomValues(bytes);
+          for (const byte of bytes)
+            if (byte < ceiling && password.length < options.length)
+              password += alphabet[byte % alphabet.length];
+        }
+        const draft = { ...scope(), draft: `demo-draft-${++serial}` };
+        generated = { ...draft, password };
+        return draft;
+      }
+      case "reveal_password_draft":
+      case "discard_password_draft": {
+        authorize(b, true);
+        if (!generated || generated.draft !== b.draft) throw "stale";
+        const { password, ...draft } = generated;
+        if (command === "discard_password_draft") {
+          generated = null;
+          return draft;
+        }
+        return { ...draft, password, expires_in_ms: 30000 };
+      }
       case "create_credential":
       case "update_credential": {
         authorize(b, true);
@@ -138,10 +188,17 @@ export function createDemoAdapter(): DemoInvoke {
         const existing =
           command === "update_credential" ? selected(b) : undefined;
         if (!existing && form.password.mode === "keep") throw "invalid_input";
+        if (
+          form.password.mode === "generated" &&
+          (!generated || generated.draft !== form.password.draft)
+        )
+          throw "stale";
         const password =
           form.password.mode === "keep"
             ? existing!.password
-            : (form.password.value ?? "");
+            : form.password.mode === "generated"
+              ? generated!.password
+              : (form.password.value ?? "");
         const value: RecordEntry = {
           id: existing?.id ?? `demo-created-${++serial}`,
           title: form.title,
@@ -172,6 +229,7 @@ export function createDemoAdapter(): DemoInvoke {
           op.apply();
           op.state = "saved";
           revision++;
+          generated = null;
           dirty = false;
         }
         return {

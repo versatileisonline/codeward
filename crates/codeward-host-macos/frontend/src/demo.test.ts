@@ -84,3 +84,46 @@ test("install never overrides a native Tauri connection", () => {
   expect(installDemo(target as never)).toBe(false);
   expect(target.__TAURI__).toBe(native);
 });
+
+test("demo generated references replace safely and commit without plaintext form", async () => {
+  const { api, page } = await opened();
+  const options = {
+    length: 24,
+    uppercase: true,
+    lowercase: true,
+    digits: true,
+    symbols: true,
+  };
+  const first = await api<any>("generate_password_draft", { ...page, options });
+  const second = await api<any>("generate_password_draft", {
+    ...page,
+    options,
+  });
+  await expect(api("discard_password_draft", first)).rejects.toBe("stale");
+  await expect(
+    api("generate_password_draft", {
+      ...page,
+      options: { ...options, length: 1 },
+    }),
+  ).rejects.toBe("invalid_input");
+  const preview = await api<any>("reveal_password_draft", second);
+  expect(preview.password).toHaveLength(24);
+  const operation = await api<Operation>("create_credential", {
+    ...page,
+    form: {
+      title: "Generated demo",
+      username: "sample",
+      url: "",
+      notes: "",
+      password: { mode: "generated", draft: second.draft },
+    },
+  });
+  await api("get_credential_operation", operation);
+  const next = await api<Page>("list_credentials", page);
+  const created = next.summaries.find((x) => x.title === "Generated demo")!;
+  expect(
+    (await api<any>("reveal_credential_password", { ...next, id: created.id }))
+      .password,
+  ).toBe(preview.password);
+  await expect(api("reveal_password_draft", second)).rejects.toBe("stale");
+});

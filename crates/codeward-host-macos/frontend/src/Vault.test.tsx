@@ -338,3 +338,66 @@ test("typed credential password can be shown, hidden and remasked on focus loss"
   fireEvent.blur(window);
   expect(input.type).toBe("password");
 });
+
+test.each([false, true])(
+  "generated password save uses opaque native reference and retains it on failure (edit=%s)",
+  async (edit) => {
+    let attempts = 0;
+    mount((c, b) => {
+      if (c === "list_credentials")
+        return { ...scope, summaries: edit ? [entry] : [], next: null };
+      if (c === "get_credential_details") return entry;
+      if (c === "generate_password_draft") {
+        expect(b).toEqual({...scope,options:{length:24,uppercase:true,lowercase:true,digits:true,symbols:true}});
+        return { ...scope, draft: "opaque-generated" };
+      }
+      if (c === "create_credential" || c === "update_credential") {
+        expect((b.form as any).password).toEqual({
+          mode: "generated",
+          draft: "opaque-generated",
+        });
+        return { ...context, operation: String(++attempts), state: "saving" };
+      }
+      if (c === "get_credential_operation")
+        return {
+          ...context,
+          operation: String(attempts),
+          state: attempts === 1 ? "failed" : "saved",
+        };
+      return {};
+    });
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Add credential",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
+    if (edit) {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Sample mail.*sample/ }),
+      );
+      await screen.findByText("Sample notes");
+      fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+      fireEvent.click(screen.getByLabelText("Replace password"));
+    } else {
+      fireEvent.click(screen.getByRole("button", { name: "Add credential" }));
+      fireEvent.change(screen.getByLabelText("Title"), {
+        target: { value: "Generated sample" },
+      });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Generate password" }));
+    await screen.findByText("Generated password ready");
+    expect(screen.queryByLabelText("Password", { exact: true })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Save credential" }));
+    await screen.findByText(
+      "Save failed. Your changes are still here. Try again.",
+    );
+    expect(screen.getByText("Generated password ready")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Save credential" }));
+    await screen.findByText("Saved", { exact: true });
+    expect(attempts).toBe(2);
+  },
+);

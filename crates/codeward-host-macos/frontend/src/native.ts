@@ -46,7 +46,9 @@ export type Form = {
   username: string;
   url: string;
   notes: string;
-  password: { mode: "keep" | "provided"; value?: string };
+  password:
+    | { mode: "keep" | "provided"; value?: string }
+    | { mode: "generated"; draft: string };
 };
 export type Operation = {
   epoch: number;
@@ -54,4 +56,13 @@ export type Operation = {
   operation: string;
   state: string;
   error?: string;
+};
+
+export type GeneratedDraft = Scope & { draft: string };
+export type PasswordOptions = {
+  length: number;
+  uppercase: boolean;
+  lowercase: boolean;
+  digits: boolean;
+  symbols: boolean;
 };
