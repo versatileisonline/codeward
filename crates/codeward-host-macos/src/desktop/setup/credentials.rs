@@ -8,6 +8,26 @@ use zeroize::Zeroize;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+pub(crate) struct SearchInput {
+    pub epoch: u64,
+    pub revocation: u64,
+    pub query: String,
+    // Require the cursor key even when null, matching the strict search contract.
+    #[serde(deserialize_with = "required_cursor")]
+    pub cursor: Option<String>,
+}
+fn required_cursor<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error> {
+    Option::<String>::deserialize(deserializer)
+}
+impl Drop for SearchInput {
+    fn drop(&mut self) {
+        self.query.zeroize();
+    }
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ListInput {
     pub epoch: u64,
     pub revocation: u64,
@@ -160,10 +180,12 @@ pub(crate) struct Operation {
     pub(super) revocation: u64,
     pub(super) operation: String,
     pub(super) state: &'static str,
+    pub(super) credential_id: Option<String>,
 }
 #[derive(Default)]
 pub(super) struct Credentials {
     cursor: Option<(String, CredentialCursor)>,
+    search_cursors: std::collections::VecDeque<(String, CredentialCursor)>,
     serial: u64,
     pub(super) operation: Option<Operation>,
     draft: Option<(String, PasswordDraftRef)>,
@@ -186,6 +208,74 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             return Err(SetupError::Busy);
         }
         Ok(())
+    }
+    pub(crate) fn credentials_search(
+        &mut self,
+        epoch: u64,
+        revocation: u64,
+        query: &str,
+        cursor: Option<&str>,
+    ) -> Result<Page, SetupError> {
+        self.credential_scope(epoch, revocation)?;
+        if query.len() > 4096 {
+            return Err(SetupError::InvalidInput);
+        }
+        let continuation = if let Some(token) = cursor {
+            let index = self
+                .credentials
+                .search_cursors
+                .iter()
+                .position(|(key, _)| key == token)
+                .ok_or(SetupError::Stale)?;
+            self.credentials.search_cursors.remove(index)
+        } else {
+            None
+        };
+        let result = self
+            .control
+            .as_mut()
+            .ok_or(SetupError::Unavailable)?
+            .command(|host| {
+                host.search_credentials(
+                    host.generation(),
+                    query,
+                    100,
+                    continuation.as_ref().map(|(_, cursor)| cursor),
+                )
+            });
+        let page = result.map_err(|error| self.credential_error(error))?;
+        self.credentials.serial = self
+            .credentials
+            .serial
+            .checked_add(1)
+            .ok_or(SetupError::Unavailable)?;
+        let next = page.next.map(|cursor| {
+            let token = format!("{}:{}:s:{}", epoch, revocation, self.credentials.serial);
+            // Independent head queries cannot overwrite another in-flight reply's cursor.
+            if self.credentials.search_cursors.len() == 8 {
+                self.credentials.search_cursors.pop_front();
+            }
+            self.credentials
+                .search_cursors
+                .push_back((token.clone(), cursor));
+            token
+        });
+        Ok(Page {
+            epoch,
+            revocation,
+            generation: page.generation.to_string(),
+            revision: page.revision.to_string(),
+            summaries: page
+                .summaries
+                .into_iter()
+                .map(|s| Summary {
+                    id: s.id,
+                    title: s.title,
+                    username: s.username,
+                })
+                .collect(),
+            next,
+        })
     }
     pub(crate) fn credentials_list(
         &mut self,
@@ -304,6 +394,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
                 TransactionError::PasswordGeneration(
                     codeward_core::password::GenerationError::InvalidOptions,
                 )
+                | TransactionError::InvalidSearchQuery
                 | TransactionError::InvalidCredentialId
                 | TransactionError::CredentialNotFound
                 | TransactionError::Vault(_),
@@ -330,11 +421,13 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     fn credentials_started(&mut self) -> Operation {
         self.pending = true;
         self.credentials.cursor = None;
+        self.credentials.search_cursors.clear();
         let operation = Operation {
             epoch: self.status.epoch,
             revocation: self.status.revocation,
             operation: self.next_request.to_string(),
             state: "saving",
+            credential_id: None,
         };
         self.credentials.operation = Some(operation.clone());
         operation
@@ -421,6 +514,9 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             .filter(|o| o.operation == input.operation)
             .ok_or(SetupError::Stale)?
             .clone();
+        if self.status.state != State::Unlocked || operation.revocation != self.status.revocation {
+            operation.credential_id = None;
+        }
         operation.revocation = self.status.revocation;
         if self.status.state == State::Locked && operation.state == "saving" {
             operation.state = "locked";
@@ -437,7 +533,10 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         match completion {
             HostCompletion::PreparationFailed { .. } => operation.state = "failed",
             HostCompletion::Transaction {
-                outcome, refresh, ..
+                outcome,
+                refresh,
+                credential_id,
+                ..
             } => {
                 operation.state = match outcome {
                     Ok(OperationStatus::Committed { .. }) if matches!(refresh, Some(Ok(()))) => {
@@ -452,6 +551,13 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
                     Ok(OperationStatus::Canceled) => "locked",
                     _ => "failed",
                 };
+                if operation.state == "saved"
+                    && matches!(refresh, Some(Ok(())))
+                    && self.status.state == State::Unlocked
+                    && operation.revocation == self.status.revocation
+                {
+                    operation.credential_id = credential_id.as_ref().map(|id| id.to_string());
+                }
                 if matches!(outcome, Ok(OperationStatus::Committed { .. }))
                     && !matches!(refresh, Some(Ok(())))
                 {
@@ -519,6 +625,15 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
 }
 
 impl Credentials {
+    pub(super) fn clear_read_access(&mut self) {
+        self.cursor = None;
+        self.search_cursors.clear();
+        if let Some(operation) = &mut self.operation
+            && let Some(mut id) = operation.credential_id.take()
+        {
+            id.zeroize();
+        }
+    }
     pub(super) fn fail_pending(&mut self) -> bool {
         if let Some(operation) = &mut self.operation
             && operation.state == "saving"

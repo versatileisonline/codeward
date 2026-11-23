@@ -161,6 +161,7 @@ pub(in crate::transaction) struct WritePreparation {
     source: Option<Fingerprint>,
     generation: u64,
     permit: Arc<Permit>,
+    pub(in crate::transaction) credential_id: Option<Zeroizing<String>>,
 }
 
 impl WritePreparation {
@@ -195,14 +196,17 @@ impl WritePreparation {
                 access.prepare_contents(request.expected_revision, snapshot.borrow())?
             }
             (WriteInput::CreateCredential(fields), Access::Master(access)) => {
-                let snapshot =
+                let (snapshot, id) =
                     super::editing::created_snapshot(access.snapshot(), &fields, &self.permit)?;
+                self.credential_id = Some(id);
                 if self.permit.canceled() {
                     return Err(TransactionError::Locked);
                 }
                 access.prepare_contents(request.expected_revision, &snapshot)?
             }
             (WriteInput::UpdateCredential { id, fields }, Access::Master(access)) => {
+                self.credential_id =
+                    Some(crate::credentials::copy_text(id.as_ref()).map_err(VaultError::from)?);
                 let snapshot = super::editing::updated_snapshot(
                     access.snapshot(),
                     id.as_ref(),
@@ -361,6 +365,7 @@ impl Session {
             source: self.source,
             generation: self.generation,
             permit,
+            credential_id: None,
         })
     }
 

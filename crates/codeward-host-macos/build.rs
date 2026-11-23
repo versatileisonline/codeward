@@ -8,6 +8,7 @@ fn main() {
             "reveal_password_draft",
             "discard_password_draft",
             "list_credentials",
+            "search_credentials",
             "get_credential_details",
             "reveal_credential_password",
             "create_credential",

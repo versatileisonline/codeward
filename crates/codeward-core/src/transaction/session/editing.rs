@@ -207,7 +207,7 @@ pub(super) fn created_snapshot(
     snapshot: &CredentialSnapshot,
     fields: &OwnedCredentialFields,
     permit: &Permit,
-) -> Result<CredentialSnapshot, TransactionError> {
+) -> Result<(CredentialSnapshot, Zeroizing<String>), TransactionError> {
     created_snapshot_with(
         snapshot,
         fields,
@@ -223,7 +223,7 @@ fn created_snapshot_with(
     permit: &Permit,
     mut next_id: impl FnMut() -> Result<[u8; 16], TransactionError>,
     now: impl FnOnce() -> Result<u64, TransactionError>,
-) -> Result<CredentialSnapshot, TransactionError> {
+) -> Result<(CredentialSnapshot, Zeroizing<String>), TransactionError> {
     if permit.canceled() {
         return Err(TransactionError::Locked);
     }
@@ -263,7 +263,11 @@ fn created_snapshot_with(
         now,
         None,
     )?;
-    snapshot_with_change(snapshot, None, Some(record), permit)
+    let id = copy_text(record.fields().id).map_err(VaultError::from)?;
+    Ok((
+        snapshot_with_change(snapshot, None, Some(record), permit)?,
+        id,
+    ))
 }
 
 pub(super) fn updated_snapshot(

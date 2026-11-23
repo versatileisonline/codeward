@@ -445,3 +445,71 @@ fn headless_create_edit_workers_cancel_queued_work_and_finish_admitted_commits_l
         }
     }
 }
+
+#[test]
+fn headless_write_identity_is_rust_assigned_and_only_delivered_after_snapshot_adoption() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let mut host = Host::open(Model::new(Some(fixture())), OWNER).unwrap();
+    authenticate(&mut host);
+    let generation = host.generation();
+    let (checkpoint, resume) = host.pause_refresh();
+    host.create_credential(
+        generation,
+        request(1, 1),
+        form(CredentialPassword::Provided("one")),
+    )
+    .unwrap();
+    await_storage(&mut host, checkpoint);
+    assert_eq!(
+        host.save(request(99, 1), empty()),
+        Err(HostError::Transaction(TransactionError::Busy))
+    );
+    resume.send(()).unwrap();
+    let HostCompletion::Transaction {
+        credential_id: Some(created),
+        refresh: Some(Ok(())),
+        ..
+    } = next(&mut host).unwrap()
+    else {
+        panic!("missing adopted creation identity");
+    };
+    let page = host
+        .search_credentials(generation, "new credential", 100, None)
+        .unwrap();
+    assert_eq!(page.summaries.len(), 1);
+    assert_eq!(page.summaries[0].id.as_str(), created.as_str());
+    host.update_credential(
+        generation,
+        request(2, 2),
+        &created,
+        form(CredentialPassword::Keep),
+    )
+    .unwrap();
+    let HostCompletion::Transaction {
+        credential_id: Some(edited),
+        refresh: Some(Ok(())),
+        ..
+    } = next(&mut host).unwrap()
+    else {
+        panic!("missing adopted edit identity");
+    };
+    assert_eq!(edited.as_str(), created.as_str());
+    host.create_credential(
+        generation,
+        request(3, 3),
+        form(CredentialPassword::Provided("two")),
+    )
+    .unwrap();
+    let (checkpoint, resume) = host.pause_refresh();
+    await_storage(&mut host, checkpoint);
+    host.lock();
+    resume.send(()).unwrap();
+    assert!(matches!(
+        next(&mut host),
+        Ok(HostCompletion::Transaction {
+            credential_id: None,
+            refresh: Some(Err(TransactionError::Locked)),
+            ..
+        })
+    ));
+}

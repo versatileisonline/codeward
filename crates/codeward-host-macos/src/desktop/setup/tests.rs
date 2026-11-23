@@ -1598,3 +1598,249 @@ fn recovery_unknown_without_event_source_reports_restart_required() {
     ));
     assert_eq!(setup.status().error, Some(SetupError::Unavailable));
 }
+
+#[test]
+fn credential_search_bridge_keeps_pages_scoped_and_returns_committed_write_identity() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let storage = disk.clone();
+    let events = Events::default();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    assert!(
+        setup
+            .credentials_search(epoch, setup.status.revocation, "", None)
+            .is_err()
+    );
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    assert!(matches!(
+        setup.credentials_search(epoch, revocation, &"é".repeat(2049), None),
+        Err(SetupError::InvalidInput)
+    ));
+    let mut ids = Vec::new();
+    for _ in 0..2 {
+        let page = setup
+            .credentials_search(epoch, revocation, "no matches", None)
+            .unwrap();
+        assert!(page.summaries.is_empty());
+        let operation = setup
+            .credentials_write(
+                credential_input(
+                    epoch,
+                    revocation,
+                    &page.generation,
+                    &page.revision,
+                    None,
+                    false,
+                ),
+                false,
+            )
+            .unwrap();
+        assert!(operation.credential_id.is_none());
+        assert_eq!(
+            operation_wait(&mut setup, epoch, &operation.operation),
+            "saved"
+        );
+        let saved = setup
+            .credentials_operation(credentials::OperationInput {
+                epoch,
+                operation: operation.operation,
+            })
+            .unwrap();
+        ids.push(saved.credential_id.unwrap());
+    }
+    assert_ne!(ids[0], ids[1]);
+    let page = setup
+        .credentials_search(epoch, revocation, "ACCOUNT", None)
+        .unwrap();
+    assert_eq!(page.summaries.len(), 2);
+    for id in &ids {
+        assert!(page.summaries.iter().any(|s| s.id.as_str() == id));
+    }
+    let operation = setup
+        .credentials_write(
+            credential_input(
+                epoch,
+                revocation,
+                &page.generation,
+                &page.revision,
+                Some(ids[0].clone()),
+                true,
+            ),
+            true,
+        )
+        .unwrap();
+    assert_eq!(
+        operation_wait(&mut setup, epoch, &operation.operation),
+        "saved"
+    );
+    let saved = setup
+        .credentials_operation(credentials::OperationInput {
+            epoch,
+            operation: operation.operation,
+        })
+        .unwrap();
+    assert_eq!(saved.credential_id.as_deref(), Some(ids[0].as_str()));
+    events.0.store(true, Ordering::SeqCst);
+    let locked = setup
+        .credentials_operation(credentials::OperationInput {
+            epoch,
+            operation: saved.operation,
+        })
+        .unwrap();
+    assert_eq!(locked.state, "saved");
+    assert!(locked.credential_id.is_none());
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    let page = setup
+        .credentials_search(epoch, revocation, "", None)
+        .unwrap();
+    let operation = setup
+        .credentials_delete(selected(
+            epoch,
+            revocation,
+            &page.generation,
+            &page.revision,
+            &ids[0],
+        ))
+        .unwrap();
+    assert_eq!(
+        operation_wait(&mut setup, epoch, &operation.operation),
+        "saved"
+    );
+    assert!(
+        setup
+            .credentials_operation(credentials::OperationInput {
+                epoch,
+                operation: operation.operation
+            })
+            .unwrap()
+            .credential_id
+            .is_none()
+    );
+    events.0.store(true, Ordering::SeqCst);
+    assert!(
+        setup
+            .credentials_search(epoch, revocation, "account", None)
+            .is_err()
+    );
+}
+
+#[test]
+fn credential_search_bridge_paginates_whole_vault_and_keeps_overlapping_query_cursors() {
+    use codeward_core::credentials::{Credential, CredentialInput, CredentialSnapshot};
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = saved_disk();
+    let records = (0..205)
+        .map(|index| {
+            Credential::new(CredentialInput {
+                id: &format!("{index:032x}"),
+                title: "Shared account",
+                username: if index == 204 { "Late match" } else { "user" },
+                password: "hidden",
+                url: "https://secret.test",
+                notes: "private note",
+                created_at: 0,
+                updated_at: 0,
+            })
+            .unwrap()
+        })
+        .collect();
+    // Install only a synthetic committed fixture into this in-memory storage.
+    let snapshot = CredentialSnapshot::new(records).unwrap();
+    let bytes = disk.0.lock().unwrap().bytes.clone().unwrap();
+    let access =
+        codeward_core::vault::unlock_with_master(&bytes, "synthetic master phrase").unwrap();
+    disk.0.lock().unwrap().bytes =
+        Some(access.prepare_contents(1, &snapshot).unwrap().into_bytes());
+    drop(access);
+    let mut setup = Setup::new();
+    let storage = disk.clone();
+    let events = Events::default();
+    let epoch = setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let revocation = setup.status.revocation;
+    let late = setup
+        .credentials_search(epoch, revocation, "LATE", None)
+        .unwrap();
+    assert_eq!(late.summaries.len(), 1);
+    assert_eq!(
+        late.summaries[0].id.as_str(),
+        "000000000000000000000000000000cc"
+    );
+    let first = setup
+        .credentials_search(epoch, revocation, "SHARED", None)
+        .unwrap();
+    let unrelated = setup
+        .credentials_search(epoch, revocation, "user", None)
+        .unwrap();
+    assert_eq!(first.summaries.len(), 100);
+    assert_eq!(unrelated.summaries.len(), 100);
+    let second = setup
+        .credentials_search(epoch, revocation, "shared", first.next.as_deref())
+        .unwrap();
+    assert_eq!(second.summaries.len(), 100);
+    assert_eq!(
+        second.summaries[0].id.as_str(),
+        "00000000000000000000000000000064"
+    );
+    let last = setup
+        .credentials_search(epoch, revocation, "shared", second.next.as_deref())
+        .unwrap();
+    assert_eq!(last.summaries.len(), 5);
+    assert!(last.next.is_none());
+    assert!(matches!(
+        setup.credentials_search(epoch, revocation, "different", unrelated.next.as_deref()),
+        Err(SetupError::Stale)
+    ));
+    assert!(
+        setup
+            .credentials_search(epoch + 1, revocation, "", None)
+            .is_err()
+    );
+    assert!(
+        setup
+            .credentials_search(epoch, revocation + 1, "", None)
+            .is_err()
+    );
+    let before_lock = setup
+        .credentials_search(epoch, revocation, "shared", None)
+        .unwrap();
+    events.0.store(true, Ordering::SeqCst);
+    assert!(
+        setup
+            .credentials_search(epoch, revocation, "shared", before_lock.next.as_deref())
+            .is_err()
+    );
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    assert!(matches!(
+        setup.credentials_search(
+            epoch,
+            setup.status.revocation,
+            "shared",
+            before_lock.next.as_deref()
+        ),
+        Err(SetupError::Stale)
+    ));
+}

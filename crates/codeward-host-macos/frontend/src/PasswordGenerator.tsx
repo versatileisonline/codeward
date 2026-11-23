@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   invoke,
   type Scope,
@@ -36,6 +36,7 @@ export function PasswordGenerator({
     [reference, setReference] = useState<GeneratedDraft | null>(null),
     [generating, setGenerating] = useState(false),
     [revealing, setRevealing] = useState(false),
+    [optionsOpen, setOptionsOpen] = useState(false),
     [preview, setPreview] = useState<string | null>(null),
     [error, setError] = useState("");
   const current = useRef<GeneratedDraft | null>(null),
@@ -46,6 +47,8 @@ export function PasswordGenerator({
     timer = useRef<number | undefined>(undefined),
     callbacks = useRef({ onDraft, onBusy });
   callbacks.current = { onDraft, onBusy };
+  const optionsId = useId(),
+    lengthId = useId();
   function hide() {
     revealSequence.current++;
     window.clearTimeout(timer.current);
@@ -58,10 +61,14 @@ export function PasswordGenerator({
   useEffect(() => {
     alive.current = true;
     const blur = () => hide();
+    const keyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") hide();
+    };
     const hidden = () => {
       if (document.hidden) hide();
     };
     window.addEventListener("blur", blur);
+    window.addEventListener("keydown", keyDown);
     document.addEventListener("visibilitychange", hidden);
     return () => {
       alive.current = false;
@@ -72,6 +79,7 @@ export function PasswordGenerator({
       current.current = null;
       callbacks.current.onBusy(false);
       window.removeEventListener("blur", blur);
+      window.removeEventListener("keydown", keyDown);
       document.removeEventListener("visibilitychange", hidden);
     };
   }, []);
@@ -79,6 +87,12 @@ export function PasswordGenerator({
     if (disabled) hide();
   }, [disabled]);
   const length = Number(lengthDraft);
+  const selectedClasses = (
+    ["uppercase", "lowercase", "digits", "symbols"] as const
+  )
+    .filter((key) => options[key])
+    .join(", ");
+  const optionsSummary = `${lengthDraft || "0"} characters · ${selectedClasses ? selectedClasses[0].toUpperCase() + selectedClasses.slice(1) : "No character classes"}`;
   const valid =
     Number.isInteger(length) &&
     length >= 12 &&
@@ -184,50 +198,6 @@ export function PasswordGenerator({
           Saved only when you save this credential.
         </span>
       </div>
-      <div className="generator-options">
-        <label htmlFor="generator-length">
-          Password length
-          <input
-            id="generator-length"
-            type="number"
-            min={12}
-            max={128}
-            value={lengthDraft}
-            disabled={disabled || generating}
-            onFocus={() => {
-              if (lengthDraft === "0") setLengthDraft("");
-            }}
-            onChange={(e) => setLengthDraft(e.target.value)}
-            onBlur={() => setLengthDraft(String(Number(lengthDraft)))}
-          />
-        </label>
-        <div className="generator-classes">
-          {(["uppercase", "lowercase", "digits", "symbols"] as const).map(
-            (key) => (
-              <label key={key} className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={options[key]}
-                  disabled={disabled || generating}
-                  onChange={(e) =>
-                    setOptions((old) => ({ ...old, [key]: e.target.checked }))
-                  }
-                />
-                {key[0].toUpperCase() + key.slice(1)}
-              </label>
-            ),
-          )}
-        </div>
-      </div>
-      {!valid && (
-        <p className="field-hint">
-          Choose 12–128 characters and at least one character class.
-        </p>
-      )}
-      <p className="field-hint">
-        Settings apply when you generate. Selected classes form the available
-        alphabet.
-      </p>
       <div className="generator-actions">
         <button
           className="secondary-button"
@@ -241,9 +211,18 @@ export function PasswordGenerator({
               ? "Regenerate password"
               : "Generate password"}
         </button>
+        <button
+          className="quiet-button generator-disclosure"
+          type="button"
+          aria-expanded={optionsOpen}
+          aria-controls={optionsId}
+          onClick={() => setOptionsOpen((open) => !open)}
+        >
+          Options <span aria-hidden="true">{optionsOpen ? "−" : "+"}</span>
+        </button>
         {reference && (
           <button
-            className="secondary-button"
+            className="quiet-button"
             type="button"
             disabled={disabled || generating}
             onClick={manual}
@@ -252,6 +231,53 @@ export function PasswordGenerator({
           </button>
         )}
       </div>
+      <p className="field-hint generator-summary">{optionsSummary}</p>
+      <div id={optionsId} hidden={!optionsOpen}>
+        <div className="generator-options">
+          <label htmlFor={lengthId}>
+            Password length
+            <input
+              id={lengthId}
+              type="number"
+              min={12}
+              max={128}
+              value={lengthDraft}
+              disabled={disabled || generating}
+              onFocus={() => {
+                if (lengthDraft === "0") setLengthDraft("");
+              }}
+              onChange={(e) => setLengthDraft(e.target.value)}
+              onBlur={() => setLengthDraft(String(Number(lengthDraft)))}
+            />
+          </label>
+          <div className="generator-classes">
+            {(["uppercase", "lowercase", "digits", "symbols"] as const).map(
+              (key) => (
+                <label key={key} className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={options[key]}
+                    disabled={disabled || generating}
+                    onChange={(e) =>
+                      setOptions((old) => ({ ...old, [key]: e.target.checked }))
+                    }
+                  />
+                  {key[0].toUpperCase() + key.slice(1)}
+                </label>
+              ),
+            )}
+          </div>
+        </div>
+        <p className="field-hint generator-options-note">
+          Options apply when you generate. Changing them keeps your current
+          password.
+        </p>
+      </div>
+      {!valid && (
+        <p className="field-hint">
+          Choose 12–128 characters and at least one character class.
+        </p>
+      )}
       {reference && (
         <div className="generated-preview">
           <p className="field-hint">Generated password ready</p>

@@ -49,7 +49,9 @@ Session preparation returns the existing pending operation reference. The host
 queues background work and reports normal `HostCompletion` results: a controlled
 `PreparationFailed`, or transaction outcome plus separate authenticated refresh.
 Only a complete committed revision acknowledges saving. After successful refresh,
-list credentials to obtain Rust-assigned IDs; no pending ID is treated as saved.
+the desktop operation can return the Rust-assigned affected credential ID for
+scoped detail selection; no pending ID is treated as saved. See the
+[everyday desktop workflow](everyday-desktop-workflow.md).
 If refresh fails after a proven commit, the save remains committed and the session
 requires reload. Use the original operation reference for status correlation.
 

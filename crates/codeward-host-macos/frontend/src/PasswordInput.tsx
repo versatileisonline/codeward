@@ -18,13 +18,18 @@ export function PasswordInput({
   }, [value]);
   useEffect(() => {
     const hide = () => setShow(false);
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") hide();
+    };
     const visibility = () => {
       if (document.hidden) hide();
     };
     window.addEventListener("blur", hide);
+    window.addEventListener("keydown", escape);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       window.removeEventListener("blur", hide);
+      window.removeEventListener("keydown", escape);
       document.removeEventListener("visibilitychange", visibility);
     };
   }, []);

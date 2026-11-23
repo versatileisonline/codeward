@@ -57,13 +57,36 @@ export function Vault({
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [generatorBusy, setGeneratorBusy] = useState(false),
-    [loading, setLoading] = useState(true),
+    [loading, setLoading] = useState(false),
+    [listLoading, setListLoading] = useState(true),
+    [listError, setListError] = useState(""),
+    [editorScope, setEditorScope] = useState<Scope | null>(null),
+    [editorFocus, setEditorFocus] = useState(0),
+    [action, setAction] = useState<"save" | "delete" | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [blocked, setBlocked] = useState(false),
     [revealed, setRevealed] = useState<string | null>(null),
     [dialog, setDialog] = useState<"dirty" | "delete" | null>(null);
   const dialogFocus = useRef<HTMLElement | null>(null);
+  const dialogElement = useRef<HTMLElement | null>(null);
+  const searchInput = useRef<HTMLInputElement>(null),
+    editor = useRef<HTMLFormElement>(null),
+    addButton = useRef<HTMLButtonElement>(null),
+    editButton = useRef<HTMLButtonElement>(null),
+    query = useRef(""),
+    queryTimer = useRef<number | undefined>(undefined),
+    listVersion = useRef(0);
+  // List requests and editor requests have independent lifetimes. Searching
+  // must never discard a draft or invalidate an in-flight detail request.
+  const currentContext = useRef({
+    epoch: status.epoch,
+    revocation: status.revocation,
+  });
+  currentContext.current = {
+    epoch: status.epoch,
+    revocation: status.revocation,
+  };
   function openDialog(value: "dirty" | "delete") {
     dialogFocus.current = document.activeElement as HTMLElement;
     setDialog(value);
@@ -74,6 +97,9 @@ export function Vault({
       dialogFocus.current = null;
     }
   }, [dialog]);
+  useEffect(() => {
+    if (dialog && busy) dialogElement.current?.focus();
+  }, [dialog, busy]);
   const revealVersion = useRef(0),
     lastActivity = useRef(0);
   const version = useRef(0),
@@ -98,7 +124,7 @@ export function Vault({
       () => {},
     );
   }
-  function reset() {
+  function reset(preserveNotice = false) {
     version.current++;
     setLoading(false);
     hidePassword();
@@ -108,42 +134,97 @@ export function Vault({
     draftRef.current = null;
     markDirty(false);
     setError("");
-    setNotice("");
+    if (!preserveNotice) setNotice("");
+    setEditorScope(null);
   }
-  async function load(append = false) {
-    const token = version.current;
-    setLoading(true);
-    setError("");
+  function contextMatches(scope: { epoch: number; revocation: number }) {
+    return (
+      scope.epoch === currentContext.current.epoch &&
+      scope.revocation === currentContext.current.revocation
+    );
+  }
+  async function load(append = false): Promise<Page | null> {
+    const token = ++listVersion.current;
+    const searchQuery = query.current;
+    setListLoading(true);
+    setListError("");
     try {
-      const next = await invoke<Page>("list_credentials", {
-        ...context,
-        cursor: append ? (pageRef.current?.next ?? null) : null,
-      });
-      if (!mounted.current || token !== version.current) return;
-      if (next.epoch !== status.epoch || next.revocation !== status.revocation)
-        return;
-      pageRef.current = next;
-      setPage(next);
-      setRows((old) => (append ? [...old, ...next.summaries] : next.summaries));
+      const next = await invoke<Page>(
+        searchQuery ? "search_credentials" : "list_credentials",
+        {
+          ...context,
+          ...(searchQuery ? { query: searchQuery } : {}),
+          cursor: append ? (pageRef.current?.next ?? null) : null,
+        },
+      );
+      if (!mounted.current || !contextMatches(next)) return null;
+      if (token === listVersion.current) {
+        pageRef.current = next;
+        setPage(next);
+        setRows((old) =>
+          append ? [...old, ...next.summaries] : next.summaries,
+        );
+      }
+      return next;
     } catch (e) {
-      if (mounted.current && token === version.current) setError(failure(e));
+      if (
+        mounted.current &&
+        token === listVersion.current &&
+        contextMatches(context)
+      )
+        setListError(failure(e));
+      return null;
     } finally {
-      if (mounted.current && token === version.current) setLoading(false);
+      if (
+        mounted.current &&
+        token === listVersion.current &&
+        contextMatches(context)
+      )
+        setListLoading(false);
     }
+  }
+  function changeSearch(value: string) {
+    query.current = value;
+    setSearch(value);
+    listVersion.current++;
+    window.clearTimeout(queryTimer.current);
+    setRows([]);
+    setListLoading(true);
+    setListError("");
+    // Keep the last valid scope for an open editor, but never reuse its cursor
+    // for a new query.
+    if (pageRef.current) pageRef.current = { ...pageRef.current, next: null };
+    setPage((old) => (old ? { ...old, next: null } : null));
+    queryTimer.current = window.setTimeout(() => void load(), value ? 200 : 0);
   }
   useEffect(() => {
     mounted.current = true;
+    reset();
+    setRows([]);
+    setPage(null);
+    pageRef.current = null;
+    setDialog(null);
+    setBlocked(false);
+    setBusy(false);
+    setGeneratorBusy(false);
+    query.current = "";
+    setSearch("");
+    desired.current = null;
+    sending.current = false;
     void load();
     const blur = () => hidePassword();
     window.addEventListener("blur", blur);
     return () => {
       mounted.current = false;
       version.current++;
+      listVersion.current++;
+      window.clearTimeout(queryTimer.current);
       window.clearTimeout(revealTimer.current);
       guard.current = null;
       window.removeEventListener("blur", blur);
     };
-  }, []);
+  }, [status.epoch, status.revocation]);
+
   function request(action: () => void) {
     if (sending.current) return;
     if (blocked) {
@@ -161,7 +242,7 @@ export function Vault({
     return () => {
       guard.current = null;
     };
-  }, [blocked]);
+  }, [blocked, status.epoch, status.revocation]);
   useEffect(() => {
     if (status.close_requested) {
       request(() => {
@@ -169,12 +250,16 @@ export function Vault({
       });
     }
   }, [status.close_requested, busy, blocked]);
-  async function select(row: Summary) {
-    reset();
+  async function select(
+    row: Pick<Summary, "id">,
+    scope = pageRef.current,
+    preserveNotice = false,
+  ) {
+    reset(preserveNotice);
     const token = version.current;
     setLoading(true);
     try {
-      const p = pageRef.current;
+      const p = scope;
       if (!p) return;
       const detail = await invoke<Details>("get_credential_details", {
         epoch: p.epoch,
@@ -186,8 +271,7 @@ export function Vault({
       if (
         mounted.current &&
         token === version.current &&
-        detail.epoch === status.epoch &&
-        detail.revocation === status.revocation
+        contextMatches(detail)
       ) {
         setSelected(detail);
         selectedRef.current = detail;
@@ -202,6 +286,8 @@ export function Vault({
     reset();
     setDraft({ ...empty });
     draftRef.current = { ...empty };
+    setEditorScope(pageRef.current);
+    setEditorFocus((value) => value + 1);
   }
   function edit() {
     if (!selected) return;
@@ -217,6 +303,8 @@ export function Vault({
     };
     setDraft(value);
     draftRef.current = value;
+    setEditorScope(selected);
+    setEditorFocus((value) => value + 1);
     setNotice("");
   }
   function change(key: keyof Draft, value: string | boolean) {
@@ -271,14 +359,15 @@ export function Vault({
   async function mutate(kind: "save" | "delete"): Promise<boolean> {
     if (sending.current || generatorBusy || blocked || !pageRef.current)
       return false;
-    const p = pageRef.current,
+    const p = selectedRef.current ?? editorScope ?? pageRef.current,
       detail = selectedRef.current,
       d = draftRef.current;
     const token = version.current;
     sending.current = true;
     setBusy(true);
+    setAction(kind);
     setError("");
-    setNotice("Saving…");
+    setNotice(kind === "delete" ? "Deleting…" : "Saving…");
     hidePassword();
     try {
       const scope = {
@@ -314,11 +403,7 @@ export function Vault({
       }
       if (!mounted.current || token !== version.current) return false;
       for (;;) {
-        if (
-          operation.epoch !== status.epoch ||
-          operation.revocation !== status.revocation
-        )
-          return false;
+        if (!contextMatches(operation)) return false;
         if (operation.state !== "saving") break;
         await new Promise((r) => window.setTimeout(r, 150));
         if (!mounted.current || token !== version.current) return false;
@@ -331,7 +416,18 @@ export function Vault({
       if (operation.state === "saved") {
         reset();
         setNotice(kind === "delete" ? "Credential deleted" : "Saved");
-        await load();
+        window.clearTimeout(queryTimer.current);
+        const refreshed = await load();
+        // The native operation supplies the identity after snapshot adoption.
+        // Titles are not unique and a saved item may be outside this query.
+        if (
+          kind === "save" &&
+          operation.credential_id &&
+          refreshed &&
+          mounted.current &&
+          token + 1 === version.current
+        )
+          await select({ id: operation.credential_id }, refreshed, true);
         return true;
       }
       setNotice("");
@@ -368,7 +464,8 @@ export function Vault({
       }
       return false;
     } finally {
-      if (mounted.current) {
+      if (mounted.current && contextMatches(context)) {
+        setAction(null);
         setBusy(false);
         sending.current = false;
       }
@@ -410,11 +507,46 @@ export function Vault({
       kind,
     }).catch(() => {});
   }
-  const filtered = rows.filter((r) =>
-    `${r.title} ${r.username}`
-      .toLocaleLowerCase()
-      .includes(search.toLocaleLowerCase()),
-  );
+  useEffect(() => {
+    if (draft)
+      editor.current
+        ?.querySelector<HTMLInputElement>("#credential-title")
+        ?.focus();
+  }, [editorFocus]);
+  function cancelEditor() {
+    setDraft(null);
+    draftRef.current = null;
+    setEditorScope(null);
+    markDirty(false);
+    window.setTimeout(
+      () =>
+        (selectedRef.current ? editButton.current : addButton.current)?.focus(),
+      0,
+    );
+  }
+  useEffect(() => {
+    function shortcuts(event: KeyboardEvent) {
+      if (event.key === "Escape") hidePassword();
+      if (!event.metaKey || event.altKey || event.ctrlKey || dialog) return;
+      const key = event.key.toLowerCase();
+      if (key === "f") {
+        event.preventDefault();
+        searchInput.current?.focus();
+      } else if (key === "n" && !busy && !blocked && pageRef.current) {
+        event.preventDefault();
+        request(startNew);
+      } else if (
+        key === "s" &&
+        draft &&
+        editor.current?.contains(event.target as Node)
+      ) {
+        event.preventDefault();
+        if (!busy && !blocked && !generatorBusy) void mutate("save");
+      }
+    }
+    window.addEventListener("keydown", shortcuts);
+    return () => window.removeEventListener("keydown", shortcuts);
+  });
   return (
     <section
       className="vault-workspace"
@@ -433,14 +565,34 @@ export function Vault({
           </h2>
         </div>
         <button className="secondary-button" onClick={lock}>
-          Lock Vault <span aria-hidden="true">↗</span>
+          Lock Vault{" "}
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="5" y="10" width="14" height="11" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            <path d="M12 14v3" />
+          </svg>
         </button>
       </header>
       <div className="vault-columns">
-        <aside className="credential-list" aria-label="Credentials">
+        <aside
+          className="credential-list"
+          aria-label="Credentials"
+          aria-busy={listLoading}
+        >
           <div className="list-tools">
             <button
               className="primary-button"
+              ref={addButton}
               disabled={busy || blocked || !page}
               onClick={() => request(startNew)}
             >
@@ -450,11 +602,12 @@ export function Vault({
               Search credentials
             </label>
             <input
+              ref={searchInput}
               id="credential-search"
               type="search"
               placeholder="Search credentials"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => changeSearch(e.target.value)}
             />
           </div>
           <p className="list-caption">
@@ -462,7 +615,7 @@ export function Vault({
             {page?.next ? " loaded" : ""}
           </p>
           <div className="credential-rows">
-            {filtered.map((row) => (
+            {rows.map((row) => (
               <button
                 key={row.id}
                 className={`credential-row ${selected?.id === row.id ? "selected" : ""}`}
@@ -483,16 +636,31 @@ export function Vault({
               </button>
             ))}
           </div>
-          {!loading && !filtered.length && rows.length > 0 && (
+          {listLoading && (
+            <p role="status" className="list-caption">
+              Loading credentials…
+            </p>
+          )}
+          {listError && (
+            <div>
+              <p role="alert" className="form-error">
+                {listError}
+              </p>
+              <button className="secondary-button" onClick={() => void load()}>
+                Reload list
+              </button>
+            </div>
+          )}
+          {!listLoading && !listError && !rows.length && search && (
             <p className="list-caption">No matching credentials.</p>
           )}
           {page?.next && (
             <button
               className="secondary-button load-more"
-              disabled={loading || busy || blocked}
+              disabled={listLoading || busy || blocked}
               onClick={() => void load(true)}
             >
-              Load more
+              {listLoading ? "Loading…" : "Load more"}
             </button>
           )}
         </aside>
@@ -507,6 +675,7 @@ export function Vault({
           </div>
           {draft ? (
             <form
+              ref={editor}
               className="credential-editor"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -559,9 +728,9 @@ export function Vault({
                         onChange={(v) => change("password", v)}
                       />
                     )}
-                    {page && (
+                    {editorScope && (
                       <PasswordGenerator
-                        scope={page}
+                        scope={editorScope}
                         disabled={busy || blocked}
                         onBusy={setGeneratorBusy}
                         onDraft={(generated) => {
@@ -587,18 +756,12 @@ export function Vault({
                 />
                 <div className="editor-actions">
                   <button className="primary-button" type="submit">
-                    Save credential
+                    {busy && action === "save" ? "Saving…" : "Save credential"}
                   </button>
                   <button
                     className="secondary-button"
                     type="button"
-                    onClick={() =>
-                      request(() => {
-                        setDraft(null);
-                        draftRef.current = null;
-                        markDirty(false);
-                      })
-                    }
+                    onClick={() => request(cancelEditor)}
                   >
                     Cancel
                   </button>
@@ -614,6 +777,7 @@ export function Vault({
                 </div>
                 <button
                   className="secondary-button"
+                  ref={editButton}
                   disabled={busy || blocked}
                   onClick={edit}
                 >
@@ -649,36 +813,31 @@ export function Vault({
                   openDialog("delete");
                 }}
               >
-                Delete credential
+                {busy && action === "delete"
+                  ? "Deleting…"
+                  : "Delete credential"}
               </button>
             </article>
           ) : (
-            !loading && (
+            !loading &&
+            !listLoading &&
+            !listError && (
               <div className="vault-empty">
                 <Logo className="empty-logo" />
                 <h3>
-                  {rows.length
+                  {rows.length || search
                     ? "Everything in its place"
                     : "Your vault is ready"}
                 </h3>
                 <p>
-                  {rows.length
+                  {rows.length || search
                     ? "Choose a credential to view its details."
                     : "Add your first credential. It stays on this Mac, protected in your vault."}
                 </p>
-                {!rows.length && (
+                {!rows.length && !search && (
                   <p className="preview-note">
                     Use sample credentials in this development build.
                   </p>
-                )}
-                {error && (
-                  <button
-                    className="secondary-button"
-                    disabled={blocked}
-                    onClick={() => void load()}
-                  >
-                    Reload list
-                  </button>
                 )}
               </div>
             )
@@ -689,11 +848,16 @@ export function Vault({
         <div className="dialog-backdrop">
           <section
             className="confirm-dialog"
+            ref={dialogElement}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="dialog-title"
             onKeyDown={(e) => {
               if (e.key === "Escape" && !busy) {
+                e.preventDefault();
+                e.stopPropagation();
+                hidePassword();
                 if (dialog === "dirty") void resolveDirty("cancel");
                 else setDialog(null);
               }
@@ -703,7 +867,13 @@ export function Vault({
                     "button:not(:disabled)",
                   ),
                 );
-                if (e.shiftKey && document.activeElement === els[0]) {
+                if (!els.length) {
+                  e.preventDefault();
+                  e.currentTarget.focus();
+                } else if (document.activeElement === e.currentTarget) {
+                  e.preventDefault();
+                  (e.shiftKey ? els.at(-1) : els[0])?.focus();
+                } else if (e.shiftKey && document.activeElement === els[0]) {
                   e.preventDefault();
                   els.at(-1)?.focus();
                 } else if (
@@ -734,7 +904,7 @@ export function Vault({
                     disabled={busy || blocked}
                     onClick={() => void resolveDirty("save")}
                   >
-                    Save changes
+                    {busy ? "Saving…" : "Save changes"}
                   </button>
                   <button
                     className="secondary-button"

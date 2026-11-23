@@ -23,6 +23,7 @@
     "allow-get-session-state",
     "allow-lock-vault",
     "allow-list-credentials",
+    "allow-search-credentials",
     "allow-get-credential-details",
     "allow-reveal-credential-password",
     "allow-create-credential",

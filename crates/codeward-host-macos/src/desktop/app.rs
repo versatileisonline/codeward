@@ -186,6 +186,24 @@ fn credential_body<T: serde::de::DeserializeOwned>(
     T::deserialize(body).map_err(|_| CommandError::InvalidInput)
 }
 #[tauri::command]
+fn search_credentials<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Page, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::SearchInput = credential_body(&request)?;
+    with_setup(|setup| {
+        setup
+            .credentials_search(
+                input.epoch,
+                input.revocation,
+                &input.query,
+                input.cursor.as_deref(),
+            )
+            .map_err(Into::into)
+    })
+}
+#[tauri::command]
 fn list_credentials<R: Runtime>(
     window: WebviewWindow<R>,
     request: Request<'_>,
@@ -634,6 +652,7 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
             reveal_password_draft,
             discard_password_draft,
             list_credentials,
+            search_credentials,
             get_credential_details,
             reveal_credential_password,
             create_credential,
@@ -789,6 +808,7 @@ mod tests {
                 reveal_password_draft,
                 discard_password_draft,
                 list_credentials,
+                search_credentials,
                 get_credential_details,
                 reveal_credential_password,
                 create_credential,
@@ -867,6 +887,7 @@ mod tests {
             "reveal_password_draft",
             "discard_password_draft",
             "list_credentials",
+            "search_credentials",
             "get_credential_details",
             "reveal_credential_password",
             "create_credential",
@@ -918,6 +939,7 @@ mod tests {
             "reveal_password_draft",
             "discard_password_draft",
             "list_credentials",
+            "search_credentials",
             "get_credential_details",
             "reveal_credential_password",
             "create_credential",
@@ -956,6 +978,7 @@ mod tests {
             "reveal_password_draft",
             "discard_password_draft",
             "list_credentials",
+            "search_credentials",
             "get_credential_details",
             "reveal_credential_password",
             "create_credential",
@@ -972,6 +995,30 @@ mod tests {
             );
         }
         for (command, body) in [
+            (
+                "search_credentials",
+                r#"{"epoch":0,"revocation":0,"query":"","cursor":null,"extra":true}"#,
+            ),
+            (
+                "search_credentials",
+                r#"{"epoch":0,"revocation":0,"query":null,"cursor":null}"#,
+            ),
+            (
+                "search_credentials",
+                r#"{"epoch":0,"revocation":0,"query":""}"#,
+            ),
+            (
+                "search_credentials",
+                r#"{"epoch":0,"revocation":0,"cursor":null}"#,
+            ),
+            (
+                "search_credentials",
+                r#"{"epoch":0,"revocation":0,"query":"","cursor":12}"#,
+            ),
+            (
+                "search_credentials",
+                r#"{"epoch":"0","revocation":0,"query":"","cursor":null}"#,
+            ),
             (
                 "begin_vault_recovery",
                 r#"{"epoch":0,"revocation":0,"paper":"sample","extra":true}"#,

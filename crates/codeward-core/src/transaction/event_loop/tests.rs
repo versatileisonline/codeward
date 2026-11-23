@@ -285,6 +285,7 @@ fn lost_refresh_worker_reports_revocation_and_keeps_the_commit_and_writer() {
         operation,
         outcome: Ok(OperationStatus::Committed { revision: 2 }),
         refresh: Some(Err(TransactionError::ReloadRequired)),
+        credential_id: None,
     }) = update.completion
     else {
         panic!("expected the proven commit with a refresh failure");

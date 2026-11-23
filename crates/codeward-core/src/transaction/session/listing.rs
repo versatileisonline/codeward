@@ -14,6 +14,7 @@ pub struct CredentialCursor {
     generation: u64,
     source: Fingerprint,
     offset: usize,
+    query: Zeroizing<String>,
 }
 
 /// Private display fields for a list result. Owned text clears on drop.
@@ -55,6 +56,22 @@ impl Session {
         limit: usize,
         cursor: Option<&CredentialCursor>,
     ) -> Result<CredentialPage, TransactionError> {
+        self.search_credentials(worker, caller, generation, "", limit, cursor)
+    }
+
+    /// Case-insensitive substring search of title and username independently.
+    /// Queries retain exact whitespace and are limited to 4,096 UTF-8 bytes.
+    /// Continuations bind the normalized query to the ordinary listing scope.
+    #[allow(clippy::too_many_arguments)]
+    pub fn search_credentials<L: WriterLease>(
+        &mut self,
+        worker: &Committer<L>,
+        caller: CallerId,
+        generation: u64,
+        query: &str,
+        limit: usize,
+        cursor: Option<&CredentialCursor>,
+    ) -> Result<CredentialPage, TransactionError> {
         self.check_scope(worker, caller)?;
         self.poll_inactivity();
         let Some(Access::Master(access)) = self.access.as_ref() else {
@@ -66,6 +83,10 @@ impl Session {
         if !(1..=MAX_CREDENTIAL_SUMMARIES).contains(&limit) {
             return Err(TransactionError::InvalidPageSize);
         }
+        if query.len() > 4096 {
+            return Err(TransactionError::InvalidSearchQuery);
+        }
+        let query = Zeroizing::new(query.to_lowercase());
         worker.check_idle()?;
         let source = self.source.ok_or(TransactionError::ReloadRequired)?;
         if Some(source) != worker.fingerprint {
@@ -75,7 +96,7 @@ impl Session {
             if cursor.caller != caller || !Arc::ptr_eq(&cursor.scope, &self.scope) {
                 return Err(TransactionError::Unauthorized);
             }
-            if cursor.generation != generation || cursor.source != source {
+            if cursor.generation != generation || cursor.source != source || cursor.query != query {
                 return Err(TransactionError::StaleCursor);
             }
             cursor.offset
@@ -83,13 +104,21 @@ impl Session {
             0
         };
         let records = access.snapshot().credentials();
-        let total = records.len();
-        let end = (offset + limit).min(total);
+        let mut matches = records
+            .iter()
+            .enumerate()
+            .skip(offset)
+            .filter(|(_, record)| {
+                let fields = record.fields();
+                query.is_empty()
+                    || Zeroizing::new(fields.title.to_lowercase()).contains(query.as_str())
+                    || Zeroizing::new(fields.username.to_lowercase()).contains(query.as_str())
+            });
         let mut summaries = Vec::new();
         summaries
-            .try_reserve_exact(end - offset)
+            .try_reserve_exact(limit)
             .map_err(|_| TransactionError::AllocationFailed)?;
-        for record in &records[offset..end] {
+        for (_, record) in matches.by_ref().take(limit) {
             let fields = record.fields();
             summaries.push(CredentialSummary {
                 id: copy_text(fields.id).map_err(VaultError::from)?,
@@ -97,6 +126,7 @@ impl Session {
                 username: copy_text(fields.username).map_err(VaultError::from)?,
             });
         }
+        let next_offset = matches.next().map(|(index, _)| index);
         if self.poll_inactivity() {
             return Err(TransactionError::Locked);
         }
@@ -104,12 +134,13 @@ impl Session {
             generation,
             revision: source.revision,
             summaries,
-            next: (end < total).then(|| CredentialCursor {
+            next: next_offset.map(|offset| CredentialCursor {
                 scope: self.scope.clone(),
                 caller,
                 generation,
                 source,
-                offset: end,
+                offset,
+                query,
             }),
         })
     }

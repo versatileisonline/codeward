@@ -57,7 +57,10 @@ export function createDemoAdapter(): DemoInvoke {
     dirty = false,
     close_requested = false;
   let generated: (GeneratedDraft & { password: string }) | null = null;
-  const operations = new Map<string, { state: string; apply: () => void }>();
+  const operations = new Map<
+    string,
+    { state: string; credential_id: string | null; apply: () => void }
+  >();
   const context = () => ({ epoch, revocation });
   const scope = () => ({
     ...context(),
@@ -80,10 +83,10 @@ export function createDemoAdapter(): DemoInvoke {
     if (!record) throw "invalid_input";
     return record;
   }
-  function queue(apply: () => void) {
+  function queue(apply: () => void, credential_id: string | null = null) {
     const operation = String(++serial);
-    operations.set(operation, { state: "saving", apply });
-    return { ...context(), operation, state: "saving" };
+    operations.set(operation, { state: "saving", credential_id, apply });
+    return { ...context(), operation, state: "saving", credential_id: null };
   }
   const handler = async (command: string, b: Args = {}): Promise<unknown> => {
     switch (command) {
@@ -111,16 +114,31 @@ export function createDemoAdapter(): DemoInvoke {
         close_requested = false;
         return status();
       case "list_credentials":
+      case "search_credentials": {
         authorize(b);
+        const query = command === "search_credentials" ? b.query : "";
+        if (
+          typeof query !== "string" ||
+          new TextEncoder().encode(query).length > 4096
+        )
+          throw "invalid_input";
+        const needle = query.toLowerCase();
         return {
           ...scope(),
-          summaries: records.map(({ id, title, username }) => ({
-            id,
-            title,
-            username,
-          })),
+          summaries: records
+            .filter(
+              (r) =>
+                r.title.toLowerCase().includes(needle) ||
+                r.username.toLowerCase().includes(needle),
+            )
+            .map(({ id, title, username }) => ({
+              id,
+              title,
+              username,
+            })),
           next: null,
         };
+      }
       case "get_credential_details": {
         const { password: _, ...record } = selected(b);
         return { ...scope(), ...record };
@@ -213,7 +231,7 @@ export function createDemoAdapter(): DemoInvoke {
           records = existing
             ? records.map((r) => (r.id === existing.id ? value : r))
             : [...records, value];
-        });
+        }, value.id);
       }
       case "delete_credential": {
         const record = selected(b);
@@ -236,6 +254,7 @@ export function createDemoAdapter(): DemoInvoke {
           ...context(),
           operation: String(b.operation),
           state: op.state,
+          credential_id: op.state === "saved" ? op.credential_id : null,
         };
       }
       case "set_desktop_dirty":

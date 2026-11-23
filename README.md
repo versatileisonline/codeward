@@ -38,7 +38,9 @@ Use synthetic data when exploring the project; it is not ready for real password
   setup, paper-code display/transcription and committed encrypted vault creation
   through the experimental managed writer. Existing vaults can be unlocked and
   locked through core authentication. The credential workspace adds scoped listing,
-  selected details/password reveal, creation, editing and deletion. Use sample
+  selected details/password reveal, creation, editing and deletion. Whole-vault
+  title/username search returns scoped summary pages, and confirmed saves keep
+  the affected credential selected. Use sample
   data; separate synthetic lock/sleep probes remain.
 
 Forgotten-password recovery connects paper-code authentication to committed
@@ -136,6 +138,7 @@ The project has not undergone an independent security audit. The
 - [System design](docs/system-design.md): architecture, responsibilities and flows.
 - [Architecture decisions](docs/adr/README.md): storage, security, recovery and session contracts.
 - [Requirements](docs/requirements.md): intended behavior and acceptance checks.
+- [Everyday desktop workflow](docs/everyday-desktop-workflow.md): search, save continuity, generation and keyboard interaction.
 - [UI/core contract](docs/ui-core-contract.md): commands, data exposure and lock/save behavior.
 - [Offline recovery](docs/offline-recovery.md): paper enrollment, password replacement and file-loss limits.
 - [Roadmap](docs/roadmap.md): completed work and next steps.
