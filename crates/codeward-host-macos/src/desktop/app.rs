@@ -361,6 +361,51 @@ fn unlock_managed_vault<R: Runtime>(
     })
 }
 #[tauri::command]
+fn begin_vault_recovery<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::recovery::PaperInput = credential_body(&request)?;
+    with_setup(|setup| {
+        setup
+            .begin_recovery(input.epoch, input.revocation, &input.paper)
+            .map_err(Into::into)
+    })
+}
+#[tauri::command]
+fn complete_vault_recovery<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::recovery::ReplacementInput = credential_body(&request)?;
+    with_setup(|setup| {
+        setup
+            .complete_recovery(
+                input.epoch,
+                input.revocation,
+                &input.password,
+                &input.confirmation,
+            )
+            .map_err(Into::into)
+    })
+}
+#[tauri::command]
+fn reconcile_vault_recovery<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::recovery::PaperInput = credential_body(&request)?;
+    with_setup(|setup| {
+        setup
+            .reconcile_recovery(input.epoch, input.revocation, &input.paper)
+            .map_err(Into::into)
+    })
+}
+
+#[tauri::command]
 fn lock_managed_vault<R: Runtime>(
     window: WebviewWindow<R>,
     request: Request<'_>,
@@ -601,6 +646,9 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
             open_managed_vault,
             unlock_managed_vault,
             lock_managed_vault,
+            begin_vault_recovery,
+            complete_vault_recovery,
+            reconcile_vault_recovery,
             begin_vault_setup,
             get_vault_setup_state,
             get_setup_recovery_code,
@@ -753,6 +801,9 @@ mod tests {
                 open_managed_vault,
                 unlock_managed_vault,
                 lock_managed_vault,
+                begin_vault_recovery,
+                complete_vault_recovery,
+                reconcile_vault_recovery,
                 begin_vault_setup,
                 get_vault_setup_state,
                 get_setup_recovery_code,
@@ -804,6 +855,9 @@ mod tests {
             "open_managed_vault",
             "unlock_managed_vault",
             "lock_managed_vault",
+            "begin_vault_recovery",
+            "complete_vault_recovery",
+            "reconcile_vault_recovery",
             "begin_vault_setup",
             "get_vault_setup_state",
             "get_setup_recovery_code",
@@ -852,6 +906,9 @@ mod tests {
             "open_managed_vault",
             "unlock_managed_vault",
             "lock_managed_vault",
+            "begin_vault_recovery",
+            "complete_vault_recovery",
+            "reconcile_vault_recovery",
             "begin_vault_setup",
             "get_vault_setup_state",
             "get_setup_recovery_code",
@@ -888,6 +945,9 @@ mod tests {
         for command in [
             "unlock_managed_vault",
             "lock_managed_vault",
+            "begin_vault_recovery",
+            "complete_vault_recovery",
+            "reconcile_vault_recovery",
             "begin_vault_setup",
             "get_setup_recovery_code",
             "confirm_vault_setup",
@@ -910,6 +970,42 @@ mod tests {
                 invoke(&main, command, LOCAL, vec![]),
                 Err("invalid_input".into())
             );
+        }
+        for (command, body) in [
+            (
+                "begin_vault_recovery",
+                r#"{"epoch":0,"revocation":0,"paper":"sample","extra":true}"#,
+            ),
+            (
+                "begin_vault_recovery",
+                r#"{"epoch":"0","revocation":0,"paper":"sample"}"#,
+            ),
+            (
+                "reconcile_vault_recovery",
+                r#"{"epoch":0,"revocation":0,"paper":null}"#,
+            ),
+            (
+                "complete_vault_recovery",
+                r#"{"epoch":0,"revocation":0,"password":"sample","confirmation":"sample","paper":"sample"}"#,
+            ),
+            (
+                "complete_vault_recovery",
+                r#"{"epoch":0,"revocation":0,"password":"sample"}"#,
+            ),
+        ] {
+            let result = get_ipc_response(
+                &main,
+                InvokeRequest {
+                    cmd: command.into(),
+                    callback: CallbackFn(0),
+                    error: CallbackFn(1),
+                    url: LOCAL.parse().unwrap(),
+                    body: InvokeBody::Json(body.parse().unwrap()),
+                    headers: Default::default(),
+                    invoke_key: INVOKE_KEY.into(),
+                },
+            );
+            assert_eq!(result.unwrap_err().as_str(), Some("invalid_input"));
         }
         assert!(invoke(&main, "plugin:app|version", LOCAL, vec![]).is_err());
         assert!(invoke(&main, "save_credential", LOCAL, vec![]).is_err());

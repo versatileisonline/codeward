@@ -41,8 +41,9 @@ Use synthetic data when exploring the project; it is not ready for real password
   selected details/password reveal, creation, editing and deletion. Use sample
   data; separate synthetic lock/sleep probes remain.
 
-The next work connects forgotten-password recovery,
-followed by broader desktop validation and packaging. See the
+Forgotten-password recovery connects paper-code authentication to committed
+master-password replacement and explicit uncertain-save checking in the desktop
+interface. Broader desktop validation and packaging remain next. See the
 [roadmap](docs/roadmap.md) for progress and remaining validation.
 
 ## How it is built

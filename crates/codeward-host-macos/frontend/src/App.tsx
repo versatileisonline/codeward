@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke, type Status } from "./native";
 import { Vault } from "./Vault";
-import { Logo } from "./Logo";
+import { Welcome } from "./Welcome";
+import { MenuIcon, ThemeIcon } from "./SidebarIcons";
 import { PasswordInput } from "./PasswordInput";
 // Screens share one revocable native session; no browser persistence owns vault state.
 export function App() {
@@ -24,8 +25,10 @@ export function App() {
     poll = useRef(false),
     pending = useRef(false),
     mode = useRef(false),
-    alive = useRef(true);
+    alive = useRef(true),
+    recoveryEntry = useRef<"code" | "recheck" | null>(null);
   function clear() {
+    recoveryEntry.current = null;
     setCode("");
     setError("");
     setMessage("");
@@ -58,6 +61,34 @@ export function App() {
     if (revoked) {
       setCode("");
       setTranscribing(false);
+      recoveryEntry.current = null;
+      setError("");
+    }
+    if (mode.current && s.state.startsWith("recovery_")) {
+      if (s.state === "recovery_unknown" && s.error === "unavailable")
+        recoveryEntry.current = null;
+      if (s.state === "recovery_ready") {
+        recoveryEntry.current = null;
+        setView("recover-password");
+      } else if (s.state === "recovery_failed" && recoveryEntry.current === "code")
+        setView("recover-code");
+      else if (s.state === "recovery_unknown" && recoveryEntry.current === "recheck")
+        setView("recover-recheck");
+      else if (s.state === "recovery_checking") setView("recover-recheck");
+      else setView("recover-result");
+      if (s.error === "invalid_code")
+        setError("The code doesn't match this vault. Try again.");
+      return;
+    }
+    if (mode.current && s.state === "recovering") {
+      setView("recover-code");
+      return;
+    }
+    if (mode.current && s.state === "locked" && !revoked && recoveryEntry.current === "code") {
+      setView("recover-code");
+      if (s.error === "invalid_code")
+        setError("The code doesn't match this vault. Try again.");
+      return;
     }
     if (mode.current && ["locked", "unlocking", "unlocked"].includes(s.state)) {
       setView(s.state === "unlocked" ? "vault" : "unlock");
@@ -182,6 +213,7 @@ export function App() {
     }
   }
   async function begin(password: string, confirmation: string) {
+    if (pending.current) return;
     if (!password) {
       setError("Enter a master password.");
       return;
@@ -256,6 +288,89 @@ export function App() {
       }
     }
   }
+  function enterRecovery(recheck = false) {
+    if (pending.current) return;
+    ++seq.current;
+    setError("");
+    setMessage("");
+    recoveryEntry.current = recheck ? "recheck" : "code";
+    setView(recheck ? "recover-recheck" : "recover-code");
+  }
+  async function recoverPaper(paper: string) {
+    if (!current.current || pending.current) return;
+    if (!paper.trim()) {
+      setError("Enter your recovery code.");
+      return;
+    }
+    if (new TextEncoder().encode(paper).length > 256) {
+      setError("The code doesn't match this vault. Try again.");
+      return;
+    }
+    const recheck = recoveryEntry.current === "recheck";
+    const s = current.current;
+    const token = ++seq.current;
+    pending.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      apply(await invoke<Status>(recheck ? "reconcile_vault_recovery" : "begin_vault_recovery", {
+        epoch: s.epoch, revocation: s.revocation, paper,
+      }), token);
+    } catch {
+      if (token === seq.current)
+        setError("Couldn't confirm the code. Checking vault status…");
+    } finally {
+      if (token === seq.current) {
+        pending.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  async function saveRecoveredPassword(password: string, confirmation: string) {
+    if (!current.current || pending.current) return;
+    if (!password) {
+      setError("Enter a master password.");
+      return;
+    }
+    if (new TextEncoder().encode(password).length > 4096) {
+      setError("Use a password of 4,096 UTF-8 bytes or fewer.");
+      return;
+    }
+    if (password !== confirmation) {
+      setError("Your passwords do not match.");
+      return;
+    }
+    const s = current.current;
+    const token = ++seq.current;
+    recoveryEntry.current = null;
+    pending.current = true;
+    setBusy(true);
+    setError("");
+    // Drop the password form before a write can enter an uncertain state.
+    setView("recover-result");
+    setMessage("Saving new password…");
+    try {
+      apply(await invoke<Status>("complete_vault_recovery", {
+        epoch: s.epoch, revocation: s.revocation, password, confirmation,
+      }), token);
+    } catch {
+      if (token === seq.current)
+        setMessage("Checking whether your new password was saved…");
+    } finally {
+      if (token === seq.current) {
+        pending.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  async function backToUnlock() {
+    recoveryEntry.current = null;
+    setError("");
+    setMessage("");
+    setCode("");
+    pending.current = false;
+    await lock();
+  }
   async function confirm(paper: string) {
     if (!current.current || pending.current) return;
     if (!paper) {
@@ -292,6 +407,7 @@ export function App() {
     const s = current.current;
     if (!s) return;
     const token = ++seq.current;
+    pending.current = true;
     setView("unlock");
     setBusy(true);
     try {
@@ -302,7 +418,10 @@ export function App() {
     } catch {
       if (token === seq.current) leave("connection");
     } finally {
-      if (token === seq.current) setBusy(false);
+      if (token === seq.current) {
+        pending.current = false;
+        setBusy(false);
+      }
     }
   }
   const result: Record<string, [string, string]> = {
@@ -334,7 +453,7 @@ export function App() {
             aria-controls="navigation"
             onClick={() => setCollapsed(!collapsed)}
           >
-            ☰
+            <MenuIcon />
           </button>
         </div>
         <nav id="navigation" aria-label="Main navigation">
@@ -367,34 +486,21 @@ export function App() {
             aria-pressed={dark}
             onClick={() => setDark(!dark)}
           >
-            <span aria-hidden="true">{dark ? "☼" : "☾"}</span>
+            <span className="theme-icon">
+              <ThemeIcon dark={dark} />
+            </span>
             <span className="theme-label">{dark ? "Light" : "Dark"} mode</span>
           </button>
         </div>
       </aside>
       <main>
         {view === "home" && (
-          <section className="welcome">
-            <Logo className="welcome-logo" />
-            <h1 className="wordmark entrance">
-              <span className="code">Code</span>
-              <span className="ward">ward</span>
-            </h1>
-            <p className="byline entrance">Your local password manager</p>
-            <div className="action-area entrance">
-              <button className="primary-button" onClick={() => leave("setup")}>
-                Get Started
-              </button>
-              <button className="welcome-unlock" onClick={open}>
-                Unlock Vault
-              </button>
-            </div>
-          </section>
+          <Welcome create={() => leave("setup")} open={open} />
         )}
         {view === "setup" && (
           <section className="setup-panel">
             <Back onClick={() => leave()} />
-            <p className="step-label">01 / PASSWORD</p>
+            <p className="step-label">Step 01 / Vault password</p>
             <h2 tabIndex={-1}>Create your vault</h2>
             <PasswordForm
               key={`setup-${status?.revocation}`}
@@ -426,12 +532,89 @@ export function App() {
               }
               submit={unlock}
             />
+            <button className="back-button view-code" disabled={busy || status?.state !== "locked"} onClick={() => enterRecovery()}>
+              Forgot password?
+            </button>
+          </section>
+        )}
+        {(view === "recover-code" || view === "recover-recheck") && (
+          <section className="setup-panel">
+            {view === "recover-code" ? (
+              <Back label="Back to unlock" onClick={() => { void backToUnlock(); }} />
+            ) : (
+              <Back label="Back" disabled={busy || status?.state === "recovery_checking"} onClick={() => {
+                ++seq.current;
+                recoveryEntry.current = null;
+                setError("");
+                setView("recover-result");
+              }} />
+            )}
+            <p className="step-label">Step 01 / Recovery code</p>
+            <h2 tabIndex={-1}>{view === "recover-recheck" ? "Check saved state" : "Recover your vault"}</h2>
+            <p className="recovery-hint">
+              {view === "recover-recheck"
+                ? "Enter your recovery code again to check whether your new password was saved."
+                : "Enter the recovery code for this vault to choose a new master password."}
+            </p>
+            <p className="field-hint">Your code must match this intact vault. It cannot restore a lost vault file.</p>
+            <RecoveryCodeForm
+              key={`${view}-${status?.revocation}`}
+              busy={busy || status?.state === "recovering" || status?.state === "recovery_checking"}
+              error={error}
+              submit={recoverPaper}
+            />
+          </section>
+        )}
+        {view === "recover-password" && (
+          <section className="setup-panel">
+            <Back label="Back to unlock" onClick={() => { void backToUnlock(); }} />
+            <p className="step-label">Step 02 / New vault password</p>
+            <h2 tabIndex={-1}>Choose a new password</h2>
+            <p className="recovery-hint">Your existing recovery code will still work.</p>
+            <PasswordForm
+              key={`recover-password-${status?.revocation}`}
+              setup recovery busy={busy} error={error} message={message}
+              submit={saveRecoveredPassword}
+            />
+          </section>
+        )}
+        {view === "recover-result" && (
+          <section className="setup-panel">
+            <h2 tabIndex={-1}>
+              {status?.state === "recovery_saved" ? "New password saved"
+                : status?.state === "recovery_unknown" ? "Save not confirmed"
+                  : status?.state === "recovery_failed" ? "Password wasn't saved"
+                    : "Saving new password…"}
+            </h2>
+            <p className="recovery-hint" role="status">
+              {status?.state === "recovery_saved"
+                ? "Your new master password is saved. Your existing recovery code still works."
+                : status?.state === "recovery_unknown"
+                  ? status.error === "unavailable"
+                    ? "Codeward could not check the saved state. Keep your recovery code, quit and reopen Codeward, then use recovery again if needed."
+                    : "Keep your recovery code. Check the saved state before trying to unlock or save another password."
+                  : status?.state === "recovery_failed"
+                    ? "Your previous vault state is unchanged. Enter your recovery code again to retry."
+                    : "Keep your recovery code while Codeward confirms the saved state."}
+            </p>
+            <p className="form-error" role="alert">{error}</p>
+            <div className="result-actions">
+              {status?.state === "recovery_unknown" && status.error !== "unavailable" && (
+                <button className="primary-button" disabled={busy} onClick={() => enterRecovery(true)}>Check saved state</button>
+              )}
+              {status?.state === "recovery_failed" && (
+                <button className="primary-button" disabled={busy} onClick={() => enterRecovery()}>Try recovery again</button>
+              )}
+              {["recovery_saved", "recovery_failed"].includes(status?.state ?? "") && (
+                <button className="secondary-button" disabled={busy} onClick={() => { void backToUnlock(); }}>Back to unlock</button>
+              )}
+            </div>
           </section>
         )}
         {view === "recovery" && (
           <section className="setup-panel">
             <Back label="Cancel setup" onClick={() => leave()} />
-            <p className="step-label">02 / RECOVERY</p>
+            <p className="step-label">Step 02 / Recovery code</p>
             <h2 tabIndex={-1}>Keep a way back in</h2>
             {!transcribing ? (
               <>
@@ -533,12 +716,14 @@ export function App() {
 function Back({
   onClick,
   label = "Back",
+  disabled = false,
 }: {
   onClick: () => void;
   label?: string;
+  disabled?: boolean;
 }) {
   return (
-    <button className="back-button" onClick={onClick}>
+    <button className="back-button" disabled={disabled} onClick={onClick}>
       <span aria-hidden="true">←</span>
       {label}
     </button>
@@ -546,12 +731,14 @@ function Back({
 }
 function PasswordForm({
   setup = false,
+  recovery = false,
   busy,
   error,
   message,
   submit,
 }: {
   setup?: boolean;
+  recovery?: boolean;
   busy: boolean;
   error: string;
   message: string;
@@ -571,7 +758,7 @@ function PasswordForm({
       noValidate
     >
       <PasswordInput
-        label="Master password"
+        label={recovery ? "New master password" : "Master password"}
         value={password}
         onChange={setPassword}
         disabled={busy}
@@ -592,7 +779,7 @@ function PasswordForm({
         className="primary-button continue-button"
         disabled={busy}
       >
-        {setup ? "Continue" : "Unlock"}
+        {recovery ? "Save new password" : setup ? "Continue" : "Unlock"}
       </button>
       <p role="status" className="setup-status">
         {message}
@@ -649,6 +836,27 @@ function RecoveryForm({
       >
         View code again
       </button>
+    </form>
+  );
+}
+
+function RecoveryCodeForm({ busy, error, submit }: {
+  busy: boolean;
+  error: string;
+  submit: (paper: string) => Promise<void>;
+}) {
+  const [paper, setPaper] = useState("");
+  return (
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      if (busy) return;
+      void submit(paper);
+      setPaper("");
+    }} noValidate>
+      <PasswordInput label="Recovery code" value={paper} onChange={setPaper} disabled={busy} />
+      <p className="form-error" role="alert">{error}</p>
+      <button className="primary-button continue-button" type="submit" disabled={busy}>Continue</button>
+      <p className="setup-status" role="status">{busy ? "Checking recovery code…" : ""}</p>
     </form>
   );
 }

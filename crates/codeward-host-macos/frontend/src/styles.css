@@ -18,13 +18,13 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #151515;
-  --rail: #101010;
+  --page: #0a0a0a;
+  --rail: #000000;
   --ink: #f3efe6;
   --muted: #b6b1a7;
-  --line: #34322e;
-  --hover: #2b2a27;
-  --surface: #20201e;
+  --line: #282724;
+  --hover: #1c1c1b;
+  --surface: #161615;
   --button: #e9ddc5;
   --button-hover: #f5e9d2;
 }
@@ -65,8 +65,9 @@ h2:focus-visible {
   margin-bottom: 10px;
 }
 .sidebar-toggle {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -185,7 +186,7 @@ main {
   transform: translateY(0);
 }
 .action-area {
-  padding-bottom: 37px;
+  padding-bottom: 0;
 }
 .action-area > .primary-button {
   min-width: 200px;
@@ -235,7 +236,13 @@ main {
   font-size: 14px;
 }
 .sidebar-collapsed {
-  --sidebar-width: 56px;
+  --sidebar-width: 64px;
+}
+.sidebar-collapsed .sidebar-toggle {
+  width: 100%;
+}
+.sidebar-collapsed .theme-toggle {
+  justify-content: center;
 }
 .sidebar-collapsed #navigation,
 .sidebar-collapsed .author,
@@ -302,7 +309,7 @@ main {
     line-height: 1.5;
   }
   .sidebar-collapsed {
-    --sidebar-width: 56px;
+    --sidebar-width: 64px;
   }
   .author {
     margin-left: 8px;
@@ -326,7 +333,7 @@ main {
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 36px;
+  min-height: 40px;
   padding: 8px;
   border: 0;
   border-radius: 8px;
@@ -338,17 +345,15 @@ main {
 .theme-toggle svg {
   flex-shrink: 0;
 }
+.theme-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+}
 .theme-toggle:hover {
   background: var(--hover);
-}
-.sun-icon {
-  display: none;
-}
-[data-theme="dark"] .sun-icon {
-  display: block;
-}
-[data-theme="dark"] .moon-icon {
-  display: none;
 }
 [data-theme="dark"] .code {
   animation-name: rainbow-dark;
@@ -410,6 +415,7 @@ main:has(
   font-size: 11px;
   letter-spacing: 0.15em;
   margin: 0 0 16px;
+  text-transform: uppercase;
 }
 .step-label span {
   padding: 0 8px;
@@ -549,19 +555,12 @@ button:disabled {
   transform: none !important;
 }
 
-.welcome-unlock {
-  display: block;
+.welcome-status {
   margin: 16px auto 0;
-  padding: 8px 14px;
+  max-width: 320px;
   color: var(--muted);
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
   font-size: 12px;
-}
-.welcome-unlock:hover {
-  color: var(--ink);
-  background: var(--hover);
+  line-height: 1.6;
 }
 .secondary-button {
   display: inline-flex;

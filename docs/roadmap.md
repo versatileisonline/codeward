@@ -50,8 +50,9 @@ creation, editing, deletion and explicit password reveal. Keys and decrypted
 snapshots remain in Rust; record operations use scoped references and commit
 status. The existing dark/light theme and separate synthetic probes are retained.
 The editor also connects Rust generation and explicit scoped draft saving.
-Forgotten-password recovery UI remains next, followed by
-integrated native offline, accessibility and packaging validation. See the
+The recovery interface connects restricted paper authentication, replacement
+password saving and explicit uncertain-outcome reconciliation. Integrated native
+offline, accessibility and packaging validation remain next. See the
 [desktop guide](macos-desktop-pilot.md) for synthetic-only use and verification
 limits.
 

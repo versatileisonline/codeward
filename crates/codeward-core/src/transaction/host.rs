@@ -269,6 +269,12 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         self.dispatch_preparation(request, input)
     }
 
+    /// Return only the committed revision authorized by current paper recovery.
+    pub fn recovery_revision(&mut self) -> Result<u64, HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.recovery_revision(worker, caller)?)
+    }
+
     /// Queue replacement of the master password from restricted recovery.
     /// Poll for the outcome before reporting recovery complete.
     pub fn replace_master_password(
