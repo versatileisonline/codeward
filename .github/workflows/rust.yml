@@ -46,7 +46,8 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2025, macos-26]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    # macOS cold builds plus native/KDF tests exceeded 20 minutes in run 45069958692.
+    timeout-minutes: ${{ matrix.os == 'macos-26' && 40 || 20 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

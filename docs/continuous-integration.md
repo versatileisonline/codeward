@@ -117,3 +117,12 @@ Official references: [Rust workflow guide](https://docs.github.com/en/actions/tu
 [runner matrix](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),
 [rustup toolchain files](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file),
 [required-check behavior](https://docs.github.com/en/pull-requests/reference/status-checks).
+
+## Native macOS job budget
+
+The check matrix allows 40 minutes on macOS and 20 minutes on Windows/Linux.
+Run 45069958692 passed the frontend, core, native host/storage and offline recovery
+checks, but reached the 20-minute job deadline immediately after Clippy completed.
+The aggregate gate correctly rejected the cancelled job. The larger macOS budget
+retains every validation step, cryptographic profile and required-gate condition;
+it accommodates cold desktop builds and the native/KDF test workload.
