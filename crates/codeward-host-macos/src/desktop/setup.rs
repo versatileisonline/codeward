@@ -12,6 +12,8 @@ use codeward_core::{
 use serde::{Serialize, Serializer};
 use zeroize::Zeroizing;
 
+pub(crate) mod credentials;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum State {
@@ -47,6 +49,7 @@ pub(super) struct Status {
     pub state: State,
     pub error: Option<SetupError>,
     pub revocation: u64,
+    pub close_requested: bool,
 }
 
 #[derive(Serialize)]
@@ -70,6 +73,8 @@ pub(super) struct Setup<L: WriterLease + Send + 'static, E: HeadlessEventSource>
     uncertain: bool,
     next_request: u64,
     existing: bool,
+    credentials: credentials::Credentials,
+    dirty: bool,
 }
 impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     pub fn new() -> Self {
@@ -81,11 +86,14 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
                 state: State::Idle,
                 error: None,
                 revocation: 0,
+                close_requested: false,
             },
             pending: false,
             uncertain: false,
             next_request: 0,
             existing: false,
+            credentials: credentials::Credentials::default(),
+            dirty: false,
         }
     }
     pub fn begin<S: Storage<Lease = L>>(
@@ -110,6 +118,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         if let Some(control) = self.control.take() {
             control.close();
         }
+        self.credentials = credentials::Credentials::default();
         self.existing = false;
         self.password = Some(Zeroizing::new(password.to_owned()));
         let result = HeadlessControlLoop::begin_open(
@@ -149,6 +158,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             control.close();
         }
         self.password.take();
+        self.credentials = credentials::Credentials::default();
         self.existing = true;
         match HeadlessControlLoop::begin_open(source, CallerId(2), VaultOpenMode::Existing, storage)
         {
@@ -331,6 +341,11 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     }
     fn set(&mut self, state: State, error: Option<SetupError>) {
         self.status.state = state;
+        if state != State::Unlocked {
+            self.credentials.clear_draft();
+            self.dirty = false;
+            self.status.close_requested = false;
+        }
         self.status.error = error;
     }
     pub fn advance(&mut self) {
@@ -342,9 +357,10 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             Err(_) => {
                 self.password.take();
                 self.pending = false;
-                self.uncertain = !self.existing;
+                let writing = self.credentials.fail_pending();
+                self.uncertain = !self.existing || writing;
                 self.set(
-                    if self.existing {
+                    if self.existing && !writing {
                         State::Failed
                     } else {
                         State::Unknown
@@ -401,6 +417,9 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             }
         }
         if let Some(completion) = update.completion {
+            if self.credential_completion(&completion) {
+                return;
+            }
             match completion {
                 HostCompletion::Authentication(outcome) if self.existing => {
                     self.pending = false;

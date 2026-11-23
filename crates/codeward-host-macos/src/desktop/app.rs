@@ -177,6 +177,142 @@ fn epoch(request: &Request<'_>) -> Result<u64, CommandError> {
         .ok_or(CommandError::InvalidInput)
 }
 
+fn credential_body<T: serde::de::DeserializeOwned>(
+    request: &Request<'_>,
+) -> Result<T, CommandError> {
+    let InvokeBody::Json(body) = request.body() else {
+        return Err(CommandError::InvalidInput);
+    };
+    T::deserialize(body).map_err(|_| CommandError::InvalidInput)
+}
+#[tauri::command]
+fn list_credentials<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Page, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::ListInput = credential_body(&request)?;
+    with_setup(|setup| {
+        setup
+            .credentials_list(input.epoch, input.revocation, input.cursor.as_deref())
+            .map_err(Into::into)
+    })
+}
+#[tauri::command]
+fn get_credential_details<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Details, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::Selection = credential_body(&request)?;
+    with_setup(|setup| setup.credentials_details(input).map_err(Into::into))
+}
+#[tauri::command]
+fn reveal_credential_password<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Reveal, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::Selection = credential_body(&request)?;
+    with_setup(|setup| setup.credentials_reveal(input).map_err(Into::into))
+}
+#[tauri::command]
+fn generate_password_draft<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::DraftReply, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::GenerateInput = credential_body(&request)?;
+    with_setup(|setup| setup.generate_draft(input).map_err(Into::into))
+}
+#[tauri::command]
+fn reveal_password_draft<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::DraftReveal, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::DraftInput = credential_body(&request)?;
+    with_setup(|setup| setup.reveal_draft(input).map_err(Into::into))
+}
+#[tauri::command]
+fn discard_password_draft<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::DraftReply, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::DraftInput = credential_body(&request)?;
+    with_setup(|setup| setup.discard_draft(input).map_err(Into::into))
+}
+#[tauri::command]
+fn create_credential<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Operation, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::WriteInput = credential_body(&request)?;
+    with_setup(|setup| setup.credentials_write(input, false).map_err(Into::into))
+}
+#[tauri::command]
+fn update_credential<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Operation, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::WriteInput = credential_body(&request)?;
+    with_setup(|setup| setup.credentials_write(input, true).map_err(Into::into))
+}
+#[tauri::command]
+fn delete_credential<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Operation, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::Selection = credential_body(&request)?;
+    with_setup(|setup| setup.credentials_delete(input).map_err(Into::into))
+}
+#[tauri::command]
+fn get_credential_operation<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<super::setup::credentials::Operation, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::OperationInput = credential_body(&request)?;
+    with_setup(|setup| setup.credentials_operation(input).map_err(Into::into))
+}
+
+#[tauri::command]
+fn set_desktop_dirty<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let input = credential_body(&request)?;
+    with_setup(|setup| setup.set_dirty(input).map_err(Into::into))
+}
+#[tauri::command]
+fn resolve_desktop_close<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let input: super::setup::credentials::CloseInput = credential_body(&request)?;
+    let status = with_setup(|setup| setup.resolve_close(&input).map_err(Into::into))?;
+    if input.allow {
+        window.destroy().map_err(|_| CommandError::Unavailable)?;
+    }
+    Ok(status)
+}
+
+#[tauri::command]
+fn record_desktop_activity<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<SetupStatus, CommandError> {
+    check_origin(&window, &request)?;
+    let input = credential_body(&request)?;
+    with_setup(|setup| setup.record_activity(input).map_err(Into::into))
+}
+
 #[tauri::command]
 fn open_managed_vault<R: Runtime>(
     window: WebviewWindow<R>,
@@ -449,6 +585,19 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
     };
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            generate_password_draft,
+            reveal_password_draft,
+            discard_password_draft,
+            list_credentials,
+            get_credential_details,
+            reveal_credential_password,
+            create_credential,
+            update_credential,
+            delete_credential,
+            get_credential_operation,
+            set_desktop_dirty,
+            resolve_desktop_close,
+            record_desktop_activity,
             open_managed_vault,
             unlock_managed_vault,
             lock_managed_vault,
@@ -506,6 +655,22 @@ pub(super) fn run(scenario: Option<Scenario>) -> tauri::Result<()> {
             api.prevent_exit();
             eprintln!("FAIL probe interrupted before completion");
             app.exit(1);
+        }
+        RunEvent::WindowEvent {
+            label: closing,
+            event: WindowEvent::CloseRequested { api, .. },
+            ..
+        } if closing == label && scenario.is_none() => {
+            if with_setup(|setup| Ok(setup.request_close())).unwrap_or(false) {
+                api.prevent_close();
+            }
+        }
+        RunEvent::ExitRequested {
+            code: None, api, ..
+        } if scenario.is_none() => {
+            if with_setup(|setup| Ok(setup.request_close())).unwrap_or(false) {
+                api.prevent_exit();
+            }
         }
         RunEvent::WindowEvent {
             label: closed,
@@ -567,18 +732,24 @@ mod tests {
     #[test]
     fn generated_acl_and_command_checks_confine_pilot_ipc() {
         let context = context::<MockRuntime>();
-        for asset in [
-            ASSET,
-            "welcome.css",
-            "welcome.js",
-            "pilot.js",
-            PROBE_PAGE,
-            "probe.js",
-        ] {
+        for asset in [ASSET, "pilot.js", PROBE_PAGE, "probe.js"] {
             assert!(context.assets().get(&asset.into()).is_some());
         }
         let app = mock_builder()
             .invoke_handler(tauri::generate_handler![
+                generate_password_draft,
+                reveal_password_draft,
+                discard_password_draft,
+                list_credentials,
+                get_credential_details,
+                reveal_credential_password,
+                create_credential,
+                update_credential,
+                delete_credential,
+                get_credential_operation,
+                set_desktop_dirty,
+                resolve_desktop_close,
+                record_desktop_activity,
                 open_managed_vault,
                 unlock_managed_vault,
                 lock_managed_vault,
@@ -638,6 +809,19 @@ mod tests {
             "get_setup_recovery_code",
             "confirm_vault_setup",
             "cancel_vault_setup",
+            "generate_password_draft",
+            "reveal_password_draft",
+            "discard_password_draft",
+            "list_credentials",
+            "get_credential_details",
+            "reveal_credential_password",
+            "create_credential",
+            "update_credential",
+            "delete_credential",
+            "get_credential_operation",
+            "set_desktop_dirty",
+            "resolve_desktop_close",
+            "record_desktop_activity",
         ] {
             assert!(
                 invoke(&other, command, LOCAL, vec![])
@@ -673,6 +857,19 @@ mod tests {
             "get_setup_recovery_code",
             "confirm_vault_setup",
             "cancel_vault_setup",
+            "generate_password_draft",
+            "reveal_password_draft",
+            "discard_password_draft",
+            "list_credentials",
+            "get_credential_details",
+            "reveal_credential_password",
+            "create_credential",
+            "update_credential",
+            "delete_credential",
+            "get_credential_operation",
+            "set_desktop_dirty",
+            "resolve_desktop_close",
+            "record_desktop_activity",
         ] {
             assert!(
                 invoke(&probe, command, LOCAL, vec![])
@@ -695,6 +892,19 @@ mod tests {
             "get_setup_recovery_code",
             "confirm_vault_setup",
             "cancel_vault_setup",
+            "generate_password_draft",
+            "reveal_password_draft",
+            "discard_password_draft",
+            "list_credentials",
+            "get_credential_details",
+            "reveal_credential_password",
+            "create_credential",
+            "update_credential",
+            "delete_credential",
+            "get_credential_operation",
+            "set_desktop_dirty",
+            "resolve_desktop_close",
+            "record_desktop_activity",
         ] {
             assert_eq!(
                 invoke(&main, command, LOCAL, vec![]),

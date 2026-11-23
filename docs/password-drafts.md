@@ -3,7 +3,8 @@
 The Rust session and headless host retain one volatile generated-password draft
 under FR-04/08 and NFR-05/09. The [generator](password-generation.md) remains a
 standalone primitive; the draft layer adds authorization, ownership and revocation
-for the future credential editor. No Tauri command or credential screen is added.
+for the credential editor. The [desktop integration](macos-desktop-pilot.md) now
+exposes scoped generation/reveal/discard and generated form saves.
 
 ## Entry points
 
@@ -70,8 +71,9 @@ This slice owns a generated password, not a complete credential edit form. The
 [targeted write layer](scoped-credential-writes.md) now applies a current draft to
 an existing credential through explicit background saving. The
 [credential form API](credential-editing.md) also accepts a current draft during
-record creation or full editing. General session-owned form drafts,
-ordinary-close Save/Discard/Cancel dialogs, Tauri transport and rendered UI remain later work under
+record creation or full editing. The desktop now connects generated form saves,
+ordinary-close Save/Discard/Cancel and scoped Tauri transport. General
+session-owned form drafts remain later work under
 [ADR-0005](adr/0005-session-and-drafts.md) and the
 [UI/core contract](ui-core-contract.md). No real-vault admission or milestone
 acceptance is inferred.
@@ -107,8 +109,8 @@ allocation error returns before the final expiry poll. No plaintext is returned;
 the retained draft is released by the next scheduled deadline poll or privileged
 operation. Successful copying and generation already perform final expiry checks.
 
-Review retained the stated scope: Tauri/UI, clipboard and native event integration;
-save-generated-draft/edit/ordinary-close workflows; real-vault admission; and
-guaranteed erasure of caller/allocator/OS copies require their separate work. The
+That core review preceded desktop integration. Clipboard, installed-app and
+platform acceptance, real-vault admission and guaranteed erasure of
+caller/allocator/OS copies remain outside its evidence. The
 additional state-only validation method fulfills queued-delivery obligations
 without copying plaintext. Hosted current-head CI remains the full-suite gate.

@@ -13,6 +13,9 @@ esac
 
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/../../.." && pwd)
 cd "$root"
+# Keep stdout reserved for the resulting app path (callers use command substitution).
+npm ci --prefix crates/codeward-host-macos/frontend >&2
+npm run build --prefix crates/codeward-host-macos/frontend >&2
 cargo build --release --locked --offline --target "$target" --target-dir "$root/target" \
     -p codeward-host-macos --features desktop-pilot --bin codeward-desktop-pilot
 

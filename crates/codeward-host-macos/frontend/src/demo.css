@@ -1,0 +1,19 @@
+.demo-banner {
+  position: relative;
+  width: calc(100% - 88px);
+  max-width: 520px;
+  margin: 12px 16px 12px 72px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--rail);
+  color: var(--muted);
+  font:
+    11px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  z-index: 4;
+  box-shadow: 0 4px 18px #0002;
+  text-align: center;
+  pointer-events: none;
+}

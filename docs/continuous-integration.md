@@ -5,6 +5,16 @@ pushes to `main` and manual requests. It does not deploy, publish or merge.
 Opening a draft PR enables checks on subsequent pushes without running duplicate
 branch-push and PR pipelines. Superseded runs for the same PR/ref are canceled.
 
+## Frontend build prerequisite
+
+Every platform job installs the frontend's exact `package-lock.json` with
+`npm ci`, runs TypeScript checking and React interaction tests, then builds the
+bundled Vite assets before invoking Cargo. This ordering also supplies the
+macOS Tauri build with its generated `desktop-dist` directory; generated assets
+and `node_modules` are ignored rather than committed. Hosted runner Node/npm
+versions are printed in the log. Node/npm are development tools only; the
+installed desktop app uses bundled files and requires no development server.
+
 ## Checks and inputs
 
 - `Formatting`: rustfmt on Ubuntu 24.04.
@@ -28,8 +38,8 @@ diagnostic is test-only and does not authorize a save or a persistence claim.
 See the [probe contract](windows-persistence-review.md#capability-probe).
 Ubuntu also runs the explicitly selected serial ext4 suite on an exclusive
 disposable image, including real ENOSPC retry cases, followed by the privileged
-same-device bind-mount refusal test. macOS runs the synthetic desktop-redaction
-Node tests. Native helper/fixture cases remain explicitly selected rather than
+same-device bind-mount refusal test. macOS additionally runs the separate synthetic desktop-probe redaction
+Node tests. Setup/unlock and credential interaction tests run in the React suite. Native helper/fixture cases remain explicitly selected rather than
 being counted as executed by the ordinary workspace test command.
 The macOS recovery step also lists exactly five recovery scenarios and one
 ignored network-denial probe, verifies its exact ignored identity, runs it under sandbox-exec and
@@ -107,3 +117,12 @@ Official references: [Rust workflow guide](https://docs.github.com/en/actions/tu
 [runner matrix](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),
 [rustup toolchain files](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file),
 [required-check behavior](https://docs.github.com/en/pull-requests/reference/status-checks).
+
+## Native macOS job budget
+
+The check matrix allows 40 minutes on macOS and 20 minutes on Windows/Linux.
+Run 45069958692 passed the frontend, core, native host/storage and offline recovery
+checks, but reached the 20-minute job deadline immediately after Clippy completed.
+The aggregate gate correctly rejected the cancelled job. The larger macOS budget
+retains every validation step, cryptographic profile and required-gate condition;
+it accommodates cold desktop builds and the native/KDF test workload.

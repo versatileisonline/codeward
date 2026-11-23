@@ -1,6 +1,6 @@
-# macOS synthetic desktop pilot
+# macOS synthetic desktop prototype
 
-## Welcome page preview
+## Bundled React interface
 
 The default window now displays the Codeward welcome page: an animated wordmark,
 slim Home/About sidebar and a Get started button. The sidebar starts collapsed,
@@ -12,8 +12,12 @@ The code disappears before transcription and after cancellation/lock. The window
 reports **Vault saved** only after the core returns a committed revision, then
 leaves the vault locked. **Unlock vault** on the welcome/result screen opens the
 managed vault and authenticates the entered password in a Rust worker. The
-unlocked screen currently reports access and offers Lock vault; credential
-management is the next slice.
+unlocked screen opens a credential workspace with a list on the left and selected
+entry details/editor on the right. Add, edit and delete use scoped Rust operations;
+password reveal is explicit and temporary. The same dark/light styles apply to
+setup, unlock and credential screens. The editor connects Rust password
+generation with configurable length/classes and explicit draft-based saving.
+Forgotten-password recovery UI remains a later slice.
 
 Use synthetic input only. The opt-in desktop feature now enables the existing
 experimental APFS writer at the fixed account location:
@@ -33,22 +37,38 @@ reopen to inspect actual state; no automatic retry or reconciliation UI is added
 JavaScript/IPC/OS copies cannot be proven erased. Native live probes remain
 separate and retain their synthetic session behavior.
 
-From the repository root, with the pinned Rust toolchain installed:
+From the repository root, with Node/npm and the pinned Rust toolchain installed:
 
 ```sh
+npm ci --prefix crates/codeward-host-macos/frontend
+npm run build --prefix crates/codeward-host-macos/frontend
 cargo fetch --locked
 cargo run -p codeward-host-macos --features desktop-pilot --bin codeward-desktop-pilot --locked --offline
 ```
 
-Quit and rerun after changing bundled assets. No DMG is required. For a browser-only
-layout preview that refreshes without compiling Rust:
+After changing frontend source, rebuild the assets and quit/rerun the native app.
+The production build writes locally bundled files to `desktop-dist`; no localhost
+server is needed when the installed app runs. For a browser-only layout preview:
 
 ```sh
-python3 -m http.server 4173 --bind 127.0.0.1 --directory crates/codeward-host-macos/desktop-assets
+npm run dev --prefix crates/codeward-host-macos/frontend -- --host 127.0.0.1
 ```
 
-Open `http://127.0.0.1:4173` and refresh after edits. This serves the same welcome
-HTML/CSS/JavaScript; native window behavior must be checked in Tauri.
+Use the URL printed by Vite. Browser preview has no native vault access; setup,
+unlock and credential persistence require Tauri. Browser checks with mocked IPC
+can validate UI behavior, but cannot establish native persistence or OS-event
+handling.
+
+## Credential workspace validation limits
+
+The search box filters summaries already loaded into the list; use **Load more**
+to include later pages. No vault-wide query API is introduced. Trusted keyboard
+and pointer interactions refresh the scoped inactivity deadline; screen-reader
+activation and VoiceOver behavior still need manual acceptance.
+
+The React interaction suite uses mocked IPC. Native bridge tests use real core
+cryptography with synthetic storage. These checks do not establish a complete
+installed-app create/edit/restart journey or new live OS lock/sleep evidence.
 
 ## Synthetic host foundation
 
@@ -82,7 +102,7 @@ can start another enrollment. Window destruction and app exit release the loop.
 
 The generated Tauri application-command manifest and
 [capability](../crates/codeward-host-macos/capabilities/desktop-pilot.json) allow
-the existing synthetic commands plus enrollment and unlock operations for the local
+the existing synthetic commands plus enrollment, unlock and credential operations for the local
 `main` WebView:
 
 | Command | Input | Output |
@@ -95,9 +115,31 @@ the existing synthetic commands plus enrollment and unlock operations for the lo
 | `open_managed_vault` | Empty body | Epoch and read-only opening/locked/missing state |
 | `unlock_managed_vault` | Current epoch, observed revocation counter and master password | Authenticating state, then polled native result |
 | `lock_managed_vault` | Current epoch | Locked state; no wait for a running KDF |
+| `list_credentials` | Epoch, revocation counter, optional opaque cursor | Up to 100 title/username summaries, decimal-string generation/revision, next cursor |
+| `get_credential_details` | Epoch, revocation, generation, revision and selected ID | One record's non-password fields and timestamps |
+| `reveal_credential_password` | Same selected-record context | One temporary password and remaining display lifetime |
+| `create_credential` | Epoch, revocation, generation, revision and complete form | Opaque operation reference and saving state |
+| `update_credential` | Same form context plus selected ID | Opaque operation reference and saving state |
+| `delete_credential` | Same selected-record context | Opaque operation reference and saving state |
+| `get_credential_operation` | Epoch and operation reference | Saving, saved, failed, conflict, unknown or locked state |
+| `set_desktop_dirty` | Epoch, revocation and dirty flag | Scoped native close-guard status |
+| `resolve_desktop_close` | Epoch, revocation and explicit allow flag | Close confirmation status |
+| `generate_password_draft` | Scoped session/revision and length/classes | Opaque retained draft token; no password or save |
+| `reveal_password_draft` | Scoped session/revision and draft token | Temporary password and remaining display lifetime |
+| `discard_password_draft` | Scoped session/revision and draft token | Releases only that current draft; no storage change |
+| `record_desktop_activity` | Epoch and revocation | Refresh inactivity for permitted user interaction |
+
+Credential forms include title, username, URL, notes and explicit password intent:
+`keep` preserves an existing password; `provided` supplies a replacement, including
+an explicit empty value. Creation requires a provided password. Record IDs and
+timestamps are assigned by Rust. Generation/revision values are canonical decimal
+strings at the frontend boundary. Cursor tokens are scoped continuations rather
+than renderer-chosen offsets. An uncertain operation blocks further mutation;
+quit and restart the app to inspect authoritative state rather than automatically
+replaying a save. Same-process reopening is blocked after an uncertain outcome. Success follows the complete core commit result.
 
 Rust checks the trusted invoking window/WebView and bundled document. Enrollment
-commands are denied to the live-probe view, other windows and remote origins.
+and credential commands are denied to the live-probe view, other windows and remote origins.
 Input shapes reject extra keys and enforce core-compatible bounds before copying;
 Tauri decodes JSON first, so this is not a predecode allocation limit. Rust owns
 request identity, expected creation revision, native events, deadlines and outcomes.
@@ -123,7 +165,8 @@ workspace dependencies; no registry version or vault format changes.
 ```sh
 cargo test -p codeward-host-macos --all-features --locked --offline
 cargo clippy -p codeward-host-macos --all-targets --all-features --locked --offline -- -D warnings
-node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
+npm test --prefix crates/codeward-host-macos/frontend
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
 ```
 
 The setup bridge tests use a synthetic in-memory storage model with real core
@@ -137,12 +180,21 @@ Local browser checks use mocked IPC for recovery/transcription/retry, distinct
 committed/unknown/existing results, delayed begin/code cancellation, secret clearing
 and dark/light desktop/narrow layouts. Unlock browser checks likewise use mocked
 IPC for retries, lock events, stale responses and responsive layout; dependency-free
-Node regressions run with the existing redaction checks in CI. Those browser checks do not establish a
+React interaction regressions run alongside the separate probe redaction checks
+in CI. Those browser checks do not establish a
 live end-to-end native save or new live sleep/redaction evidence. Existing native
 APFS recovery tests remain the native writer evidence; run the actual desktop flow
 with synthetic inputs for installed-app acceptance.
 
 ## Pinned dependencies
+
+The frontend's `package.json` pins React/React DOM and development tools, while
+`package-lock.json` records the complete npm graph. Use `npm ci` rather than an
+unlocked install when reproducing checks. React executes inside the existing
+Tauri WebView; the migration does not replace Tauri or move vault ownership out
+of Rust. Vite and the test tools are build-time dependencies and are not runtime
+network services.
+
 
 The macOS-only feature uses [Tauri 2.12.5](https://docs.rs/crate/tauri/2.12.5)
 with `custom-protocol` and `wry`, Tauri Build 2.7.4 with `config-json`,
@@ -184,8 +236,12 @@ exercises process-local macOS event delivery separately.
 
 ### Packaged live probes
 
-Build an ad-hoc-signed local `.app` with the pinned toolchain and cached
-dependencies. The script prints its path and verifies the bundle signature.
+Build an ad-hoc-signed local `.app` with Node/npm and the pinned Rust toolchain.
+The script installs locked npm dependencies, builds the React assets, then builds
+Rust with cached Cargo dependencies. npm installation may require network access;
+that build-time access is separate from the offline installed-app requirement.
+Build output goes to stderr; stdout contains only the app path. The script
+verifies the bundle signature.
 The WebView assets are embedded in the release executable.
 [Apple bundle layout](https://developer.apple.com/documentation/bundleresources/placing-content-in-a-bundle)
 
@@ -193,7 +249,8 @@ The WebView assets are embedded in the release executable.
 app=$(sh crates/codeward-host-macos/tests/package-desktop-pilot.sh)
 "$app/Contents/MacOS/codeward-desktop-pilot" --live-lock
 "$app/Contents/MacOS/codeward-desktop-pilot" --live-sleep
-node --test crates/codeward-host-macos/tests/desktop-redaction.cjs crates/codeward-host-macos/tests/desktop-enrollment.cjs
+npm test --prefix crates/codeward-host-macos/frontend
+node --test crates/codeward-host-macos/tests/desktop-redaction.cjs
 ```
 
 After `ARMED Lock`, the operator locks and unlocks the Mac. After
@@ -201,8 +258,8 @@ After `ARMED Lock`, the operator locks and unlocks the Mac. After
 session. The probe exits after a verified `PASS`, a failure, or a 120-second
 awake timeout. An interrupted run needs to be repeated.
 
-The probe uses a separate local WebView and capability. The normal view has
-its original three commands. The probe view can read cached status and
+The probe uses a separate local WebView and capability. The normal view uses the scoped enrollment, unlock and credential commands.
+The probe view can read cached status and
 acknowledge the initial and redacted renderings. A pass requires that the
 WebView first report visible synthetic preview and draft values, the desktop
 loop revoke on `OsSessionLocked` or `Suspend`, and the matching lock or sleep
@@ -218,3 +275,36 @@ A coalesced batch does not prove arrival order.
 gap fallback remains separately unit-tested. This local bundle has no
 distribution signing or notarization. The probe exercises synthetic DOM
 redaction, with product credential fields and OS memory outside its evidence.
+
+## Interactive browser demo
+
+For UI review with in-memory sample credentials, run:
+
+```sh
+npm ci --prefix crates/codeward-host-macos/frontend
+npm run dev --prefix crates/codeward-host-macos/frontend -- --port 4173
+```
+
+Open `http://127.0.0.1:4173/?demo=1`, choose **Unlock vault**, and enter any
+sample password. The visible demo banner identifies the synthetic session.
+Create, edit, delete and reveal operate only on temporary sample records;
+reloading resets them. This cannot inspect or modify the native vault and does
+not validate encryption or durable saves. The adapter is development-only,
+requires the explicit query flag, never replaces an existing Tauri transport,
+and is excluded from production bundles.
+
+## Generated passwords in the editor
+
+Generate explicitly with length 12–128 (default 24) and any nonempty selection of
+lowercase, uppercase, digits and symbols. Enabled classes provide the sampling
+alphabet; they do not guarantee every class appears. A generated password remains
+unsaved until **Save credential** completes a confirmed commit.
+
+The renderer retains an opaque token, while Rust owns the generated bytes. The
+complete form uses password intent `generated` with a `draft` token, rather than
+sending the revealed text back as `provided`. Show/Hide is a separate targeted
+preview, cleared at deadline, focus loss, navigation and lock. A stale reveal or
+discard cannot replace or clear a newer draft. Invalid generation leaves a valid
+older draft available; definite save failure permits explicit retry. Unknown saves
+retain the existing restart requirement. The dev browser demo remains synthetic
+and does not establish native randomness, encryption or persistence.
