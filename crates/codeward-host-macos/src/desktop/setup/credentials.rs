@@ -314,7 +314,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             error => self.command_error(error),
         }
     }
-    fn credential_request(&mut self, revision: u64) -> Result<Request, SetupError> {
+    pub(super) fn credential_request(&mut self, revision: u64) -> Result<Request, SetupError> {
         self.next_request = self
             .next_request
             .checked_add(1)

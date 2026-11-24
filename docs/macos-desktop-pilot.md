@@ -3,10 +3,15 @@
 ## Bundled React interface
 
 The default window now displays the Codeward welcome page: an animated wordmark,
-slim Home/About sidebar and a Get started button. The sidebar starts collapsed,
-and the bottom theme control remains visible. Dark mode is the initial theme;
-the toggle switches between dark and light for the current window.
-Get started now opens connected setup: enter/confirm a master password, write
+slim Home/About sidebar and one primary action. The landing page checks the native
+managed vault and offers **Create your vault** only when it is absent, or
+**Unlock Vault** when it exists. Returning users keep the same landing page.
+An unavailable check offers retry without treating the vault as absent. The
+read-only opening is released before either action is enabled.
+The sidebar starts collapsed, and its bottom theme control remains visible.
+Dark mode uses a pure black sidebar and near-black page; the sun and crescent
+toggle between dark and the existing warm light palette for the current window.
+Create your vault opens connected setup: enter/confirm a master password, write
 Rust's generated recovery code, transcribe it, then create the encrypted vault.
 The code disappears before transcription and after cancellation/lock. The window
 reports **Vault saved** only after the core returns a committed revision, then
@@ -17,14 +22,24 @@ entry details/editor on the right. Add, edit and delete use scoped Rust operatio
 password reveal is explicit and temporary. The same dark/light styles apply to
 setup, unlock and credential screens. The editor connects Rust password
 generation with configurable length/classes and explicit draft-based saving.
-Forgotten-password recovery UI remains a later slice.
+**Forgot password?** beneath the unlock form starts restricted paper-code recovery.
+The code is entered in a masked field; acceptance opens new-password entry and
+confirmation. Credentials remain inaccessible. **Back to unlock** is offered only
+after Rust confirms the replacement committed, and ordinary password authentication
+is still required. The existing paper code remains valid.
+
+A definite recovery save failure requires explicit retry with fresh paper-code
+authentication. An uncertain save blocks replacement and offers **Check saved
+state**, requiring the paper code again to reconcile the retained operation.
+Unresolved checks never claim success. If the native worker or event source is
+unavailable, the interface requires quitting and reopening Codeward instead of
+offering an impossible in-process check. Navigation and locking clear entered
+secrets but cannot roll back an admitted save.
 
 Use synthetic input only. The opt-in desktop feature now enables the existing
 experimental APFS writer at the fixed account location:
-`~/Library/Application Support/Codeward/Vaults/vault.cw`. An existing vault is
-refused and preserved; the renderer cannot choose another path. This does not
-admit real credentials or complete installed-app/milestone acceptance. A browser
-layout preview cannot create a vault; use the Tauri application for setup.
+`~/Library/Application Support/Codeward/Vaults/vault.cw`. Creation refuses and preserves an existing vault; the renderer cannot choose another path. This does not
+admit real credentials or complete installed-app/milestone acceptance. Use the native Tauri application for previews and workflow validation.
 
 Master passwords accept exact UTF-8 bytes (1–4,096), without normalization. The
 renderer clears password fields immediately after dispatch; Rust retains the
@@ -32,8 +47,9 @@ bounded zeroizing enrollment password until the attempt completes or is revoked.
 Canceling/navigation/hidden-document handling clears renderer secrets and sends
 an epoch-scoped cancellation. Late code/opening replies are discarded. An
 already admitted save can still finish; cancellation never claims rollback.
-Unknown outcomes block new creation in that process. Keep the paper code and
-reopen to inspect actual state; no automatic retry or reconciliation UI is added.
+Unknown enrollment outcomes block new creation in that process. Keep the paper
+code and reopen to inspect actual state. Recovery replacement has its separate
+explicit saved-state check; neither workflow automatically republishes a write.
 JavaScript/IPC/OS copies cannot be proven erased. Native live probes remain
 separate and retain their synthetic session behavior.
 
@@ -48,16 +64,9 @@ cargo run -p codeward-host-macos --features desktop-pilot --bin codeward-desktop
 
 After changing frontend source, rebuild the assets and quit/rerun the native app.
 The production build writes locally bundled files to `desktop-dist`; no localhost
-server is needed when the installed app runs. For a browser-only layout preview:
-
-```sh
-npm run dev --prefix crates/codeward-host-macos/frontend -- --host 127.0.0.1
-```
-
-Use the URL printed by Vite. Browser preview has no native vault access; setup,
-unlock and credential persistence require Tauri. Browser checks with mocked IPC
-can validate UI behavior, but cannot establish native persistence or OS-event
-handling.
+server is needed when the installed app runs. Product previews, visual checks and
+interaction checks use the native desktop application. Frontend unit tests may
+mock IPC, but they do not establish native persistence or OS-event handling.
 
 ## Credential workspace validation limits
 
@@ -69,6 +78,22 @@ activation and VoiceOver behavior still need manual acceptance.
 The React interaction suite uses mocked IPC. Native bridge tests use real core
 cryptography with synthetic storage. These checks do not establish a complete
 installed-app create/edit/restart journey or new live OS lock/sleep evidence.
+
+## Recovery validation bounds
+
+The frontend interaction suite covers recovery navigation, masked inputs,
+confirmation, stale replies, revocation, resumable outcomes and restart guidance.
+These tests use mocked IPC. Native bridge tests use real core cryptography and
+synthetic storage to verify replacement, preserved credentials and paper-code
+reuse, cancellation and fresh-proof reconciliation without replay.
+
+The managed APFS recovery scenarios also pass with network access denied; the
+separate kernel-denial probe verifies that the sandbox denies even loopback TCP.
+Native desktop checks cover the recovery entry, both themes, invalid-code
+handling, cleared input and return to ordinary unlock. A full interactive
+successful replacement in an isolated installed-app vault, and OS lock/sleep
+through that UI journey, remain manual acceptance work. No real-user vault was
+changed to validate password replacement.
 
 ## Synthetic host foundation
 

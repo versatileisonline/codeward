@@ -1263,3 +1263,338 @@ fn generated_bridge_command_boundary_revocation_never_delivers_a_preview() {
         assert_eq!(setup.status().state, State::Locked);
     }
 }
+
+#[test]
+fn paper_recovery_is_restricted_replaces_only_master_and_requires_new_unlock() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let disk = Memory::default();
+    let mut setup = Setup::new();
+    let epoch = begin(&mut setup, &disk, Events::default());
+    wait(&mut setup, State::Recovery);
+    let code = setup.code(epoch).unwrap();
+    setup.confirm(epoch, &code.code).unwrap();
+    wait(&mut setup, State::Created);
+    let storage = disk.clone();
+    let events = Events::default();
+    let epoch = setup
+        .open_existing(events.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    wait(&mut setup, State::Locked);
+    setup
+        .unlock(epoch, setup.status.revocation, "synthetic master phrase")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let page = setup
+        .credentials_list(epoch, setup.status.revocation, None)
+        .unwrap();
+    let op = setup
+        .credentials_write(
+            credential_input(
+                epoch,
+                setup.status.revocation,
+                &page.generation,
+                &page.revision,
+                None,
+                false,
+            ),
+            false,
+        )
+        .unwrap();
+    assert_eq!(operation_wait(&mut setup, epoch, &op.operation), "saved");
+    setup.lock_existing(epoch).unwrap();
+    let revoked = setup.status.revocation;
+    setup.begin_recovery(epoch, revoked, &code.code).unwrap();
+    wait(&mut setup, State::RecoveryReady);
+    assert!(setup.credentials_list(epoch, revoked, None).is_err());
+    assert!(
+        setup
+            .complete_recovery(epoch, revoked, "replacement", "different")
+            .is_err()
+    );
+    setup
+        .complete_recovery(epoch, revoked, "replacement", "replacement")
+        .unwrap();
+    wait(&mut setup, State::RecoverySaved);
+    events.0.store(true, Ordering::SeqCst);
+    assert_eq!(setup.status().state, State::RecoverySaved);
+    assert!(
+        setup
+            .credentials_list(epoch, setup.status.revocation, None)
+            .is_err()
+    );
+    let bytes = disk.0.lock().unwrap().bytes.clone().unwrap();
+    assert!(codeward_core::vault::unlock_with_master(&bytes, "synthetic master phrase").is_err());
+    assert!(codeward_core::vault::unlock_with_master(&bytes, "replacement").is_ok());
+    assert!(codeward_core::vault::begin_recovery(&bytes, &code.code).is_ok());
+    setup.lock_existing(epoch).unwrap();
+    setup
+        .unlock(epoch, setup.status.revocation, "replacement")
+        .unwrap();
+    wait(&mut setup, State::Unlocked);
+    let page = setup
+        .credentials_list(epoch, setup.status.revocation, None)
+        .unwrap();
+    assert_eq!(page.summaries.len(), 1);
+    let details = setup
+        .credentials_reveal(selected(
+            epoch,
+            setup.status.revocation,
+            &page.generation,
+            &page.revision,
+            &page.summaries[0].id,
+        ))
+        .unwrap();
+    assert_eq!(details.password.as_str(), "synthetic credential password");
+}
+
+fn recoverable_disk() -> (Memory, String) {
+    let disk = Memory::default();
+    let mut setup = Setup::new();
+    let epoch = begin(&mut setup, &disk, Events::default());
+    wait(&mut setup, State::Recovery);
+    let paper = setup.code(epoch).unwrap().code.to_string();
+    setup.confirm(epoch, &paper).unwrap();
+    wait(&mut setup, State::Created);
+    (disk, paper)
+}
+fn open_recoverable(disk: &Memory, events: Events) -> Setup<Memory, Events> {
+    let storage = disk.clone();
+    let mut setup = Setup::new();
+    setup.open_existing(events, move || Ok(storage)).unwrap();
+    wait(&mut setup, State::Locked);
+    setup
+}
+fn paper_ready(setup: &mut Setup<Memory, Events>, paper: &str) {
+    setup
+        .begin_recovery(setup.status.epoch, setup.status.revocation, paper)
+        .unwrap();
+    wait(setup, State::RecoveryReady);
+}
+#[test]
+fn recovery_bad_proof_stale_scope_and_revocation_never_browse_or_write() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let (disk, paper) = recoverable_disk();
+    let events = Events::default();
+    let mut setup = open_recoverable(&disk, events.clone());
+    let epoch = setup.status.epoch;
+    let revision = setup.status.revocation;
+    assert!(setup.begin_recovery(epoch + 1, revision, &paper).is_err());
+    assert!(setup.begin_recovery(epoch, revision + 1, &paper).is_err());
+    setup.begin_recovery(epoch, revision, "wrong code").unwrap();
+    wait(&mut setup, State::Locked);
+    assert_eq!(setup.status.error, Some(SetupError::InvalidCode));
+    paper_ready(&mut setup, &paper);
+    assert!(
+        setup
+            .credentials_list(epoch, setup.status.revocation, None)
+            .is_err()
+    );
+    let before = disk.0.lock().unwrap().bytes.clone();
+    events.0.store(true, Ordering::SeqCst);
+    assert!(
+        setup
+            .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+            .is_err()
+    );
+    assert_eq!(setup.status().state, State::Locked);
+    assert!(setup.status.revocation > revision);
+    assert_eq!(disk.0.lock().unwrap().bytes, before);
+    paper_ready(&mut setup, &paper);
+    setup.cancel(epoch).unwrap();
+    assert_eq!(setup.status.state, State::Locked);
+    assert!(
+        setup
+            .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+            .is_err()
+    );
+}
+#[test]
+fn recovery_definite_failure_needs_fresh_proof_and_unknown_reconciles_without_replay() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let (disk, paper) = recoverable_disk();
+    let mut setup = open_recoverable(&disk, Events::default());
+    let epoch = setup.status.epoch;
+    paper_ready(&mut setup, &paper);
+    let before = disk.0.lock().unwrap().bytes.clone();
+    disk.0.lock().unwrap().fail_stage = true;
+    setup
+        .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+        .unwrap();
+    wait(&mut setup, State::RecoveryFailed);
+    assert_eq!(disk.0.lock().unwrap().bytes, before);
+    assert!(
+        setup
+            .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+            .is_err()
+    );
+    disk.0.lock().unwrap().fail_stage = false;
+    paper_ready(&mut setup, &paper);
+    disk.0.lock().unwrap().fail_barrier = true;
+    setup
+        .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+        .unwrap();
+    wait(&mut setup, State::RecoveryUnknown);
+    let publications = disk.0.lock().unwrap().publications;
+    setup.cancel(epoch).unwrap();
+    let storage = disk.clone();
+    let current = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap();
+    assert_eq!(current.epoch, epoch);
+    assert_eq!(current.state, State::RecoveryUnknown);
+    assert!(setup.lock_existing(epoch).is_err());
+    assert!(
+        setup
+            .unlock(epoch, current.revocation, "replacement")
+            .is_err()
+    );
+    assert!(
+        setup
+            .begin_recovery(epoch, current.revocation, &paper)
+            .is_err()
+    );
+    setup
+        .reconcile_recovery(epoch, current.revocation, "wrong code")
+        .unwrap();
+    wait(&mut setup, State::RecoveryUnknown);
+    assert_eq!(setup.status.error, Some(SetupError::InvalidCode));
+    disk.0.lock().unwrap().fail_barrier = false;
+    setup
+        .reconcile_recovery(epoch, setup.status.revocation, &paper)
+        .unwrap();
+    wait(&mut setup, State::RecoverySaved);
+    assert_eq!(disk.0.lock().unwrap().publications, publications);
+    assert!(
+        setup
+            .credentials_list(epoch, setup.status.revocation, None)
+            .is_err()
+    );
+    // Reattachment after the worker completes must still show its proven outcome.
+    let storage = disk.clone();
+    let resumed = setup
+        .open_existing(Events::default(), move || Ok(storage))
+        .unwrap();
+    assert_eq!(resumed.epoch, epoch);
+    assert_eq!(resumed.state, State::RecoverySaved);
+}
+
+#[test]
+fn recovery_cancel_during_stage_or_admitted_barrier_preserves_authoritative_outcome() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    for admitted in [false, true] {
+        let (disk, paper) = recoverable_disk();
+        let mut setup = open_recoverable(&disk, Events::default());
+        let epoch = setup.status.epoch;
+        paper_ready(&mut setup, &paper);
+        let gate = Arc::new(Gate::default());
+        {
+            let mut state = disk.0.lock().unwrap();
+            if admitted {
+                state.barrier_gate = Some(gate.clone());
+            } else {
+                state.stage_gate = Some(gate.clone());
+            }
+        }
+        setup
+            .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !gate.entered.load(Ordering::SeqCst) {
+            setup.status();
+            if Instant::now() >= deadline {
+                gate.release();
+                panic!("recovery worker did not reach gate");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        setup.cancel(epoch).unwrap();
+        let storage = disk.clone();
+        let status = setup
+            .open_existing(Events::default(), move || Ok(storage))
+            .unwrap();
+        let retained = status.epoch == epoch && status.state == State::RecoverySaving;
+        let refused = setup.lock_existing(epoch).is_err()
+            && setup
+                .unlock(epoch, status.revocation, "replacement")
+                .is_err()
+            && setup
+                .credentials_list(epoch, status.revocation, None)
+                .is_err();
+        gate.release();
+        assert!(retained && refused);
+        wait(
+            &mut setup,
+            if admitted {
+                State::RecoverySaved
+            } else {
+                State::RecoveryFailed
+            },
+        );
+        assert_eq!(
+            disk.0.lock().unwrap().publications,
+            if admitted { 2 } else { 1 }
+        );
+        assert!(
+            setup
+                .credentials_list(epoch, setup.status.revocation, None)
+                .is_err()
+        );
+    }
+}
+
+#[derive(Default, Clone)]
+struct UnreliableEvents(Arc<AtomicBool>);
+impl HeadlessEventSource for UnreliableEvents {
+    fn take_revocation(&mut self) -> Result<Option<SessionEvent>, EventSourceError> {
+        if self.0.load(Ordering::SeqCst) {
+            Err(EventSourceError)
+        } else {
+            Ok(None)
+        }
+    }
+    fn wait(&mut self, _: Duration) -> Result<(), EventSourceError> {
+        Ok(())
+    }
+}
+#[test]
+fn recovery_unknown_without_event_source_reports_restart_required() {
+    let _master = MASTER_SCENARIOS.lock().unwrap();
+    let (disk, paper) = recoverable_disk();
+    let storage = disk.clone();
+    let source = UnreliableEvents::default();
+    let mut setup = Setup::new();
+    let epoch = setup
+        .open_existing(source.clone(), move || Ok(storage))
+        .unwrap()
+        .epoch;
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while setup.status().state != State::Locked {
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    setup
+        .begin_recovery(epoch, setup.status.revocation, &paper)
+        .unwrap();
+    while setup.status().state != State::RecoveryReady {
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    disk.0.lock().unwrap().fail_barrier = true;
+    setup
+        .complete_recovery(epoch, setup.status.revocation, "replacement", "replacement")
+        .unwrap();
+    while setup.status().state != State::RecoveryUnknown {
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    source.0.store(true, Ordering::SeqCst);
+    let status = setup.status();
+    assert_eq!(status.state, State::RecoveryUnknown);
+    assert_eq!(status.error, Some(SetupError::Unavailable));
+    assert!(matches!(
+        setup.reconcile_recovery(epoch, status.revocation, &paper),
+        Err(SetupError::Unavailable)
+    ));
+    assert_eq!(setup.status().error, Some(SetupError::Unavailable));
+}

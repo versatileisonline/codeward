@@ -215,6 +215,30 @@ impl Session {
         Ok(())
     }
 
+    /// Numeric revision for a current restricted recovery replacement. This does
+    /// not grant ordinary credential access or authenticate an unknown outcome.
+    pub fn recovery_revision<L: WriterLease>(
+        &mut self,
+        worker: &Committer<L>,
+        caller: CallerId,
+    ) -> Result<u64, TransactionError> {
+        self.check_scope(worker, caller)?;
+        self.poll_inactivity();
+        worker.check_idle()?;
+        if self.worker_access.is_some() {
+            return Err(TransactionError::Busy);
+        }
+        if !matches!(self.access, Some(Access::Recovery(_))) {
+            return Err(TransactionError::Locked);
+        }
+        if self.source != worker.fingerprint {
+            return Err(TransactionError::ReloadRequired);
+        }
+        self.source
+            .map(|source| source.revision)
+            .ok_or(TransactionError::ReloadRequired)
+    }
+
     /// Enrollment-only temporary code display, scoped to the owning trusted caller.
     pub fn recovery_code(
         &mut self,

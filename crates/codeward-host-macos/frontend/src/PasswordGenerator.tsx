@@ -32,6 +32,7 @@ export function PasswordGenerator({
   disabled: boolean;
 }) {
   const [options, setOptions] = useState(defaults),
+    [lengthDraft, setLengthDraft] = useState(String(defaults.length)),
     [reference, setReference] = useState<GeneratedDraft | null>(null),
     [generating, setGenerating] = useState(false),
     [revealing, setRevealing] = useState(false),
@@ -77,10 +78,11 @@ export function PasswordGenerator({
   useEffect(() => {
     if (disabled) hide();
   }, [disabled]);
+  const length = Number(lengthDraft);
   const valid =
-    Number.isInteger(options.length) &&
-    options.length >= 12 &&
-    options.length <= 128 &&
+    Number.isInteger(length) &&
+    length >= 12 &&
+    length <= 128 &&
     (options.uppercase ||
       options.lowercase ||
       options.digits ||
@@ -99,7 +101,7 @@ export function PasswordGenerator({
         revocation: scope.revocation,
         generation: scope.generation,
         revision: scope.revision,
-        options,
+        options: { ...options, length },
       });
       if (!alive.current || token !== generation.current) {
         discard(next);
@@ -190,11 +192,13 @@ export function PasswordGenerator({
             type="number"
             min={12}
             max={128}
-            value={Number.isNaN(options.length) ? "" : options.length}
+            value={lengthDraft}
             disabled={disabled || generating}
-            onChange={(e) =>
-              setOptions((old) => ({ ...old, length: Number(e.target.value) }))
-            }
+            onFocus={() => {
+              if (lengthDraft === "0") setLengthDraft("");
+            }}
+            onChange={(e) => setLengthDraft(e.target.value)}
+            onBlur={() => setLengthDraft(String(Number(lengthDraft)))}
           />
         </label>
         <div className="generator-classes">

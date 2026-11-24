@@ -13,6 +13,7 @@ use serde::{Serialize, Serializer};
 use zeroize::Zeroizing;
 
 pub(crate) mod credentials;
+pub(crate) mod recovery;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -27,6 +28,13 @@ pub(super) enum State {
     Existing,
     Missing,
     Unlocking,
+    Recovering,
+    RecoveryReady,
+    RecoverySaving,
+    RecoverySaved,
+    RecoveryUnknown,
+    RecoveryChecking,
+    RecoveryFailed,
     Unlocked,
     Unknown,
 }
@@ -75,6 +83,7 @@ pub(super) struct Setup<L: WriterLease + Send + 'static, E: HeadlessEventSource>
     existing: bool,
     credentials: credentials::Credentials,
     dirty: bool,
+    recovery: recovery::Recovery,
 }
 impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     pub fn new() -> Self {
@@ -94,6 +103,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             existing: false,
             credentials: credentials::Credentials::default(),
             dirty: false,
+            recovery: recovery::Recovery::default(),
         }
     }
     pub fn begin<S: Storage<Lease = L>>(
@@ -119,6 +129,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             control.close();
         }
         self.credentials = credentials::Credentials::default();
+        self.recovery = recovery::Recovery::default();
         self.existing = false;
         self.password = Some(Zeroizing::new(password.to_owned()));
         let result = HeadlessControlLoop::begin_open(
@@ -146,6 +157,14 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         storage: impl FnOnce() -> Result<S, TransactionError> + Send + 'static,
     ) -> Result<Status, SetupError> {
         self.advance();
+        if self.recovery.resumable(self.status.state)
+            || matches!(
+                self.status.state,
+                State::RecoverySaved | State::RecoveryFailed
+            )
+        {
+            return Ok(self.status);
+        }
         if self.pending || self.uncertain || self.status.state == State::Recovery {
             return Err(SetupError::Busy);
         }
@@ -159,6 +178,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         }
         self.password.take();
         self.credentials = credentials::Credentials::default();
+        self.recovery = recovery::Recovery::default();
         self.existing = true;
         match HeadlessControlLoop::begin_open(source, CallerId(2), VaultOpenMode::Existing, storage)
         {
@@ -209,13 +229,20 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         if !self.existing
             || !matches!(
                 self.status.state,
-                State::Locked | State::Unlocking | State::Unlocked
+                State::Locked
+                    | State::Unlocking
+                    | State::Unlocked
+                    | State::Recovering
+                    | State::RecoveryReady
+                    | State::RecoverySaved
+                    | State::RecoveryFailed
             )
         {
             return Err(SetupError::Stale);
         }
         self.control.as_mut().ok_or(SetupError::Unavailable)?.lock();
         self.pending = false;
+        self.recovery.revision = None;
         self.status.revocation = self.status.revocation.saturating_add(1);
         self.set(State::Locked, None);
         Ok(self.status)
@@ -286,14 +313,21 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
     pub fn cancel(&mut self, epoch: u64) -> Result<Status, SetupError> {
         self.check_epoch(epoch)?;
         self.status.revocation = self.status.revocation.saturating_add(1);
-        if matches!(self.status.state, State::Opening | State::Unlocking) {
+        if matches!(
+            self.status.state,
+            State::Opening | State::Unlocking | State::Recovering
+        ) {
             self.pending = false;
         }
         if let Some(control) = &mut self.control {
             control.lock();
         }
         self.password.take();
-        if !self.uncertain && self.status.state != State::Created {
+        self.recovery.revision = None;
+        if !self.recovery.resumable(self.status.state)
+            && !self.uncertain
+            && self.status.state != State::Created
+        {
             self.set(State::Locked, None);
         }
         if self.status.state == State::Locked
@@ -357,6 +391,17 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             Err(_) => {
                 self.password.take();
                 self.pending = false;
+                let recovery_write = self.recovery.resumable(self.status.state);
+                if recovery_write {
+                    if let Some(control) = &mut self.control {
+                        control.lock();
+                    }
+                    self.status.revocation = self.status.revocation.saturating_add(1);
+                    self.recovery.revision = None;
+                    self.uncertain = true;
+                    self.set(State::RecoveryUnknown, Some(SetupError::Unavailable));
+                    return;
+                }
                 let writing = self.credentials.fail_pending();
                 self.uncertain = !self.existing || writing;
                 self.set(
@@ -374,10 +419,23 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             self.status.revocation = self.status.revocation.saturating_add(1);
             self.password.take();
             let opening_revoked = self.status.state == State::Opening;
-            if matches!(self.status.state, State::Opening | State::Unlocking) {
+            if matches!(
+                self.status.state,
+                State::Opening | State::Unlocking | State::Recovering
+            ) {
                 self.pending = false;
             }
-            if !self.uncertain && self.status.state != State::Created {
+            self.recovery.revision = None;
+            if !update.source_available && self.status.state == State::RecoveryUnknown {
+                self.status.error = Some(SetupError::Unavailable);
+            }
+            if !self.recovery.resumable(self.status.state)
+                && !self.uncertain
+                && !matches!(
+                    self.status.state,
+                    State::Created | State::RecoverySaved | State::RecoveryFailed
+                )
+            {
                 self.set(
                     if self.existing && (!update.source_available || opening_revoked) {
                         State::Failed
@@ -417,6 +475,12 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
             }
         }
         if let Some(completion) = update.completion {
+            if self.recovery_completion(&completion, update.revoked || !update.source_available) {
+                if self.status.state == State::RecoveryUnknown && !update.source_available {
+                    self.status.error = Some(SetupError::Unavailable);
+                }
+                return;
+            }
             if self.credential_completion(&completion) {
                 return;
             }

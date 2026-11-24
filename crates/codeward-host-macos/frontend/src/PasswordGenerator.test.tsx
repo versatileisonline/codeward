@@ -142,6 +142,93 @@ test("invalid options cannot dispatch generation", async () => {
   ).toBe(true);
 });
 
+test("length stays empty while editing and replacement digits generate the requested length", async () => {
+  mount(() => draft);
+  const length = screen.getByLabelText("Password length") as HTMLInputElement;
+  const generate = screen.getByRole("button", {
+    name: "Generate password",
+  }) as HTMLButtonElement;
+
+  fireEvent.focus(length);
+  fireEvent.change(length, { target: { value: "" } });
+  expect(length.value).toBe("");
+  expect(generate.disabled).toBe(true);
+  fireEvent.click(generate);
+  expect(window.__TAURI__!.core.invoke).not.toHaveBeenCalled();
+
+  fireEvent.change(length, { target: { value: "1" } });
+  expect(length.value).toBe("1");
+  expect(generate.disabled).toBe(true);
+  fireEvent.change(length, { target: { value: `${length.value}2` } });
+  expect(length.value).toBe("12");
+  expect(generate.disabled).toBe(false);
+  fireEvent.click(generate);
+  await screen.findByText("Generated password ready");
+  expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith(
+    "generate_password_draft",
+    {
+      ...scope,
+      options: {
+        length: 12,
+        uppercase: true,
+        lowercase: true,
+        digits: true,
+        symbols: true,
+      },
+    },
+  );
+});
+
+test("leaving an empty length displays zero and keeps generation disabled", () => {
+  mount(() => draft);
+  const length = screen.getByLabelText("Password length") as HTMLInputElement;
+  fireEvent.focus(length);
+  fireEvent.change(length, { target: { value: "" } });
+  expect(length.value).toBe("");
+  fireEvent.blur(length);
+  expect(length.value).toBe("0");
+  expect(
+    (screen.getByRole("button", { name: "Generate password" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+});
+
+test("refocusing an empty length's zero allows typing a fresh number", () => {
+  mount(() => draft);
+  const length = screen.getByLabelText("Password length") as HTMLInputElement;
+  fireEvent.focus(length);
+  fireEvent.change(length, { target: { value: "" } });
+  fireEvent.blur(length);
+  expect(length.value).toBe("0");
+
+  fireEvent.focus(length);
+  expect(length.value).toBe("");
+  fireEvent.change(length, { target: { value: `${length.value}1` } });
+  fireEvent.change(length, { target: { value: `${length.value}2` } });
+  expect(length.value).toBe("12");
+  expect(
+    (screen.getByRole("button", { name: "Generate password" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
+});
+
+test("leaving a length removes leading zeros without changing its numeric value", async () => {
+  mount(() => draft);
+  const length = screen.getByLabelText("Password length") as HTMLInputElement;
+  fireEvent.focus(length);
+  fireEvent.change(length, { target: { value: "0012" } });
+  fireEvent.blur(length);
+  expect(length.value).toBe("12");
+  fireEvent.click(screen.getByRole("button", { name: "Generate password" }));
+  await screen.findByText("Generated password ready");
+  expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith(
+    "generate_password_draft",
+    expect.objectContaining({
+      options: expect.objectContaining({ length: 12 }),
+    }),
+  );
+});
+
 test("preview expires on its returned lifetime and old reveal cannot replace regeneration", async () => {
   let revealCount = 0,
     resolveOld!: (x: unknown) => void,

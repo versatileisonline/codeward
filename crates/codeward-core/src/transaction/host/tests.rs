@@ -432,3 +432,23 @@ fn creation_failure_preserves_enrollment_and_known_retry_does_not_rewrite() {
     ));
     assert_eq!(model.events(), events);
 }
+
+#[test]
+fn recovery_revision_requires_current_restricted_access() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let mut host = Host::open(Model::new(Some(fixture())), OWNER).unwrap();
+    assert!(host.recovery_revision().is_err());
+    host.begin_authentication(AccessProof::Paper(paper()))
+        .unwrap();
+    assert!(matches!(
+        next(&mut host),
+        Ok(HostCompletion::Authentication(Ok(())))
+    ));
+    assert_eq!(host.recovery_revision().unwrap(), 1);
+    let generation = host.generation();
+    assert!(host.list_credentials(generation, 1, None).is_err());
+    host.lock();
+    assert!(host.recovery_revision().is_err());
+    authenticate(&mut host);
+    assert!(host.recovery_revision().is_err());
+}

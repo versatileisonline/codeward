@@ -6,7 +6,8 @@ the matching code and vault can recover access. Store the paper separately from
 the computer and its vault file.
 
 The Rust core and headless macOS workflow implement the operations below.
-The credential interface will present them during the desktop prototype work.
+The macOS desktop interface presents recovery from **Forgot password?** on the
+unlock page; the native Rust bridge owns authentication and committed outcomes.
 See [recovery evidence](milestone-3-progress.md) for tested scope and remaining gates.
 
 ## Enrollment
@@ -41,7 +42,8 @@ copies or rotate an exposed data key.
 
 ## Messages for the desktop interface
 
-These are the message contract for the later UI, not a claim that screens exist.
+These are the message contract for desktop recovery. The interface uses the
+existing setup/unlock panel, masked inputs and current theme tokens.
 Messages contain no entered secrets, raw paths or native error text.
 
 | Proven state | Message |

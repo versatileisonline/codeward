@@ -15,12 +15,18 @@ afterEach(() => {
 });
 function native(
   handler: (command: string, body: Record<string, unknown>) => unknown,
+  existing = false,
 ) {
+  let firstOpening = true;
   window.__TAURI__ = {
     core: {
-      invoke: vi.fn(async (command, body = {}) =>
-        handler(command, body),
-      ) as never,
+      invoke: vi.fn(async (command, body = {}) => {
+        if (command === "open_managed_vault" && firstOpening) {
+          firstOpening = false;
+          return { epoch: 100, revocation: 0, state: existing ? "locked" : "missing" };
+        }
+        return handler(command, body);
+      }) as never,
     },
   };
 }
@@ -28,7 +34,7 @@ test("welcome retains theme and setup validation", () => {
   render(<App />);
   fireEvent.click(screen.getByLabelText("Switch to light mode"));
   expect(document.documentElement.dataset.theme).toBe("light");
-  fireEvent.click(screen.getByText("Get Started"));
+  fireEvent.click(screen.getByText("Create your vault"));
   fireEvent.submit(
     screen.getByRole("button", { name: "Continue" }).closest("form")!,
   );
@@ -40,9 +46,10 @@ test("late opening is canceled after navigation", async () => {
   let done!: (x: unknown) => void;
   native((c) =>
     c === "open_managed_vault" ? new Promise((r) => (done = r)) : {},
+    true,
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock Vault"));
+  fireEvent.click(await screen.findByText("Unlock Vault"));
   fireEvent.click(screen.getByText("Back"));
   done({ epoch: 2, revocation: 0, state: "locked" });
   await waitFor(() =>
@@ -51,16 +58,17 @@ test("late opening is canceled after navigation", async () => {
       { epoch: 2 },
     ),
   );
-  expect(screen.getByText("Get Started")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Codeward" })).toBeTruthy();
 });
 test("unlock dispatch clears password and wrong password allows retry", async () => {
   native((c) =>
     c === "open_managed_vault"
       ? { epoch: 1, revocation: 0, state: "locked" }
       : { epoch: 1, revocation: 0, state: "locked", error: "wrong_password" },
+    true,
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock Vault"));
+  fireEvent.click(await screen.findByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic" },
@@ -73,8 +81,8 @@ test("unlock dispatch clears password and wrong password allows retry", async ()
     (screen.getByLabelText("Master password") as HTMLInputElement).value,
   ).toBe("");
 });
-function setupForm() {
-  fireEvent.click(screen.getByText("Get Started"));
+async function setupForm() {
+  fireEvent.click(await screen.findByRole("button", { name: "Create your vault" }));
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic master" },
   });
@@ -103,7 +111,7 @@ test("connection loss invalidates outstanding recovery code", async () => {
           : {},
   );
   render(<App />);
-  setupForm();
+  await setupForm();
   await screen.findByText("Keep a way back in");
   await screen.findByText("Connection lost");
   code.resolve({ epoch: 1, code: "SYNTHETIC CODE" });
@@ -119,7 +127,7 @@ test("cancel setup discards a late opening and cancels its native epoch", async 
   const opening = deferred();
   native((c) => (c === "begin_vault_setup" ? opening.promise : {}));
   render(<App />);
-  setupForm();
+  await setupForm();
   fireEvent.click(screen.getByText("Back"));
   opening.resolve({ epoch: 4, revocation: 0, state: "recovery" });
   await waitFor(() =>
@@ -142,7 +150,7 @@ test("navigation clears exposed code and ignores pending status", async () => {
           : {},
   );
   render(<App />);
-  setupForm();
+  await setupForm();
   await screen.findByText("SYNTHETIC CODE");
   await waitFor(() =>
     expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith(
@@ -153,7 +161,7 @@ test("navigation clears exposed code and ignores pending status", async () => {
   fireEvent.click(screen.getByText("Cancel setup"));
   polling.resolve({ epoch: 2, revocation: 0, state: "recovery" });
   expect(screen.queryByText("SYNTHETIC CODE")).toBeNull();
-  expect(screen.getByText("Get Started")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Codeward" })).toBeTruthy();
 });
 test("saving and unknown enrollment never claim committed success", async () => {
   let state = "recovery";
@@ -167,7 +175,7 @@ test("saving and unknown enrollment never claim committed success", async () => 
           : { epoch: 3, revocation: 0, state },
   );
   render(<App />);
-  setupForm();
+  await setupForm();
   await screen.findByText("SYNTHETIC CODE");
   fireEvent.click(screen.getByText("I've written it down"));
   expect(screen.queryByText("SYNTHETIC CODE")).toBeNull();
@@ -190,7 +198,7 @@ test("lost confirmation reply polls actual committed state", async () => {
           : { epoch: 5, revocation: 0, state },
   );
   render(<App />);
-  setupForm();
+  await setupForm();
   await screen.findByText("SYNTHETIC CODE");
   fireEvent.click(screen.getByText("I've written it down"));
   fireEvent.change(screen.getByLabelText("Type your recovery code"), {
@@ -207,9 +215,10 @@ test("navigation during authentication rejects a late unlocked reply", async () 
       : c === "unlock_managed_vault"
         ? attempt.promise
         : {},
+    true,
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock Vault"));
+  fireEvent.click(await screen.findByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic" },
@@ -217,13 +226,13 @@ test("navigation during authentication rejects a late unlocked reply", async () 
   fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
   fireEvent.click(screen.getByText("Back"));
   attempt.resolve({ epoch: 7, revocation: 0, state: "unlocked" });
-  expect(screen.getByText("Get Started")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Codeward" })).toBeTruthy();
   expect(screen.queryByText("Your vault")).toBeNull();
 });
 test("missing vault does not start creation", async () => {
-  native(() => ({ epoch: 8, revocation: 0, state: "missing" }));
+  native(() => ({ epoch: 8, revocation: 0, state: "missing" }), true);
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock Vault"));
+  fireEvent.click(await screen.findByText("Unlock Vault"));
   await screen.findByText("No vault found");
   expect(window.__TAURI__!.core.invoke).not.toHaveBeenCalledWith(
     "begin_vault_setup",
@@ -236,9 +245,10 @@ test("revocation clears typed password even while already locked", async () => {
     c === "open_managed_vault"
       ? { epoch: 9, revocation: 0, state: "locked" }
       : { epoch: 9, revocation, state: "locked" },
+    true,
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock Vault"));
+  fireEvent.click(await screen.findByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic pre-auth" },
@@ -267,9 +277,10 @@ test("native security lock clears the credential editor and dirty dialog immedia
               next: null,
             }
           : { epoch: 1, revocation: state === "locked" ? 1 : 0, state },
+    true,
   );
   render(<App />);
-  fireEvent.click(screen.getByText("Unlock Vault"));
+  fireEvent.click(await screen.findByText("Unlock Vault"));
   await screen.findByLabelText("Master password");
   fireEvent.change(screen.getByLabelText("Master password"), {
     target: { value: "synthetic" },
@@ -286,4 +297,50 @@ test("native security lock clears the credential editor and dirty dialog immedia
   await screen.findByRole("heading", { name: "Unlock your vault" });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.queryByDisplayValue("SENSITIVE EDIT")).toBeNull();
+});
+
+test("a saved vault replaces creation with Unlock Vault at home and on restart", async () => {
+  let exists = false;
+  let epoch = 0;
+  let state = "idle";
+  window.__TAURI__ = {
+    core: {
+      invoke: vi.fn(async (command: string) => {
+        if (command === "open_managed_vault") {
+          epoch++;
+          state = exists ? "locked" : "missing";
+        }
+        if (command === "begin_vault_setup") {
+          epoch++;
+          state = "recovery";
+        }
+        if (command === "get_setup_recovery_code")
+          return { epoch, code: "SYNTHETIC CODE" };
+        if (command === "confirm_vault_setup") {
+          exists = true;
+          state = "created";
+        }
+        if (command === "cancel_vault_setup") state = "locked";
+        return { epoch, revocation: 0, state };
+      }) as never,
+    },
+  };
+  const first = render(<App />);
+  await setupForm();
+  await screen.findByText("SYNTHETIC CODE");
+  fireEvent.click(screen.getByText("I've written it down"));
+  fireEvent.change(screen.getByLabelText("Type your recovery code"), {
+    target: { value: "SYNTHETIC CODE" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create vault" }));
+  await screen.findByRole("heading", { name: "Vault saved" });
+  fireEvent.click(screen.getByRole("button", { name: "Back to Home" }));
+  await screen.findByRole("button", { name: "Unlock Vault" });
+  expect(screen.queryByRole("button", { name: "Create your vault" })).toBeNull();
+  first.unmount();
+  render(<App />);
+  await screen.findByRole("button", { name: "Unlock Vault" });
+  expect(screen.getByRole("heading", { name: "Codeward" })).toBeTruthy();
+  expect(screen.queryByLabelText("Master password")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Create your vault" })).toBeNull();
 });
