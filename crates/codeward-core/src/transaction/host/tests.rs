@@ -113,6 +113,7 @@ fn headless_host_lock_cancels_staging_and_preserves_an_admitted_commit() {
                 operation,
                 outcome: Ok(OperationStatus::Committed { revision: 2 }),
                 refresh: Some(Err(TransactionError::Locked)),
+                credential_id: None,
             } = done
             else {
                 panic!("expected an admitted commit");
@@ -160,6 +161,7 @@ fn headless_host_refreshes_committed_saves_and_deduplicates_requests() {
         operation: duplicate,
         outcome: Ok(OperationStatus::Committed { revision: 2 }),
         refresh: None,
+        credential_id: None,
     } = next(&mut host).unwrap()
     else {
         panic!("expected the recorded commit status");
@@ -189,6 +191,7 @@ fn headless_host_reconciles_unknown_without_restoring_access() {
         operation,
         outcome: Ok(OperationStatus::OutcomeUnknown),
         refresh: None,
+        credential_id: None,
     } = next(&mut host).unwrap()
     else {
         panic!("expected uncertain publication");
@@ -319,6 +322,7 @@ fn prepared_candidate_canceled_before_storage_does_not_block_a_fresh_save() {
         operation,
         outcome: Ok(OperationStatus::Canceled),
         refresh: None,
+        credential_id: None,
     } = next(&mut host).unwrap()
     else {
         panic!("expected canceled preparation");

@@ -30,6 +30,42 @@ function mount(handler: (c: string, b: Record<string, unknown>) => unknown) {
   );
   return { ...result, onDraft };
 }
+test("options start collapsed and opening them does not generate a password", () => {
+  const { onDraft } = mount(() => draft);
+  const disclosure = screen.getByRole("button", { name: "Options" });
+  expect(disclosure.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.queryByRole("spinbutton", { name: "Password length" })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: "Symbols" })).toBeNull();
+  expect(screen.getByText("24 characters · Uppercase, lowercase, digits, symbols")).toBeTruthy();
+  fireEvent.click(disclosure);
+  expect(disclosure.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByRole("spinbutton", { name: "Password length" })).toBeTruthy();
+  expect(screen.getByRole("checkbox", { name: "Symbols" })).toBeTruthy();
+  expect(onDraft).not.toHaveBeenCalled();
+  expect(window.__TAURI__!.core.invoke).not.toHaveBeenCalled();
+});
+
+test("option edits leave the generated selection unchanged until explicit regeneration", async () => {
+  let count = 0;
+  const { onDraft } = mount((c) => c === "generate_password_draft" ? { ...draft, draft: `opaque-${++count}` } : {});
+  fireEvent.click(screen.getByRole("button", { name: "Generate password" }));
+  await screen.findByText("Generated password ready");
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
+  fireEvent.change(screen.getByRole("spinbutton", { name: "Password length" }), { target: { value: "32" } });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Symbols" }));
+  expect(screen.getByText("32 characters · Uppercase, lowercase, digits")).toBeTruthy();
+  expect(onDraft).toHaveBeenCalledTimes(1);
+  expect(count).toBe(1);
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
+  expect(screen.queryByRole("spinbutton", { name: "Password length" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Regenerate password" }));
+  await waitFor(() => expect(onDraft).toHaveBeenLastCalledWith({ ...draft, draft: "opaque-2" }));
+  expect(window.__TAURI__!.core.invoke).toHaveBeenCalledWith("generate_password_draft", {
+    ...scope,
+    options: { length: 32, uppercase: true, lowercase: true, digits: true, symbols: false },
+  });
+});
+
 test("generation sends options and retains only opaque reference, preview is explicit", async () => {
   const { onDraft } = mount((c) =>
     c === "generate_password_draft"
@@ -76,6 +112,28 @@ test("navigation discards a late generated draft without selecting it", async ()
   );
   expect(onDraft).not.toHaveBeenCalled();
 });
+test("Escape masks the generated preview while keeping its draft and options", async () => {
+  const { onDraft } = mount((c) =>
+    c === "generate_password_draft"
+      ? draft
+      : { ...draft, password: "ESCAPE-PREVIEW", expires_in_ms: 30000 },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Generate password" }));
+  await screen.findByText("Generated password ready");
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
+  fireEvent.change(screen.getByRole("spinbutton", { name: "Password length" }), {
+    target: { value: "32" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Show generated password" }));
+  await screen.findByText("ESCAPE-PREVIEW");
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByText("ESCAPE-PREVIEW")).toBeNull();
+  expect(screen.getByRole("button", { name: "Show generated password" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Regenerate password" })).toBeTruthy();
+  expect((screen.getByRole("spinbutton", { name: "Password length" }) as HTMLInputElement).value).toBe("32");
+  expect(onDraft).toHaveBeenCalledTimes(1);
+  expect(window.__TAURI__!.core.invoke).not.toHaveBeenCalledWith("discard_password_draft", draft);
+});
 test("late reveal after blur is discarded and reveal lifetime expires", async () => {
   let done!: (x: unknown) => void;
   mount((c) =>
@@ -118,6 +176,7 @@ test("failed regeneration keeps old reference and manual switch discards it", as
 });
 test("invalid options cannot dispatch generation", async () => {
   mount(() => draft);
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
   fireEvent.change(screen.getByLabelText("Password length"), {
     target: { value: "11" },
   });
@@ -144,6 +203,7 @@ test("invalid options cannot dispatch generation", async () => {
 
 test("length stays empty while editing and replacement digits generate the requested length", async () => {
   mount(() => draft);
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
   const length = screen.getByLabelText("Password length") as HTMLInputElement;
   const generate = screen.getByRole("button", {
     name: "Generate password",
@@ -181,6 +241,7 @@ test("length stays empty while editing and replacement digits generate the reque
 
 test("leaving an empty length displays zero and keeps generation disabled", () => {
   mount(() => draft);
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
   const length = screen.getByLabelText("Password length") as HTMLInputElement;
   fireEvent.focus(length);
   fireEvent.change(length, { target: { value: "" } });
@@ -195,6 +256,7 @@ test("leaving an empty length displays zero and keeps generation disabled", () =
 
 test("refocusing an empty length's zero allows typing a fresh number", () => {
   mount(() => draft);
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
   const length = screen.getByLabelText("Password length") as HTMLInputElement;
   fireEvent.focus(length);
   fireEvent.change(length, { target: { value: "" } });
@@ -214,6 +276,7 @@ test("refocusing an empty length's zero allows typing a fresh number", () => {
 
 test("leaving a length removes leading zeros without changing its numeric value", async () => {
   mount(() => draft);
+  fireEvent.click(screen.getByRole("button", { name: "Options" }));
   const length = screen.getByLabelText("Password length") as HTMLInputElement;
   fireEvent.focus(length);
   fireEvent.change(length, { target: { value: "0012" } });

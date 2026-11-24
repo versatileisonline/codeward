@@ -116,6 +116,8 @@ pub enum TransactionError {
     ReloadRequired,
     /// The requested summary page size is outside the supported range.
     InvalidPageSize,
+    /// A search query exceeds 4,096 UTF-8 bytes.
+    InvalidSearchQuery,
     /// A selected record ID is not exactly 32 lowercase hexadecimal characters.
     InvalidCredentialId,
     /// The authenticated current snapshot contains no record with this valid ID.

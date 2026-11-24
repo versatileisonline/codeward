@@ -689,7 +689,7 @@ fn creation_id_collisions_entropy_capacity_and_cancellation_fail_without_overwri
     let fields = owned();
     let permit = Permit::new();
     let mut calls = 0;
-    let created = created_snapshot_with(
+    let (created, created_id) = created_snapshot_with(
         &snapshot,
         &fields,
         &permit,
@@ -705,6 +705,7 @@ fn creation_id_collisions_entropy_capacity_and_cancellation_fail_without_overwri
     )
     .unwrap();
     assert_eq!(calls, 2);
+    assert_eq!(created_id.as_str(), "00000000000000000000000000000000");
     assert_eq!(created.credentials().len(), 3);
     let new = created.credentials()[0].fields();
     assert_eq!(new.id, "00000000000000000000000000000000");

@@ -377,6 +377,7 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> Setup<L, E> {
         self.status.state = state;
         if state != State::Unlocked {
             self.credentials.clear_draft();
+            self.credentials.clear_read_access();
             self.dirty = false;
             self.status.close_requested = false;
         }

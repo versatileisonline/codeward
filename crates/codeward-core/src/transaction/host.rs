@@ -50,7 +50,7 @@ impl From<TransactionError> for HostError {
     }
 }
 
-/// Targeted worker result for the trusted caller. Contains no credential data.
+/// Targeted worker result for the trusted caller. May carry one adopted record ID.
 pub enum HostCompletion {
     /// The current authentication completed. Revoked results are discarded.
     Authentication(Result<(), TransactionError>),
@@ -70,6 +70,8 @@ pub enum HostCompletion {
         /// Snapshot adoption for a successful ordinary save. An error here does
         /// not undo or change the independent commit outcome.
         refresh: Option<Result<(), TransactionError>>,
+        /// Rust-assigned create/edit ID, only after successful current adoption.
+        credential_id: Option<Zeroizing<String>>,
     },
 }
 
@@ -117,6 +119,7 @@ pub struct HeadlessVault<L: WriterLease + Send + 'static> {
     caller: CallerId,
     pending: Option<Pending<L>>,
     worker: Option<Committer<L>>,
+    affected_credential: Option<Zeroizing<String>>,
     #[cfg(test)]
     preparation_gate: Option<(mpsc::Sender<()>, Receiver<()>)>,
     #[cfg(test)]
@@ -145,6 +148,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
             caller,
             worker: Some(worker),
             pending: None,
+            affected_credential: None,
             #[cfg(test)]
             preparation_gate: None,
             #[cfg(test)]
@@ -346,6 +350,18 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         Ok(session.list_credentials(worker, caller, generation, limit, cursor)?)
     }
 
+    /// Search current committed titles and usernames without exporting the vault.
+    pub fn search_credentials(
+        &mut self,
+        generation: u64,
+        query: &str,
+        limit: usize,
+        cursor: Option<&CredentialCursor>,
+    ) -> Result<CredentialPage, HostError> {
+        let (session, worker, caller) = self.idle()?;
+        Ok(session.search_credentials(worker, caller, generation, query, limit, cursor)?)
+    }
+
     /// Read one current record's non-password fields through ordinary access.
     /// Use the selection/list revision. Retain caller/opened-vault context and
     /// recheck generation/revision before delivering a queued result.
@@ -473,6 +489,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
 
     /// Revoke access without waiting for authentication, preparation or storage.
     pub fn lock(&mut self) {
+        self.affected_credential = None;
         self.session.lock();
         self.discard_revoked_access_work();
     }
@@ -528,6 +545,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
                 return Ok(Some(HostCompletion::Transaction {
                     operation,
                     outcome: Ok(OperationStatus::Committed { revision }),
+                    credential_id: self.affected_credential.take().filter(|_| refresh.is_ok()),
                     refresh: Some(refresh),
                 }));
             }
@@ -586,6 +604,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
 
     fn discard_revoked_access_work(&mut self) {
         if self.session.inactivity_deadline().is_none() {
+            self.affected_credential = None;
             match &mut self.pending {
                 Some(Pending::Authentication(_)) => self.pending = None,
                 Some(Pending::Refresh { receiver, .. }) => {
@@ -648,6 +667,10 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         Some(HostCompletion::Transaction {
             operation,
             outcome,
+            credential_id: self
+                .affected_credential
+                .take()
+                .filter(|_| matches!(refresh, Some(Ok(())))),
             refresh,
         })
     }
@@ -689,6 +712,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
     ) -> Result<(), HostError> {
         let (session, worker, caller) = self.idle()?;
         let mut authorization = session.begin_preparation(worker, caller, &input)?;
+        self.affected_credential = None;
         let refresh = input.refreshes_contents();
         let mut worker = self
             .worker
@@ -721,9 +745,16 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
         done: FinishedPreparation<L>,
     ) -> Result<Option<HostCompletion>, HostError> {
         self.poll_deadline();
-        let current = done.authorization.is_some_and(|authorization| {
+        let mut credential_id = None;
+        let current = done.authorization.is_some_and(|mut authorization| {
+            credential_id = authorization.credential_id.take();
             self.session.finish_preparation(authorization, &done.result)
         });
+        self.affected_credential = if current && matches!(done.result, Ok(PreparedWrite::New(_))) {
+            credential_id
+        } else {
+            None
+        };
         self.pending = None;
         self.worker = Some(done.worker);
         let error = match done.result {
@@ -742,6 +773,7 @@ impl<L: WriterLease + Send + 'static> HeadlessVault<L> {
                     operation,
                     outcome: Ok(outcome),
                     refresh: None,
+                    credential_id: None,
                 }));
             }
             Err(error) if current => error,

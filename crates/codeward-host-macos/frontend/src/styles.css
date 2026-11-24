@@ -9,6 +9,9 @@
   --surface: #fcfaf5;
   --button: #353431;
   --button-hover: #242321;
+  --control-radius: 10px;
+  --panel-radius: 16px;
+  --focus-ring: var(--button);
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   color: var(--ink);
   background: var(--page);
@@ -42,12 +45,14 @@ body {
 button {
   font: inherit;
   cursor: pointer;
-  font-weight: 650;
+  font-weight: 600;
 }
 button:focus-visible,
-h2:focus-visible {
-  outline: 3px solid var(--button);
-  outline-offset: 4px;
+h2:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
 }
 .sidebar {
   position: fixed;
@@ -72,7 +77,7 @@ h2:focus-visible {
   place-items: center;
   color: var(--muted);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--control-radius);
   background: transparent;
 }
 .sidebar-toggle:hover {
@@ -90,7 +95,7 @@ h2:focus-visible {
   min-height: 38px;
   padding: 9px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: var(--muted);
   text-align: left;
@@ -165,22 +170,19 @@ main {
   justify-content: center;
   align-items: center;
   border: 1px solid var(--button);
-  border-radius: 11px;
+  min-height: 42px;
+  border-radius: var(--control-radius);
   background: var(--button);
   color: var(--page);
-  padding: 13px 25px;
+  padding: 10px 18px;
   font-size: 13px;
   line-height: 20px;
   text-align: center;
-  transition:
-    transform 180ms,
-    background 180ms,
-    box-shadow 180ms;
+  transition: background 160ms ease, border-color 160ms ease;
 }
 .primary-button:hover {
   transform: none;
   background: var(--button-hover);
-  box-shadow: 0 5px 14px #1d1e1b16;
 }
 .primary-button:active {
   transform: translateY(0);
@@ -336,11 +338,11 @@ main {
   min-height: 40px;
   padding: 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: var(--muted);
   text-align: left;
-  font-size: 12px;
+  font-size: 13px;
 }
 .theme-toggle svg {
   flex-shrink: 0;
@@ -412,8 +414,8 @@ main:has(
 }
 .step-label {
   color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.15em;
+  font-size: 12px;
+  letter-spacing: 0.1em;
   margin: 0 0 16px;
   text-transform: uppercase;
 }
@@ -440,13 +442,13 @@ main:has(
   display: flex;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--control-radius);
   background: var(--surface);
 }
 .password-field:focus-within {
-  border-color: var(--button);
-  outline: 2px solid var(--button);
-  outline-offset: 2px;
+  border-color: var(--focus-ring);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
 }
 .password-field:has(input[aria-invalid="true"]) {
   border-color: #c87676;
@@ -461,15 +463,16 @@ main:has(
   font: inherit;
   font-size: 15px;
   outline: none;
-  border-radius: 10px;
+  border-radius: var(--control-radius);
 }
 .reveal-button {
+  min-width: 54px;
   padding: 0 14px;
   background: transparent;
   color: var(--muted);
   border: 0;
-  border-radius: 8px;
-  font-size: 11px;
+  border-radius: var(--control-radius);
+  font-size: 12px;
 }
 .reveal-button:hover {
   color: var(--ink);
@@ -498,7 +501,7 @@ main:has(
 .preview-note {
   margin: 22px 0 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -566,11 +569,12 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 13px 25px;
+  min-height: 42px;
+  gap: 8px;
+  padding: 10px 18px;
   border: 1px solid var(--line);
-  border-radius: 11px;
-  font-size: 13px;
+  border-radius: var(--control-radius);
+  transition: background 160ms ease, border-color 160ms ease;
   line-height: 20px;
   color: var(--ink);
   background: transparent;
@@ -578,6 +582,25 @@ button:disabled {
 }
 .secondary-button:hover {
   background: var(--hover);
+}
+.quiet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+  transition: background 160ms ease, color 160ms ease;
+}
+.quiet-button:hover {
+  background: var(--hover);
+  color: var(--ink);
 }
 main:has(.vault-workspace) {
   display: block;
@@ -593,13 +616,13 @@ main:has(.vault-workspace) {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding-bottom: 32px;
+  padding-bottom: 24px;
 }
 .vault-toolbar .step-label {
   margin-bottom: 10px;
 }
 .vault-toolbar h2 {
-  font-size: 36px;
+  font-size: 32px;
   letter-spacing: -0.045em;
   margin: 0;
   font-weight: 650;
@@ -609,14 +632,14 @@ main:has(.vault-workspace) {
   grid-template-columns: minmax(230px, 310px) minmax(0, 1fr);
   min-height: calc(100svh - 170px);
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--panel-radius);
   overflow: hidden;
   background: var(--surface);
 }
 .credential-list {
   background: var(--rail);
   border-right: 1px solid var(--line);
-  padding: 20px 12px;
+  padding: 20px 12px 24px;
 }
 .list-tools {
   padding: 0 8px;
@@ -636,23 +659,19 @@ textarea {
   min-width: 0;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  min-height: 44px;
+  border-radius: var(--control-radius);
   background: var(--page);
   font-size: 14px;
 }
 .list-tools input {
-  margin-top: 18px;
-  font-size: 12px;
-}
-input:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--button);
-  outline-offset: 2px;
+  margin-top: 12px;
+  font-size: 13px;
 }
 .list-caption {
   color: var(--muted);
-  font-size: 11px;
-  padding: 10px 10px 0;
+  font-size: 12px;
+  padding: 8px 8px 0;
   line-height: 1.6;
 }
 .credential-row {
@@ -663,8 +682,8 @@ textarea:focus-visible {
   color: var(--ink);
   border: 1px solid transparent;
   background: transparent;
-  border-radius: 10px;
-  padding: 14px 10px;
+  border-radius: var(--control-radius);
+  padding: 13px 10px;
   text-align: left;
 }
 .credential-row:hover {
@@ -692,14 +711,15 @@ textarea:focus-visible {
 }
 .credential-summary strong {
   font-weight: 550;
-  font-size: 13px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .credential-summary > span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -710,7 +730,7 @@ textarea:focus-visible {
   font-size: 12px;
 }
 .credential-panel {
-  padding: 24px clamp(20px, 4vw, 56px) 40px;
+  padding: 24px clamp(24px, 3.5vw, 48px) 32px;
   min-width: 0;
 }
 .panel-feedback:has(.form-error:empty):has(.setup-status:empty) {
@@ -719,12 +739,19 @@ textarea:focus-visible {
 .panel-feedback .form-error:empty {
   display: none;
 }
+.panel-feedback .setup-status,
+.panel-feedback .form-error {
+  margin: 0 0 18px;
+}
+.panel-feedback .setup-status {
+  font-size: 13px;
+}
 .detail-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin: 14px 0 30px;
+  margin: 6px 0 24px;
 }
 .detail-heading .step-label {
   margin-bottom: 10px;
@@ -737,16 +764,16 @@ h3 {
   overflow-wrap: anywhere;
 }
 .credential-details dl {
-  margin: 0 0 40px;
+  margin: 0 0 28px;
 }
 .detail-field {
   border-bottom: 1px solid var(--line);
-  padding: 20px 0;
+  padding: 18px 0;
 }
 .detail-field dt {
   color: var(--muted);
-  font-size: 11px;
-  margin-bottom: 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 .detail-field dd {
   margin: 0;
@@ -771,12 +798,13 @@ h3 {
   padding-right: 0;
 }
 .danger-button {
-  padding: 11px 14px;
+  min-height: 40px;
+  padding: 9px 14px;
   border: 1px solid #aa626666;
-  border-radius: 9px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: #e59999;
-  font-size: 12px;
+  font-size: 13px;
 }
 [data-theme="light"] .danger-button {
   color: #a33e3e;
@@ -807,10 +835,16 @@ h3 {
   align-items: center;
   gap: 10px;
   margin-top: 24px;
-  font-size: 12px;
+  font-size: 13px;
+}
+.checkbox-field input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--button);
 }
 .unsaved-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -838,7 +872,7 @@ h3 {
   line-height: 1.8;
 }
 .vault-empty .preview-note {
-  font-size: 11px;
+  font-size: 12px;
 }
 .load-more {
   margin: 14px 8px;
@@ -867,7 +901,7 @@ h3 {
   width: min(100%, 480px);
   padding: 30px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--panel-radius);
   background: var(--surface);
   box-shadow: 0 25px 100px #0005;
 }
@@ -957,30 +991,21 @@ input::placeholder {
   }
 }
 
-/* Back navigation stays aligned at rest and lifts as one control on hover. */
+/* Navigation and destructive actions stay in place during interaction. */
 .home-back-button {
-  transition:
-    transform 180ms ease,
-    background 180ms ease,
-    box-shadow 180ms ease;
+  transition: background 160ms ease, border-color 160ms ease;
 }
 .home-back-button:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 18px #0003;
+  transform: none;
 }
 .danger-button {
-  transition:
-    transform 180ms ease,
-    background 180ms ease,
-    color 180ms ease,
-    box-shadow 180ms ease;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .danger-button:hover:not(:disabled) {
   background: #d92332;
   border-color: #d92332;
   color: #fff;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 18px #d9233240;
+  transform: none;
 }
 .credential-editor .password-field input {
   border: 0;
@@ -1017,15 +1042,13 @@ input::placeholder {
 }
 
 .password-generator {
-  margin-top: 20px;
-  padding: 18px 0;
+  margin-top: 18px;
+  padding: 16px 0 4px;
   border-top: 1px solid var(--line);
 }
 .generator-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 16px;
+  display: grid;
+  gap: 4px;
 }
 .generator-heading strong {
   font-size: 13px;
@@ -1035,7 +1058,7 @@ input::placeholder {
   flex-wrap: wrap;
   align-items: end;
   gap: 12px 24px;
-  margin: 16px 0;
+  margin: 18px 0 12px;
 }
 .generator-options > label {
   display: grid;
@@ -1057,9 +1080,32 @@ input::placeholder {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.generator-actions .secondary-button {
+  min-height: 40px;
+  padding: 9px 14px;
+}
+.generator-summary {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.generator-options-note {
+  margin: 0;
+  max-width: 420px;
+}
+.generator-disclosure span {
+  width: 12px;
+  font-size: 16px;
+  font-weight: 400;
 }
 .generated-preview {
-  margin-top: 18px;
+  margin-top: 16px;
+}
+.generated-preview > .field-hint {
+  margin: 0 0 8px;
 }
 .generated-value {
   display: block;

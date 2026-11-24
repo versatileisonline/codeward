@@ -205,3 +205,272 @@ fn credential_listing_waits_for_write_resolution_and_invalidates_cursor_on_commi
         Err(TransactionError::ReloadRequired)
     ));
 }
+
+#[test]
+fn credential_search_scans_all_records_and_binds_cursors_to_normalized_query() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let (_, mut session, mut worker) = opened();
+    let records = (0..205)
+        .map(|id| {
+            Credential::new(CredentialInput {
+                id: &format!("{id:032x}"),
+                title: if id == 204 { "Café Late" } else { "Shared" },
+                username: if id == 203 { "CAFÉ User" } else { "user" },
+                password: "hidden",
+                url: "https://secret.test",
+                notes: "invisible",
+                created_at: 0,
+                updated_at: 0,
+            })
+            .unwrap()
+        })
+        .collect();
+    let snapshot = CredentialSnapshot::new(records).unwrap();
+    let operation = session
+        .prepare_contents(&mut worker, OWNER, request(1, 1), &snapshot)
+        .unwrap();
+    assert_eq!(
+        complete(&mut worker),
+        OperationStatus::Committed { revision: 2 }
+    );
+    session
+        .refresh_committed_contents(&worker, OWNER, &operation)
+        .unwrap();
+    let generation = session.generation();
+    let matches = session
+        .search_credentials(&worker, OWNER, generation, "CAFÉ", 100, None)
+        .unwrap();
+    assert_eq!(matches.summaries.len(), 2);
+    assert_eq!(
+        matches.summaries[0].id.as_str(),
+        "000000000000000000000000000000cb"
+    );
+    assert_eq!(
+        matches.summaries[1].id.as_str(),
+        "000000000000000000000000000000cc"
+    );
+    assert!(matches.next.is_none());
+    for query in [
+        "hidden",
+        "secret.test",
+        "invisible",
+        "shareduser",
+        "shared user",
+        " café ",
+    ] {
+        assert!(
+            session
+                .search_credentials(&worker, OWNER, generation, query, 100, None)
+                .unwrap()
+                .summaries
+                .is_empty()
+        );
+    }
+    let first = session
+        .search_credentials(&worker, OWNER, generation, "SHARED", 100, None)
+        .unwrap();
+    assert_eq!(first.summaries.len(), 100);
+    let second = session
+        .search_credentials(
+            &worker,
+            OWNER,
+            generation,
+            "shared",
+            100,
+            first.next.as_ref(),
+        )
+        .unwrap();
+    assert_eq!(second.summaries.len(), 100);
+    let last = session
+        .search_credentials(
+            &worker,
+            OWNER,
+            generation,
+            "shared",
+            100,
+            second.next.as_ref(),
+        )
+        .unwrap();
+    assert_eq!(last.summaries.len(), 4);
+    assert!(last.next.is_none());
+    assert!(matches!(
+        session.search_credentials(
+            &worker,
+            OWNER,
+            generation,
+            "other",
+            100,
+            first.next.as_ref()
+        ),
+        Err(TransactionError::StaleCursor)
+    ));
+    assert!(matches!(
+        session.list_credentials(&worker, OWNER, generation, 100, first.next.as_ref()),
+        Err(TransactionError::StaleCursor)
+    ));
+    let empty = session
+        .search_credentials(&worker, OWNER, generation, "", 100, None)
+        .unwrap();
+    assert_eq!(empty.summaries.len(), 100);
+    assert!(empty.next.is_some());
+    assert!(
+        session
+            .search_credentials(&worker, OWNER, generation, &"é".repeat(2048), 100, None)
+            .is_ok()
+    );
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, &"é".repeat(2049), 100, None),
+        Err(TransactionError::InvalidSearchQuery)
+    ));
+}
+#[test]
+fn credential_search_refuses_wrong_caller_opening_and_stale_generation() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let (_, mut session, worker) = opened();
+    let (_, mut other, other_worker) = opened();
+    let generation = session.generation();
+    let first = session
+        .search_credentials(&worker, OWNER, generation, "synthetic", 1, None)
+        .unwrap();
+    let cursor = first.next.as_ref().expect("second synthetic record");
+    assert!(matches!(
+        session.search_credentials(
+            &worker,
+            CallerId(8),
+            generation,
+            "synthetic",
+            1,
+            Some(cursor)
+        ),
+        Err(TransactionError::Unauthorized)
+    ));
+    assert!(matches!(
+        session.search_credentials(&other_worker, OWNER, generation, "synthetic", 1, None),
+        Err(TransactionError::Unauthorized)
+    ));
+    assert!(matches!(
+        other.search_credentials(
+            &other_worker,
+            OWNER,
+            generation,
+            "synthetic",
+            1,
+            Some(cursor)
+        ),
+        Err(TransactionError::Unauthorized)
+    ));
+
+    session.lock();
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, session.generation(), "synthetic", 1, None),
+        Err(TransactionError::Locked)
+    ));
+    session
+        .reload_master(&worker, OWNER, "synthetic password")
+        .unwrap();
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, "synthetic", 1, None),
+        Err(TransactionError::Locked)
+    ));
+    assert!(matches!(
+        session.search_credentials(
+            &worker,
+            OWNER,
+            session.generation(),
+            "synthetic",
+            1,
+            Some(cursor)
+        ),
+        Err(TransactionError::StaleCursor)
+    ));
+}
+
+#[test]
+fn credential_search_refuses_recovery_and_enrollment_access() {
+    let (mut recovery, worker) =
+        Committer::open_recovery(Model::new(Some(fixture())), OWNER, paper()).unwrap();
+    assert!(matches!(
+        recovery.search_credentials(&worker, OWNER, recovery.generation(), "synthetic", 1, None),
+        Err(TransactionError::Locked)
+    ));
+    let (mut enrollment, worker) = Committer::begin_create(Model::new(None), OWNER).unwrap();
+    assert!(matches!(
+        enrollment.search_credentials(
+            &worker,
+            OWNER,
+            enrollment.generation(),
+            "synthetic",
+            1,
+            None
+        ),
+        Err(TransactionError::Locked)
+    ));
+}
+
+#[test]
+fn credential_search_waits_for_write_resolution_and_invalidates_cursor_on_commit() {
+    let _test = crypto::MASTER_TESTS.lock().unwrap();
+    let (model, mut session, mut worker) = opened();
+    let generation = session.generation();
+    let first = session
+        .search_credentials(&worker, OWNER, generation, "synthetic", 1, None)
+        .unwrap();
+    let cursor = first.next.as_ref().expect("second synthetic record");
+    let pending = session
+        .prepare_contents(&mut worker, OWNER, request(1, 1), &empty())
+        .unwrap();
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, "synthetic", 1, Some(cursor)),
+        Err(TransactionError::Busy)
+    ));
+    model.fault(Fault::UnknownBefore);
+    assert_eq!(complete(&mut worker), OperationStatus::OutcomeUnknown);
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, "synthetic", 1, Some(cursor)),
+        Err(TransactionError::Busy)
+    ));
+    assert_eq!(
+        worker.reconcile_recovery(OWNER, &pending, paper()),
+        Ok(OperationStatus::Unchanged)
+    );
+    let unchanged = session
+        .search_credentials(&worker, OWNER, generation, "synthetic", 1, Some(cursor))
+        .unwrap();
+    assert_eq!(unchanged.revision, 1);
+    assert_eq!(unchanged.summaries.len(), 1);
+
+    let saved = session
+        .prepare_contents(&mut worker, OWNER, request(2, 1), &empty())
+        .unwrap();
+    assert_eq!(
+        complete(&mut worker),
+        OperationStatus::Committed { revision: 2 }
+    );
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, "synthetic", 1, Some(cursor)),
+        Err(TransactionError::ReloadRequired)
+    ));
+    session
+        .refresh_committed_contents(&worker, OWNER, &saved)
+        .unwrap();
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, "synthetic", 1, Some(cursor)),
+        Err(TransactionError::StaleCursor)
+    ));
+    let current = session
+        .search_credentials(&worker, OWNER, generation, "synthetic", 1, None)
+        .unwrap();
+    assert_eq!(current.revision, 2);
+    assert!(current.summaries.is_empty());
+    assert!(current.next.is_none());
+
+    session
+        .prepare_contents(&mut worker, OWNER, request(3, 2), &empty())
+        .unwrap();
+    model.0.lock().unwrap().live = Some(fixture());
+    assert_eq!(complete(&mut worker), OperationStatus::Conflict);
+    assert!(matches!(
+        session.search_credentials(&worker, OWNER, generation, "synthetic", 1, None),
+        Err(TransactionError::ReloadRequired)
+    ));
+}

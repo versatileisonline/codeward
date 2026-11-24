@@ -251,9 +251,11 @@ impl<L: WriterLease + Send + 'static, E: HeadlessEventSource> HeadlessControlLoo
                 Some(HostCompletion::Authentication(_)) => completion = None,
                 Some(HostCompletion::Transaction {
                     refresh: Some(refresh @ Ok(())),
+                    credential_id,
                     ..
                 }) => {
                     *refresh = Err(TransactionError::Locked);
+                    *credential_id = None;
                 }
                 _ => (),
             }

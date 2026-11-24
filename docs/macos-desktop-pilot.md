@@ -70,8 +70,11 @@ mock IPC, but they do not establish native persistence or OS-event handling.
 
 ## Credential workspace validation limits
 
-The search box filters summaries already loaded into the list; use **Load more**
-to include later pages. No vault-wide query API is introduced. Trusted keyboard
+Search covers titles and usernames throughout the committed vault through Rust.
+**Load more** continues the current query using a scoped native cursor. Search
+changes preserve an open editor; a confirmed save keeps the affected credential
+open, including when it no longer matches the query. See the
+[everyday workflow](everyday-desktop-workflow.md) for matching and cursor rules. Trusted keyboard
 and pointer interactions refresh the scoped inactivity deadline; screen-reader
 activation and VoiceOver behavior still need manual acceptance.
 

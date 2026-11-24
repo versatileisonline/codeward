@@ -55,6 +55,7 @@ export type Operation = {
   revocation: number;
   operation: string;
   state: string;
+  credential_id?: string | null;
   error?: string;
 };
 

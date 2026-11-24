@@ -127,3 +127,53 @@ test("demo generated references replace safely and commit without plaintext form
   ).toBe(preview.password);
   await expect(api("reveal_password_draft", second)).rejects.toBe("stale");
 });
+
+test("demo native search uses independent fields and committed identity", async () => {
+  const { api, page } = await opened();
+  expect(
+    (
+      await api<Page>("search_credentials", {
+        ...page,
+        query: "SAMPLE.DEVELOPER",
+        cursor: null,
+      })
+    ).summaries.map((x) => x.id),
+  ).toEqual(["sample-code"]);
+  expect(
+    (
+      await api<Page>("search_credentials", {
+        ...page,
+        query: "repository sample",
+        cursor: null,
+      })
+    ).summaries,
+  ).toEqual([]);
+  await expect(
+    api("search_credentials", {
+      ...page,
+      query: "é".repeat(2049),
+      cursor: null,
+    }),
+  ).rejects.toBe("invalid_input");
+  const operation = await api<Operation>("create_credential", {
+    ...page,
+    form: {
+      title: "Sample mail",
+      username: "another",
+      url: "",
+      notes: "",
+      password: { mode: "provided", value: "synthetic" },
+    },
+  });
+  expect((operation as any).credential_id).toBeNull();
+  const saved = await api<Operation>("get_credential_operation", operation);
+  expect((saved as any).credential_id).toBeTruthy();
+  expect(
+    (
+      await api<Details>("get_credential_details", {
+        ...(await api<Page>("list_credentials", page)),
+        id: (saved as any).credential_id,
+      })
+    ).username,
+  ).toBe("another");
+});
